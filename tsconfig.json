@@ -24,12 +24,10 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@app/*": ["./apps/*"],
-      "@app/database": [
-        "libs/database/src"
-      ],
-      "@app/database/*": [
-        "libs/database/src/*"
-      ]
+      "@lib/auth": ["libs/auth/src"],
+      "@lib/auth/*": ["libs/auth/src/*"],
+      "@lib/database": ["libs/database/src"],
+      "@lib/database/*": ["libs/database/src/*"]
     }
   }
 }

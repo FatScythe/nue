@@ -2,10 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and } from 'drizzle-orm';
 
-import * as schema from '@app/database/schemas';
-import { BaseRepository } from '@app/database/base.repository';
-import { accounts } from '@app/database/schemas';
-import { DATABASE_CONNECTION } from '@app/database/database.provider';
+import * as schema from '@lib/database/schemas';
+import { BaseRepository } from '@lib/database/base.repository';
+import { accounts } from '@lib/database/schemas';
+import { DATABASE_CONNECTION } from '@lib/database/database.provider';
 
 @Injectable()
 export class AccountRepository extends BaseRepository {
