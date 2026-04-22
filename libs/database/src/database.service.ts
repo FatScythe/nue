@@ -1,14 +1,13 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schemas';
+import { Inject, Injectable } from '@nestjs/common';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+import * as schema from '@database/schemas';
+import { DATABASE_CONNECTION } from '@database/database.provider';
 
 @Injectable()
-export class DatabaseService implements OnModuleInit {
-  public db!: PostgresJsDatabase<typeof schema>;
-
-  onModuleInit() {
-    const queryClient = postgres(process.env.DATABASE_URL!, { max: 20,  });
-    this.db = drizzle(queryClient, { schema });
-  }
+export class DatabaseService {
+  constructor(
+    @Inject(DATABASE_CONNECTION)
+    public readonly db: NodePgDatabase<typeof schema>,
+  ) {}
 }

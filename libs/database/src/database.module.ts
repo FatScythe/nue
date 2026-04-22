@@ -4,15 +4,26 @@ import { ConfigModule } from '@nestjs/config';
 import {
   DATABASE_CONNECTION,
   DatabaseProvider,
-} from '@app/database/database.provider';
-import { CustomerRepository } from '@app/database/repository/customer';
-import { AccountRepository } from '@app/database/repository/account';
+} from '@database/database.provider';
+import { CustomerRepository } from '@database/repository/customer';
+import { AccountRepository } from '@database/repository/account';
+import { UserRepository } from '@database/repository/user';
 
 @Global()
 @Module({
   imports: [ConfigModule],
-  providers: [DatabaseProvider, CustomerRepository, AccountRepository],
-  exports: [DATABASE_CONNECTION, CustomerRepository, AccountRepository],
+  providers: [
+    DatabaseProvider,
+    CustomerRepository,
+    AccountRepository,
+    UserRepository,
+  ],
+  exports: [
+    DATABASE_CONNECTION,
+    CustomerRepository,
+    AccountRepository,
+    UserRepository,
+  ],
 })
 export class DatabaseModule implements OnApplicationShutdown {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: any) {}

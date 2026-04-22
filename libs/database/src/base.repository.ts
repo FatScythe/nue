@@ -1,8 +1,11 @@
 import { Inject } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import * as schema from './schemas';
-import { DATABASE_CONNECTION } from './database.provider';
+import * as schema from '@database/schemas';
+import { DATABASE_CONNECTION } from '@database/database.provider';
+import { DatabaseClient, DBTransaction } from '@database/types';
+import { SQL, TableConfig } from 'drizzle-orm';
+import { PgTableWithColumns } from 'drizzle-orm/pg-core';
 
 export abstract class BaseRepository {
   constructor(
@@ -10,7 +13,9 @@ export abstract class BaseRepository {
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
-  protected getClient(tx?: any) {
+  protected getClient(tx?: DBTransaction): DatabaseClient {
+    // If 'tx' exists, we use it (ensuring ACID compliance)
+    // otherwise, we use the main pool...
     return tx || this.db;
   }
 }

@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import * as schema from '@lib/database/schemas';
-import { BaseRepository } from '@lib/database/base.repository';
-import { customers } from '@lib/database/schemas';
-import { DATABASE_CONNECTION } from '@lib/database/database.provider';
+import * as schema from '@database/schemas';
+import { BaseRepository } from '@database/base.repository';
+import { customers } from '@database/schemas';
+import { DATABASE_CONNECTION } from '@database/database.provider';
+import { DBTransaction } from '@database/types';
 
 @Injectable()
 export class CustomerRepository extends BaseRepository {
@@ -16,9 +17,9 @@ export class CustomerRepository extends BaseRepository {
   }
 
   /**
-   * Create a new customer profile
+   * create a new customer profile...
    */
-  async create(data: typeof customers.$inferInsert, tx?: any) {
+  async create(data: typeof customers.$inferInsert, tx?: DBTransaction) {
     const result = await this.getClient(tx)
       .insert(customers)
       .values(data)

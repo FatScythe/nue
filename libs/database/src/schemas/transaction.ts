@@ -10,29 +10,12 @@ import {
 import { accounts } from './account';
 import { Currency, dbCurrencyEnum } from './utils';
 import { users } from './user';
-
-export enum TransactionType {
-  Transfer = 'transfer',
-  Deposit = 'deposit',
-  Withdrawal = 'withdrawal',
-  Fee = 'fee',
-  Interest = 'interest',
-  Refund = 'refund',
-  Reversal = 'reversal',
-}
+import { TransactionStatus, TransactionType } from '@database/enums';
 
 export const transactionTypeEnum = pgEnum(
   'transaction_type',
   Object.values(TransactionType) as [string, ...string[]],
 );
-
-export enum TransactionStatus {
-  Successful = 'successful',
-  Failed = 'failed',
-  Pending = 'pending',
-  Processing = 'processing',
-  Reversed = 'reversed',
-}
 
 export const transactionStatusEnum = pgEnum(
   'transaction_status',

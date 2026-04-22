@@ -1,19 +1,8 @@
 import { jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { businesses } from './business';
 import { users } from './user';
-
-export enum Resources {
-  Dashboard = 'dashboard',
-  Team = 'team',
-  Transaction = 'transaction',
-  Developer = 'developer',
-  Customer = 'customer',
-  Account = 'account',
-  Product = 'product',
-  Loan = 'loan',
-  Ledger = 'ledger',
-  Audit = 'audit',
-}
+import { AnyPgColumn } from 'drizzle-orm/pg-core';
+import { Permission } from '@database/types';
 
 const defaultPermission: Permission = {
   dashboard: { view: false },
@@ -72,65 +61,6 @@ const defaultPermission: Permission = {
   },
 };
 
-export type Permission = {
-  [Resources.Dashboard]: {
-    view: boolean;
-  };
-  [Resources.Transaction]: {
-    view: boolean;
-    add: boolean;
-    generateStatement: boolean;
-    generateReceipt: boolean;
-    approve: boolean;
-    reverse: boolean;
-  };
-  [Resources.Customer]: {
-    view: boolean;
-    add: boolean;
-    edit: boolean;
-    deactivate: boolean;
-    verifyKyc: boolean;
-  };
-  [Resources.Account]: {
-    view: boolean;
-    create: boolean;
-    freeze: boolean;
-    close: boolean;
-    updateLimits: boolean;
-  };
-  [Resources.Product]: {
-    view: boolean;
-    create: boolean;
-    edit: boolean;
-    deactivate: boolean;
-  };
-  [Resources.Loan]: {
-    view: boolean;
-    disburse: boolean;
-    restructure: boolean;
-    writeOff: boolean;
-    approve: boolean;
-  };
-  [Resources.Ledger]: {
-    view: boolean;
-    manualJournalEntry: boolean;
-    reconcile: boolean;
-    viewGlBalances: boolean;
-  };
-  [Resources.Developer]: {
-    view: boolean;
-    manageApiKeys: boolean;
-    viewWebhooks: boolean;
-    simulateTransactions: boolean;
-  };
-  [Resources.Team]: {
-    view: boolean;
-    add: boolean;
-    activityLog: boolean;
-    deactivate: boolean;
-  };
-};
-
 export const roles = pgTable('roles', {
   id: uuid('id').primaryKey().defaultRandom(),
   tenantId: uuid('tenant_id').references(() => businesses.id), // nullable for default roles...
@@ -139,7 +69,7 @@ export const roles = pgTable('roles', {
     .$type<Permission>()
     .notNull()
     .default(defaultPermission),
-  createdBy: uuid('created_by').references(() => users.id), // nullable for default, id of the user or api
+  createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // nullable for default, id of the user or api
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

@@ -2,10 +2,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { eq, and } from 'drizzle-orm';
 
-import * as schema from '@lib/database/schemas';
-import { BaseRepository } from '@lib/database/base.repository';
-import { accounts } from '@lib/database/schemas';
-import { DATABASE_CONNECTION } from '@lib/database/database.provider';
+import * as schema from '@database/schemas';
+import { BaseRepository } from '@database/base.repository';
+import { accounts } from '@database/schemas';
+import { DATABASE_CONNECTION } from '@database/database.provider';
+import { DBTransaction } from '@database/types';
 
 @Injectable()
 export class AccountRepository extends BaseRepository {
@@ -16,8 +17,11 @@ export class AccountRepository extends BaseRepository {
     super(db);
   }
 
-  async getBalance(accountId: string, tenantId: string) {
-    const result = await this.db
+  async getBalance(
+    { accountId, tenantId }: { accountId: string; tenantId: string },
+    tx?: DBTransaction,
+  ) {
+    const result = await this.getClient(tx)
       .select({ balance: accounts.balance, bookBalance: accounts.bookBalance })
       .from(accounts)
       .where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId)))
