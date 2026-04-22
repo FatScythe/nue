@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+import { ApiErrorCode } from '../enums';
 
 export default class ConfigError extends Error {
   constructor(message: string) {
@@ -9,7 +10,21 @@ export default class ConfigError extends Error {
 }
 
 export class ApiException extends HttpException {
-  constructor(message: string, meta?: Record<string, unknown>) {
-    super({ message, isClientError: true, ...meta }, HttpStatus.BAD_REQUEST);
+  constructor(
+    public readonly errorCode: ApiErrorCode,
+    message: string,
+    public readonly meta?: { error_code?: string; [key: string]: unknown },
+    status: HttpStatus = HttpStatus.BAD_REQUEST,
+  ) {
+    super(
+      {
+        success: false,
+        statusCode: status,
+        errorCode,
+        message,
+        meta,
+      },
+      status,
+    );
   }
 }

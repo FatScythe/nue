@@ -23,11 +23,14 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@app/*": ["./apps/*"],
-      "@lib/auth": ["libs/auth/src"],
-      "@lib/auth/*": ["libs/auth/src/*"],
-      "@lib/database": ["libs/database/src"],
-      "@lib/database/*": ["libs/database/src/*"]
+      "@app/*": ["apps/*"],
+      "@auth": ["libs/auth/src"],
+      "@auth/*": ["libs/auth/src/*"],
+      "@database": ["libs/database/src"],
+      "@database/*": ["libs/database/src/*"],
+      "@common/*": ["libs/common/*"],
+      "@utils": ["libs/common/utils"],
+      "@utils/*": ["libs/common/utils/*"]
     }
   }
 }
