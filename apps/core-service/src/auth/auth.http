@@ -1,0 +1,6 @@
+GET http://localhost:6060/api/v1/auth/access-token
+nue-sec-key: nsk_admin_init_123456789
+
+###
+GET http://localhost:6060/api/v1
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNGM2MWY2MS00YjZmLTQ2MjgtODM3My0xZjlkZGM5MjljMDQiLCJpYXQiOjE3NzcxMzQ1MjksImV4cCI6MTc3NzEzNDgyOX0.kQYh5i5bQAz5H8cdjue2oTfN5hiVLOBMi3Ic_PQcC_0
