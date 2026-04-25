@@ -8,12 +8,13 @@ import { and, eq, SQL } from 'drizzle-orm';
 import { IS_NON_TOKEN, IS_PUBLIC_KEY } from '../../common/decorator';
 import { ApiException } from '../../common/exception';
 import { ApiErrorCode } from '../../common/enums';
+import { ReqUser } from '../../common/types';
 
 import { AuthService } from '@auth';
 
 import { UserRepository } from '@database/repository';
 import { users } from '@database/schemas';
-import { UserStatus } from '@database/enums';
+import { UserStatus, UserType } from '@database/enums';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -65,6 +66,7 @@ export class AuthGuard implements CanActivate {
     const queryCondition = and(
       eq(users.secretKey, key),
       eq(users.status, UserStatus.Active),
+      eq(users.type, UserType.Api),
     ) as SQL;
 
     return this.validateRequest({ request, queryCondition });
@@ -97,6 +99,7 @@ export class AuthGuard implements CanActivate {
     const queryCondition = and(
       eq(users.status, UserStatus.Active),
       eq(users.id, decoded.sub),
+      eq(users.type, UserType.Api),
     ) as SQL;
 
     return this.validateRequest({ request, queryCondition });
@@ -142,7 +145,7 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    request['user'] = user;
+    request['user'] = user as ReqUser;
     return true;
   }
 }
