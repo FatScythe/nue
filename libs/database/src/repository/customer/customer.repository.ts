@@ -4,7 +4,7 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as schema from '@database/schemas';
 import { BaseRepository } from '@database/base.repository';
 import { customers } from '@database/schemas';
-import { DATABASE_CONNECTION } from '@database/database.provider';
+import { DATABASE_CONNECTION } from '@database/drizzle.provider';
 import { DBTransaction } from '@database/types';
 
 @Injectable()

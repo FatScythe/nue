@@ -69,6 +69,7 @@ export const roles = pgTable('roles', {
     .$type<Permission>()
     .notNull()
     .default(defaultPermission),
+  deletedAt: timestamp('deleted_at'),
   createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // nullable for default, id of the user or api
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

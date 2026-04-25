@@ -13,6 +13,10 @@ export const businesses = pgTable('businesses', {
   emailAddress: text('email_address').unique().notNull(),
   reference: text('short_name').unique().notNull(),
   onboardedBy: uuid('created_by').references((): AnyPgColumn => users.id), // sys admin user...
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });

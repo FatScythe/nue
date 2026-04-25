@@ -6,3 +6,10 @@ export enum LoanScheduleStatus {
   Overdue = 'overdue', // past due date
   Waived = 'waived', // mgmt cancelled this specific installment
 }
+
+export enum LoanRepaymentFrequency {
+  Daily = 'daily',
+  Weekly = 'weekly',
+  Monthly = 'monthly',
+  Yearly = 'yearly',
+}

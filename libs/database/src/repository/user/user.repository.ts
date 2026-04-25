@@ -6,7 +6,7 @@ import { eq, SQL } from 'drizzle-orm';
 import * as schema from '@database/schemas';
 import { BaseRepository } from '@database/base.repository';
 import { roles, users } from '@database/schemas';
-import { DATABASE_CONNECTION } from '@database/database.provider';
+import { DATABASE_CONNECTION } from '@database/drizzle.provider';
 import { DBTransaction } from '@database/types';
 
 @Injectable()

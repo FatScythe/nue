@@ -3,23 +3,26 @@ import { ConfigModule } from '@nestjs/config';
 
 import {
   DATABASE_CONNECTION,
-  DatabaseProvider,
-} from '@database/database.provider';
+  DrizzleProvider,
+} from '@database/drizzle.provider';
 import { CustomerRepository } from '@database/repository/customer';
 import { AccountRepository } from '@database/repository/account';
 import { UserRepository } from '@database/repository/user';
+import { REDIS_CLIENT, RedisProvider } from '@database/redis.provider';
 
 @Global()
 @Module({
   imports: [ConfigModule],
   providers: [
-    DatabaseProvider,
+    DrizzleProvider,
+    RedisProvider,
     CustomerRepository,
     AccountRepository,
     UserRepository,
   ],
   exports: [
     DATABASE_CONNECTION,
+    REDIS_CLIENT,
     CustomerRepository,
     AccountRepository,
     UserRepository,

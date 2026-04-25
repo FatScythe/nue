@@ -27,6 +27,9 @@ export const users = pgTable('users', {
   type: userTypeEnum('type').notNull(),
   status: userTypeEnum('status').notNull(),
   emailAddress: text('email_address'),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  otherName: text('other_name'),
   secretKey: text('secret_key').unique(),
   hashedPassword: text('hashed_password'),
   ipWhitelist: text('ip_address').array(),
@@ -36,6 +39,7 @@ export const users = pgTable('users', {
     .references(() => roles.id)
     .notNull(),
   createdBy: uuid('created_by').references((): AnyPgColumn => users.id), // nullable for default user, id of the user or api
+  deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

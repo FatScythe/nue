@@ -55,9 +55,7 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  Logger.warn(
-    `🚀 Csore Service is running on: http://localhost:${port}/api/v1`,
-  );
+  Logger.warn(`🚀 Core Service is running on: http://localhost:${port}/api/v1`);
 }
 
 bootstrap();

@@ -33,7 +33,9 @@ export const accountProducts = pgTable('account_products', {
   glAccountId: uuid('gl_account_id')
     .references(() => generalLedger.id)
     .notNull(),
-  interestRate: numeric('interest_rate', { precision: 5, scale: 2 }).notNull(),
+  interestRate: numeric('interest_rate', { precision: 5, scale: 2 })
+    .default('0.00')
+    .notNull(),
   supportedCurrencies: dbCurrencyEnum('supported_currencies')
     .array()
     .notNull()
@@ -43,6 +45,11 @@ export const accountProducts = pgTable('account_products', {
     .default(0n)
     .notNull(),
   createdBy: uuid('created_by'), // id of the user or api
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });

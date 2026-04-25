@@ -11,3 +11,4 @@ export * from './loan_schedule';
 export * from './savings_detail';
 export * from './role';
 export * from './transaction';
+export * from './account_lien';

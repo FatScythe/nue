@@ -29,9 +29,11 @@ const customerTierEnum = pgEnum(
 );
 
 export const customers = pgTable('customers', {
-  id: uuid('id').primaryKey(),
-  tenantId: uuid('tenant_id').references(() => businesses.id),
-  externalId: varchar('external_id', { length: 255 }).notNull(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id')
+    .notNull()
+    .references(() => businesses.id),
+  externalId: varchar('external_id', { length: 255 }),
   status: customerStatusEnum('status')
     .notNull()
     .default(CustomerStatus.PendingVerification),
@@ -39,9 +41,10 @@ export const customers = pgTable('customers', {
   type: customerTypeEnum('type').notNull(),
   firstName: text('first_name'),
   lastName: text('last_name'),
+  dateOfBirth: date('date_of_birth', { mode: 'string' }),
   emailAddress: text('email_address').notNull(),
   businessName: text('business_name'),
-  dateOfBirth: date('date_of_birth'), // or dateOfIncorporation
+  dateOfIncorporation: date('date_of_incorporation', { mode: 'string' }),
   phoneNumber: varchar('phone_number', { length: 40 }).notNull(),
   street: text('street').notNull(),
   city: text('city').notNull(),
@@ -60,6 +63,11 @@ export const customers = pgTable('customers', {
     .$type<CustomerLoopEntries>()
     .default({})
     .notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
