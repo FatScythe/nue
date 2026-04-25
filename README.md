@@ -79,3 +79,61 @@ pnpm run build
 # run the production build for the core service
 pnpm run start:prod
 ```
+
+Since you are using a custom wrapper (`db-migrate.mjs`) to handle the environment variables from your `_env` folder, your documentation needs to reflect how to call that script via `pnpm` while still utilizing the power of `dbmate`.
+
+Here is the continuation of your markdown guide:
+
+---
+
+### 6. Database Migrations (dbmate)
+
+We use `dbmate` for database schema management. Instead of calling `dbmate` directly, use the provided `pnpm` scripts which automatically load the correct environment variables (like `DATABASE_URL` and `DATABASE_NAME`) from your `_env/core.env` file.
+
+#### Available Migration Commands
+
+| Action         | Command                  | Description                                                     |
+| :------------- | :----------------------- | :-------------------------------------------------------------- |
+| **Create**     | `pnpm run db:new <name>` | Generates a new migration file in the `db/migrations` folder.   |
+| **Migrate Up** | `pnpm run db:up`         | Applies all pending migrations to the database.                 |
+| **Rollback**   | `pnpm run db:down`       | Reverts the last migration applied.                             |
+| **Status**     | `pnpm run db:status`     | Shows which migrations have been applied and which are pending. |
+
+#### Usage Examples
+
+- **To create a new table (e.g., account_liens):**
+
+  ```bash
+  pnpm run db:new create_account_liens_table
+  ```
+
+  _This creates a `.sql` file. Open it and add your `UP` and `DOWN` blocks._
+
+- **To apply changes to your local database:**
+
+  ```bash
+  pnpm run db:up
+  ```
+
+- **To fix a mistake by rolling back the last change:**
+  ```bash
+  pnpm run db:down
+  ```
+
+### 7. Migration Wrapper Logic
+
+The `db-migrate.mjs` script acts as a bridge. It performs the following logic to ensure the database connection is secure and accurate:
+
+1.  **Environment Loading:** It targets `./_env/core.env` specifically.
+2.  **URL Construction:** It intelligently merges the `DATABASE_URL` and `DATABASE_NAME` (handling trailing slashes) to create a `fullUrl`.
+3.  **Command Forwarding:** It uses `execSync` to pass your arguments (up, down, status) directly to the `dbmate` binary using the `-u` flag.
+
+---
+
+### 8. Troubleshooting Migrations
+
+If you encounter a `connection refused` error during migration:
+
+1. Ensure your PostgreSQL service is running.
+2. Verify that the `DATABASE_URL` in `_env/core.env` uses `127.0.0.1` instead of `localhost` if you are on Node 18+.
+3. Check that the database specified in `DATABASE_NAME` actually exists (dbmate will attempt to create it if it doesn't).
