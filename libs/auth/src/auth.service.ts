@@ -7,9 +7,14 @@ export class AuthService {
 
   async generateToken(
     payload: { sub: string; email: string } | { sub: string },
+    options?: {
+      expiresIn?: number;
+    },
   ) {
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtService.sign(payload, {
+        ...(options?.expiresIn && { expiresIn: options.expiresIn }),
+      }),
     };
   }
 
