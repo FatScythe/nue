@@ -88,7 +88,7 @@ Here is the continuation of your markdown guide:
 
 ### 6. Database Migrations (dbmate)
 
-We use `dbmate` for database schema management. Instead of calling `dbmate` directly, use the provided `pnpm` scripts which automatically load the correct environment variables (like `DATABASE_URL` and `DATABASE_NAME`) from your `_env/core.env` file.
+Use `dbmate` for database schema management. Instead of calling `dbmate` directly, use the provided `pnpm` scripts which automatically load the correct environment variables (like `DATABASE_URL` and `DATABASE_NAME`) from your `_env/core.env` file.
 
 #### Available Migration Commands
 
