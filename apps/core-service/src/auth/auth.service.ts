@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { ReqUser } from '../common/types';
 import { ApiException } from '../common/exception';
 import { ApiErrorCode } from '../common/enums';
 
@@ -9,7 +8,9 @@ import { AuthService as GAuthService } from '@auth/auth.service';
 import { REDIS_CLIENT } from '@database/redis.provider';
 
 import { Redis } from 'ioredis';
-import { configuration } from '../config';
+import { GetAccessRespDto } from './dto';
+import { plainToInstance } from 'class-transformer';
+import { CoreReqUser } from '@common/types';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
-  async getAccessToken(user: ReqUser) {
+  async getAccessToken(user: CoreReqUser): Promise<GetAccessRespDto> {
     const userId = user.id;
 
     if (!userId)
@@ -39,13 +40,14 @@ export class AuthService {
       if (cachedToken) {
         const ttl = await this.redis.ttl(cacheKey);
 
-        return {
+        return plainToInstance(GetAccessRespDto, {
           message: `token will expire in ${Math.ceil(ttl / 60)} minutes`,
           data: {
             accessToken: cachedToken,
             expiresIn: ttl > 0 ? ttl : expiresIn,
+            tokenType: 'Bearer',
           },
-        };
+        });
       }
     } catch (error) {
       this.logger.error({ message: 'Error accessing redis cache', error });
@@ -64,9 +66,13 @@ export class AuthService {
       this.logger.error({ message: 'Error setting redis cache', error });
     }
 
-    return {
+    return plainToInstance(GetAccessRespDto, {
       message: `token will expire in ${expiresIn / 60} minutes`,
-      data: { accessToken: access_token, expiresIn: expiresIn },
-    };
+      data: {
+        accessToken: access_token,
+        expiresIn: expiresIn,
+        tokenType: 'Bearer',
+      },
+    });
   }
 }

@@ -1,20 +1,23 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-
-import { Request } from 'express';
 
 import { and, eq, SQL } from 'drizzle-orm';
 
 import { IS_NON_TOKEN, IS_PUBLIC_KEY } from '../../common/decorator';
 import { ApiException } from '../../common/exception';
 import { ApiErrorCode } from '../../common/enums';
-import { ReqUser } from '../../common/types';
 
 import { AuthService } from '@auth';
 
 import { UserRepository } from '@database/repository';
 import { users } from '@database/schemas';
-import { UserStatus, UserType } from '@database/enums';
+import { Resources, UserStatus, UserType } from '@database/enums';
+import { CoreRequest } from '@common/interfaces';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -37,7 +40,7 @@ export class AuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<CoreRequest>();
 
     if (isNoToken) {
       return this.validateNonTokenRequest({
@@ -51,7 +54,7 @@ export class AuthGuard implements CanActivate {
   async validateNonTokenRequest({
     request,
   }: {
-    request: Request;
+    request: CoreRequest;
   }): Promise<boolean> {
     const key = request.headers['nue-sec-key'] as string;
 
@@ -60,6 +63,7 @@ export class AuthGuard implements CanActivate {
         ApiErrorCode.InvalidAuthKey,
         'invalid credentials format',
         { error_code: 'VNTR001' },
+        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -75,7 +79,7 @@ export class AuthGuard implements CanActivate {
   async validateTokenRequest({
     request,
   }: {
-    request: Request;
+    request: CoreRequest;
   }): Promise<boolean> {
     const authHeader = request.headers['authorization'];
     if (!authHeader?.startsWith('Bearer ')) {
@@ -83,6 +87,7 @@ export class AuthGuard implements CanActivate {
         ApiErrorCode.InvalidAuthKey,
         'invalid credentials',
         { error_code: 'VTR001' },
+        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -109,16 +114,16 @@ export class AuthGuard implements CanActivate {
     request,
     queryCondition,
   }: {
-    request: Request;
+    request: CoreRequest;
     queryCondition: SQL<unknown>;
   }): Promise<boolean> {
-    // Drizzle lookup
-    const user = await this.userRepo.findOneWithRole(queryCondition);
-
+    const user = await this.userRepo.findOneWithScope(queryCondition);
     if (!user) {
       throw new ApiException(
         ApiErrorCode.InvalidAuthKey,
         'invalid credentials',
+        { error_code: 'AVR001' },
+        HttpStatus.UNAUTHORIZED,
       );
     }
 
@@ -130,6 +135,8 @@ export class AuthGuard implements CanActivate {
         throw new ApiException(
           ApiErrorCode.AccessForbidden,
           `invalid credentials.`,
+          { error_code: 'AVR002' },
+          HttpStatus.FORBIDDEN,
         );
       }
 
@@ -141,11 +148,31 @@ export class AuthGuard implements CanActivate {
         throw new ApiException(
           ApiErrorCode.IpNotWhitelisted,
           `IP address ${incomingIp} is not authorized for this secret key.`,
+          { error_code: 'AVR003' },
         );
       }
     }
 
-    request['user'] = user as ReqUser;
+    if (!user.id || !user.tenantId) {
+      throw new ApiException(
+        ApiErrorCode.InternalServerError,
+        'User or Tenant context is missing',
+        { error_code: 'AVR004' },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+
+    const reqUser = {
+      id: user.id,
+      secretKey: user.secretKey ?? '',
+      whitelistedIps: user.whitelistedIps ?? [],
+      type: user.type as UserType,
+      scopes: (user.scopes || []) as Resources[],
+      tenantId: user.tenantId,
+    };
+
+    request['user'] = reqUser;
+
     return true;
   }
 }

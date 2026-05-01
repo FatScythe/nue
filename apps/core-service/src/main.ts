@@ -1,7 +1,8 @@
-import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory, Reflector } from '@nestjs/core';
 import { CoreServiceModule } from './core-service.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import {
+  ClassSerializerInterceptor,
   Logger,
   ValidationError,
   ValidationPipe,
@@ -31,6 +32,14 @@ async function bootstrap() {
     prefix: 'v',
     defaultVersion: '1',
   });
+
+  // mapping response to dto...
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector), {
+      // strategy: 'excludeAll' ensures ONLY fields with @Expose() are sent back.
+      strategy: 'excludeAll',
+    }),
+  );
 
   // validate dtos...
   app.useGlobalPipes(
