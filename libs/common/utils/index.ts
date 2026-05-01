@@ -17,6 +17,12 @@ export class MoneyTransformer {
   }
 }
 
+export const containsSpecialChars = (str) => {
+  const re = /[ `!@#$%^&*()+\=\[\]{};':"\\|,.<>\/?~]/;
+
+  return re.test(str);
+};
+
 export const randomNumberNano = (length = 11) => {
   const alphabet = '1234567890';
   const nanoid = customAlphabet(alphabet, length);
