@@ -4,7 +4,6 @@ import {
   numeric,
   pgEnum,
   pgTable,
-  text,
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
@@ -12,7 +11,7 @@ import { accounts } from './account';
 import { businesses } from './business';
 import { LoanRepaymentFrequency } from '@database/enums';
 
-const repaymentFrequencyEnum = pgEnum(
+export const repaymentFrequencyEnum = pgEnum(
   'repayment_frequency',
   Object.values(LoanRepaymentFrequency) as [string, ...string[]],
 );
@@ -20,10 +19,10 @@ const repaymentFrequencyEnum = pgEnum(
 export const loanDetails = pgTable('loan_details', {
   accountId: uuid('account_id')
     .primaryKey()
-    .references(() => accounts.id),
-  tenantId: uuid('tenant_id')
-    .primaryKey()
-    .references(() => businesses.id),
+    .references(() => accounts.id, { onDelete: 'restrict' }),
+  tenantId: uuid('tenant_id').references(() => businesses.id, {
+    onDelete: 'restrict',
+  }),
   principalAmount: bigint('principal_amount', { mode: 'bigint' }).notNull(),
   tenorMonths: integer('tenor_months').notNull(),
   repaymentFrequency: repaymentFrequencyEnum('repayment_frequency')

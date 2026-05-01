@@ -12,3 +12,24 @@ export enum AccountStatus {
   Closed = 'closed', // relationship terminated: account is inactive and cannot be reused
   Rejected = 'rejected', // onboarding failed: application was turned down during the pending stage
 }
+
+export enum AccountProducts {
+  Savings = 'savings',
+  Current = 'current',
+  FixedDeposit = 'fixed_deposit',
+  Loan = 'loan',
+}
+
+export enum AccountProductStatus {
+  Active = 'active',
+  Inactive = 'inactive',
+  Deprecated = 'deprecated',
+}
+
+export enum SavingsPoolStatus {
+  Active = 'active',
+  Locked = 'locked',
+  Matured = 'matured',
+  Closed = 'closed',
+  Suspended = 'suspended',
+}

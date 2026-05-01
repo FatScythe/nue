@@ -12,7 +12,7 @@ import { businesses } from './business';
 export const offices = pgTable('offices', {
   id: serial('id').primaryKey(),
   tenantId: uuid('tenant_id')
-    .references(() => businesses.id)
+    .references(() => businesses.id, { onDelete: 'restrict' })
     .notNull(),
   name: text('name').notNull(), // e.g., "Lagos Main Branch" or "Virtual Operations"
   code: text('code').notNull(), // e.g., "HQ-01"

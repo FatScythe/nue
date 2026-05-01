@@ -5,8 +5,11 @@ export enum Resources {
   Developer = 'developer',
   Customer = 'customer',
   Account = 'account',
+  Lien = 'lien',
   Product = 'product',
   Loan = 'loan',
   Ledger = 'ledger',
   Audit = 'audit',
+  Configuration = 'configuration',
+  Security = 'security',
 }

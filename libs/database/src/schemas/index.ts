@@ -12,3 +12,6 @@ export * from './savings_detail';
 export * from './role';
 export * from './transaction';
 export * from './account_lien';
+export * from './offices';
+export * from './savings_pool';
+export * from './utils';

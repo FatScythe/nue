@@ -6,11 +6,10 @@ import {
   pgEnum,
   bigint,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
 import { accounts, businesses, users } from './';
 import { LienStatus } from '@database/enums';
 
-const lienStatusEnum = pgEnum(
+export const lienStatusEnum = pgEnum(
   'lien_status',
   Object.values(LienStatus) as [string, ...string[]],
 );
@@ -26,7 +25,7 @@ export const accountLiens = pgTable('account_liens', {
   amount: bigint('amount', { mode: 'number' }).notNull(),
   reason: text('reason'),
   reference: text('reference').unique(),
-  status: lienStatusEnum('status').notNull().default(LienStatus.Active),
+  status: lienStatusEnum('status').notNull(),
   createdBy: uuid('created_by')
     .references(() => users.id)
     .notNull(),

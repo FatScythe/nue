@@ -1,5 +1,6 @@
 export enum LoanScheduleStatus {
   Scheduled = 'scheduled', // future payment...
+  PendingApproval = 'pending_approval', // maker makes a request for checker...
   Pending = 'pending', // due today or very soon
   Paid = 'paid', // fully paid
   PartiallyPaid = 'partially_paid', // paid some, but not all

@@ -12,7 +12,9 @@ export const businesses = pgTable('businesses', {
   name: text('name').notNull(),
   emailAddress: text('email_address').unique().notNull(),
   reference: text('short_name').unique().notNull(),
-  onboardedBy: uuid('created_by').references((): AnyPgColumn => users.id), // sys admin user...
+  onboardedBy: uuid('created_by').references((): AnyPgColumn => users.id, {
+    onDelete: 'set null',
+  }), // sys admin user...
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()
     .notNull(),

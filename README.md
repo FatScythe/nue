@@ -86,54 +86,74 @@ Here is the continuation of your markdown guide:
 
 ---
 
-### 6. Database Migrations (dbmate)
+### 6. Database Migrations (Drizzle Kit)
 
-Use `dbmate` for database schema management. Instead of calling `dbmate` directly, use the provided `pnpm` scripts which automatically load the correct environment variables (like `DATABASE_URL` and `DATABASE_NAME`) from your `_env/core.env` file.
+Use **Drizzle Kit** for database schema management. Instead of calling the CLI directly, use the provided `pnpm` scripts. These scripts automatically handle environment variable injection (like `DATABASE_URL` and/or `DATABASE_NAME`) from your `_env/core.env` file using the configuration defined in `drizzle.config.ts`.
 
 #### Available Migration Commands
 
-| Action         | Command                  | Description                                                     |
-| :------------- | :----------------------- | :-------------------------------------------------------------- |
-| **Create**     | `pnpm run db:new <name>` | Generates a new migration file in the `db/migrations` folder.   |
-| **Migrate Up** | `pnpm run db:up`         | Applies all pending migrations to the database.                 |
-| **Rollback**   | `pnpm run db:down`       | Reverts the last migration applied.                             |
-| **Status**     | `pnpm run db:status`     | Shows which migrations have been applied and which are pending. |
+| Action       | Command                              | Description                                                                             |
+| :----------- | :----------------------------------- | :-------------------------------------------------------------------------------------- |
+| **Generate** | `pnpm run db:generate --name <name>` | Compares your TS schema to the last snapshot and creates a named `.sql` migration file. |
+| **Migrate**  | `pnpm run db:migrate`                | Applies all pending `.sql` migrations to the local PostgreSQL database.                 |
+| **Studio**   | `pnpm run db:studio`                 | Opens a GUI in your browser to view and edit your database data.                        |
+| **Seed**     | `pnpm run db:seed`                   | Populates the database with initial required data (e.g., system roles, offices).        |
 
 #### Usage Examples
 
-- **To create a new table (e.g., account_liens):**
+- **To create a new migration (after changing your TypeScript schema):**
 
   ```bash
-  pnpm run db:new create_account_liens_table
+  pnpm run db:generate --name add_office_to_users
   ```
 
-  _This creates a `.sql` file. Open it and add your `UP` and `DOWN` blocks._
+  _This generates a versioned `.sql` file in `libs/database/migrations`. Review this file before applying._
 
-- **To apply changes to your local database:**
+- **To apply schema changes to your local database:**
 
   ```bash
-  pnpm run db:up
+  pnpm run db:migrate
   ```
 
-- **To fix a mistake by rolling back the last change:**
-  ```bash
-  pnpm run db:down
-  ```
+- **To push changes instantly (Development Only):**
+  _Use `drizzle-kit push` if you want to sync the DB without creating migration files (Note: this can be destructive)._
 
-### 7. Migration Wrapper Logic
+---
 
-The `db-migrate.mjs` script acts as a bridge. It performs the following logic to ensure the database connection is secure and accurate:
+### 7. Migration Logic & Workflow
 
-1.  **Environment Loading:** It targets `./_env/core.env` specifically.
-2.  **URL Construction:** It intelligently merges the `DATABASE_URL` and `DATABASE_NAME` (handling trailing slashes) to create a `fullUrl`.
-3.  **Command Forwarding:** It uses `execSync` to pass your arguments (up, down, status) directly to the `dbmate` binary using the `-u` flag.
+Drizzle Kit operates on a **Forward-Only** philosophy. Unlike `dbmate`, there is no explicit `db:down` command.
+
+1. **Schema-First:** Always update your TypeScript files in `libs/database/src/lib/schema/` first.
+2. **Type Safety:** The generator will verify that your foreign key references match (e.g., ensuring `office_id` is an `integer` if it references a `serial` primary key).
+3. **Environment Injection:** The toolkit reads the `core.env` file to establish the connection string: `postgresql://<user>:<pass>@localhost:5432/<db_name>`.
 
 ---
 
 ### 8. Troubleshooting Migrations
 
-If you encounter a `connection refused` error during migration:
+If you encounter an `ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL` or connection errors:
 
-1. Ensure your PostgreSQL service is running.
-2. Verify that the `DATABASE_URL` in `_env/core.env` uses `127.0.0.1` instead of `localhost` if you are on Node 18+.
-3. Check that the database specified in `DATABASE_NAME` actually exists (dbmate will attempt to create it if it doesn't).
+1. **Type Mismatch:** Ensure Primary Keys and Foreign Keys share the exact same data type (e.g., `UUID` to `UUID`, not `UUID` to `Integer`).
+2. **Null Violations:** If you `SET NOT NULL` on a column that already has data, the migration will fail. You must clear or update existing rows first.
+3. **Connection Refused:**
+   - Verify PostgreSQL is running on port `5432`.
+   - If using Node 18+, ensure your `DATABASE_URL` uses `127.0.0.1` instead of `localhost` to avoid IPv6 resolution issues.
+4. **Out of Sync:** If the migration state becomes corrupted during development, you can safely drop the `public` schema and re-run `db:migrate` to start fresh.
+
+---
+
+### Root package.json Scripts
+
+```json
+"scripts": {
+  "db:generate": "pnpm --filter ./libs/database run db:generate",
+  "db:migrate": "pnpm --filter ./libs/database run db:migrate",
+  "db:studio": "pnpm --filter ./libs/database run db:studio",
+  "db:seed": "pnpm --filter @lib/database run db:seed"
+}
+```
+
+```
+
+```

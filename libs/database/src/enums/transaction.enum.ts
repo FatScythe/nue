@@ -14,4 +14,5 @@ export enum TransactionStatus {
   Pending = 'pending',
   Processing = 'processing',
   Reversed = 'reversed',
+  PendingApproval = 'pending_approval',
 }

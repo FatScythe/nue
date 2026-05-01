@@ -3,6 +3,12 @@ export enum CustomerType {
   Corporate = 'corporate',
 }
 
+export enum CustomerGender {
+  Male = 'male',
+  Female = 'female',
+  Nil = 'n/a',
+}
+
 export enum CustomerStatus {
   PendingVerification = 'pending_verification', // customer has signed up but hasn't uploaded docs or passed checks...
   UnderReview = 'under_review', // documents uploaded, waiting for back-office/worker-service review

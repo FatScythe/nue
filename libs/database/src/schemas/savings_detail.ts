@@ -5,8 +5,10 @@ import { businesses } from './business';
 export const savingsDetails = pgTable('savings_details', {
   accountId: uuid('account_id')
     .primaryKey()
-    .references(() => accounts.id),
-  tenantId: uuid('tenant_id').references(() => businesses.id),
+    .references(() => accounts.id, { onDelete: 'restrict' }),
+  tenantId: uuid('tenant_id').references(() => businesses.id, {
+    onDelete: 'restrict',
+  }),
   targetAmount: bigint('target_amount', { mode: 'bigint' }).notNull(),
   targetDate: timestamp('target_date', { withTimezone: true }),
   withdrawalCountThisMonth: integer('withdrawal_count').default(0).notNull(),
