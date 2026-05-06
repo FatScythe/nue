@@ -1,8 +1,8 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 import { GetUser, NoToken } from '../common/decorator';
-import type { ReqUser } from '../common/types';
 import { AuthService } from './auth.service';
 import { GetAccessRespDto } from './dto';
+import type { CoreReqUser } from '@lib/common/src/types';
 
 @Controller('auth')
 export class AuthController {
@@ -11,7 +11,7 @@ export class AuthController {
   @NoToken()
   @Get('access-token')
   @HttpCode(HttpStatus.OK)
-  getAccessToken(@GetUser() user: ReqUser): Promise<GetAccessRespDto> {
+  getAccessToken(@GetUser() user: CoreReqUser): Promise<GetAccessRespDto> {
     return this.authService.getAccessToken(user);
   }
 }

@@ -6,4 +6,5 @@ export enum ApiErrorCode {
   BadRequest = 'BAD_REQUEST',
   IpNotWhitelisted = 'IP_NOT_WHITELISTED',
   AccessForbidden = 'ACCESS_FORBIDDEN',
+  Conflict = 'CONFLICT',
 }

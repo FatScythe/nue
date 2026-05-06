@@ -40,7 +40,7 @@ export class ScopeGuard implements CanActivate {
     if (!canPass) {
       throw new ApiException(
         ApiErrorCode.AccessForbidden,
-        'The provided credentials do not have the required scopes for this resource.',
+        'the provided credentials do not have the required scopes for this resource.',
         {
           error_code: 'SCG001',
         },

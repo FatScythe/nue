@@ -17,7 +17,7 @@ import { AuthService } from '@auth';
 import { UserRepository } from '@database/repository';
 import { users } from '@database/schemas';
 import { Resources, UserStatus, UserType } from '@database/enums';
-import { CoreRequest } from '@common/interfaces';
+import { CoreRequest } from '@lib/common/src/interfaces';
 
 @Injectable()
 export class AuthGuard implements CanActivate {

@@ -7,6 +7,7 @@ import {
 import { Observable } from 'rxjs';
 import { isObject, isString, formatReponse } from '@utils';
 import { map } from 'rxjs/operators';
+import { instanceToPlain } from 'class-transformer';
 
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor {
@@ -17,23 +18,34 @@ export class TransformInterceptor<T> implements NestInterceptor {
     return next.handle().pipe(
       map((response) => {
         let message = 'request successful';
-        let data: any = null;
+        let rawData: any = null;
+        let meta: any = null;
 
         if (isObject(response)) {
-          const { message: customMsg, data: customData, ...extra } = response;
+          const target = response.data ?? response;
+
+          rawData = instanceToPlain(target, {
+            strategy: 'excludeAll',
+            excludeExtraneousValues: true,
+            enableImplicitConversion: true,
+          });
+
+          const { message: customMsg, meta: customMeta, ...extra } = response;
+
           message = customMsg ?? message;
-          data = customData ?? (Object.keys(extra).length ? extra : null);
+          meta = customMeta || {};
         } else if (isString(response)) {
-          data = response;
+          rawData = response;
         }
 
-        const formattedData = formatReponse(data);
+        const formattedData = formatReponse(rawData);
 
         return {
           success: true,
           statusCode: responseObj.statusCode,
           message,
           data: formattedData,
+          meta,
         };
       }),
     );

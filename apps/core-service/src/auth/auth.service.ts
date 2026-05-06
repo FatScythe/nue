@@ -10,7 +10,7 @@ import { REDIS_CLIENT } from '@database/redis.provider';
 import { Redis } from 'ioredis';
 import { GetAccessRespDto } from './dto';
 import { plainToInstance } from 'class-transformer';
-import { CoreReqUser } from '@common/types';
+import { CoreReqUser } from '@lib/common/src/types';
 
 @Injectable()
 export class AuthService {

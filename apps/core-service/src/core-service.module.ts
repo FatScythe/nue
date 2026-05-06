@@ -3,6 +3,7 @@ import {
   Module,
   NestModule,
   RequestMethod,
+  Scope,
 } from '@nestjs/common';
 
 import { CoreServiceController } from './core-service.controller';
@@ -12,11 +13,27 @@ import { RequestLoggerMiddleware } from './common/middleware';
 
 import { AuthModule as GAuthModule } from '@auth';
 import { CoreAuthModule } from './auth/auth.module';
+import { CustomerModule } from './customer/customer.module';
+import { AccountModule } from './account/account.module';
+import { Calculator } from '@common';
 
 @Module({
-  imports: [CConfigModule, GAuthModule, CoreAuthModule],
+  imports: [
+    CConfigModule,
+    GAuthModule,
+    CoreAuthModule,
+    CustomerModule,
+    AccountModule,
+  ],
   controllers: [CoreServiceController],
-  providers: [CoreServiceService],
+  providers: [
+    CoreServiceService,
+    {
+      provide: Calculator,
+      useClass: Calculator,
+      scope: Scope.TRANSIENT,
+    },
+  ],
 })
 export class CoreServiceModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

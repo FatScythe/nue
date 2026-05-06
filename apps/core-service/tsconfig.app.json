@@ -2,8 +2,12 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "declaration": false,
-    "outDir": "../../dist/apps/core-service"
+    "outDir": "../../dist/apps/core-service",
+    "noEmit": false
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*.ts",               // The app's own code
+    "../../libs/**/*.ts"         // Explicitly allow the app to see the library source
+  ],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

@@ -24,6 +24,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log({ exception });
+    }
+
     let httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
     let errorCode: string = ApiErrorCode.InternalServerError;
     let message = 'An unexpected error occurred';
