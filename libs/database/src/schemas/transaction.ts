@@ -27,7 +27,7 @@ export const transactionStatusEnum = pgEnum(
 );
 
 export const transactions = pgTable('transactions', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   tenantId: uuid('tenant_id')
     .notNull()
     .references(() => businesses.id, {

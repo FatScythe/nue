@@ -19,7 +19,7 @@ export const poolStatusEnum = pgEnum(
 );
 
 export const savingsPools = pgTable('savings_pools', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   tenantId: uuid('tenant_id')
     .references(() => businesses.id, { onDelete: 'restrict' })
     .notNull(),

@@ -29,7 +29,7 @@ CREATE TABLE "businesses" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"tenant_id" uuid NOT NULL,
+	"tenant_id" uuid,
 	"type" "user_type" NOT NULL,
 	"status" "user_status" NOT NULL,
 	"email_address" text,
@@ -53,7 +53,7 @@ CREATE TABLE "users" (
 );
 --> statement-breakpoint
 CREATE TABLE "general_ledgers" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"code" text NOT NULL,
 	"name" text NOT NULL,
@@ -66,8 +66,9 @@ CREATE TABLE "general_ledgers" (
 );
 --> statement-breakpoint
 CREATE TABLE "customers" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"tenant_id" uuid NOT NULL,
+	"office_id" integer NOT NULL,
 	"external_id" varchar(255),
 	"status" "customer_status" DEFAULT 'pending_verification' NOT NULL,
 	"tier" "customer_tier" DEFAULT '0' NOT NULL,
@@ -95,7 +96,7 @@ CREATE TABLE "customers" (
 );
 --> statement-breakpoint
 CREATE TABLE "accounts" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"customer_id" uuid NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"product_id" integer NOT NULL,
@@ -110,7 +111,7 @@ CREATE TABLE "accounts" (
 	"book_balance" bigint DEFAULT 0,
 	"created_by" uuid,
 	"approved_by" uuid,
-	"office_id" integer,
+	"office_id" integer NOT NULL,
 	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -152,7 +153,7 @@ CREATE TABLE "fixed_deposit_details" (
 );
 --> statement-breakpoint
 CREATE TABLE "journal_entries" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"transaction_id" uuid,
 	"gl_account_id" uuid NOT NULL,
@@ -179,7 +180,7 @@ CREATE TABLE "loan_details" (
 );
 --> statement-breakpoint
 CREATE TABLE "loan_schedules" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"account_id" uuid NOT NULL,
 	"tenant_id" uuid,
 	"installment_number" integer NOT NULL,
@@ -223,7 +224,7 @@ CREATE TABLE "roles" (
 );
 --> statement-breakpoint
 CREATE TABLE "transactions" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"sender_account_id" uuid,
 	"receiver_account_id" uuid,
@@ -245,7 +246,7 @@ CREATE TABLE "transactions" (
 );
 --> statement-breakpoint
 CREATE TABLE "account_liens" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"account_id" uuid NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"amount" bigint NOT NULL,
@@ -274,7 +275,7 @@ CREATE TABLE "offices" (
 );
 --> statement-breakpoint
 CREATE TABLE "savings_pools" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY NOT NULL,
 	"tenant_id" uuid NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
@@ -299,6 +300,7 @@ ALTER TABLE "general_ledgers" ADD CONSTRAINT "general_ledgers_tenant_id_business
 ALTER TABLE "general_ledgers" ADD CONSTRAINT "general_ledgers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "general_ledgers" ADD CONSTRAINT "general_ledgers_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customers" ADD CONSTRAINT "customers_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "customers" ADD CONSTRAINT "customers_office_id_offices_id_fk" FOREIGN KEY ("office_id") REFERENCES "public"."offices"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customers" ADD CONSTRAINT "customers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint

@@ -30,11 +30,9 @@ export const userApiScopeEnum = pgEnum(
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  tenantId: uuid('tenant_id')
-    .notNull()
-    .references(() => businesses.id, {
-      onDelete: 'restrict',
-    }),
+  tenantId: uuid('tenant_id').references(() => businesses.id, {
+    onDelete: 'restrict',
+  }), // nullable for sys admin...
   type: userTypeEnum('type').notNull(),
   status: userStatusEnum('status').notNull(),
   emailAddress: text('email_address'),

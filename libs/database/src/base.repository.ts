@@ -5,7 +5,7 @@ import * as schema from '@database/schemas';
 import { DATABASE_CONNECTION } from '@database/drizzle.provider';
 import { DatabaseClient, DBTransaction } from '@database/types';
 import { PgTable } from 'drizzle-orm/pg-core';
-import { SQL } from 'drizzle-orm';
+import { sql, SQL } from 'drizzle-orm';
 
 export abstract class BaseRepository<TTable extends PgTable> {
   constructor(
@@ -21,11 +21,14 @@ export abstract class BaseRepository<TTable extends PgTable> {
   async create(
     data: TTable['_']['inferInsert'],
     tx?: DBTransaction,
-  ): Promise<TTable['_']['inferSelect']> {
+  ): Promise<TTable['_']['inferSelect'] | null> {
     const client = this.getClient(tx);
     const transformData = await this.transformAndValidate(data);
 
-    const result = await client.insert(this.table).values(transformData);
+    const result = await client
+      .insert(this.table)
+      .values(transformData)
+      .returning();
 
     return result[0] || null;
   }
@@ -120,6 +123,18 @@ export abstract class BaseRepository<TTable extends PgTable> {
     const client = this.getClient(tx);
     const [result] = await client.delete(this.table).where(where).returning();
     return result;
+  }
+
+  async exists(where: SQL | undefined, tx?: DBTransaction): Promise<boolean> {
+    const client = this.getClient(tx);
+
+    const result = await client
+      .select({ dummy: sql`1` })
+      .from(this.table as any)
+      .where(where)
+      .limit(1);
+
+    return result.length > 0;
   }
 
   protected getClient(tx?: DBTransaction): DatabaseClient {

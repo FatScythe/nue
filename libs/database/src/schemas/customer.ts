@@ -1,4 +1,5 @@
 import {
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -17,6 +18,9 @@ import {
   CustomerGender,
 } from '@database/enums';
 import { CustomerLoopEntries } from '@database/types';
+import { offices } from './offices';
+import { sql } from 'drizzle-orm';
+import { uuidv7 } from 'uuidv7';
 
 export const customerTypeEnum = pgEnum(
   'customer_type',
@@ -39,10 +43,15 @@ export const customerTierEnum = pgEnum(
 );
 
 export const customers = pgTable('customers', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   tenantId: uuid('tenant_id')
     .notNull()
     .references(() => businesses.id, { onDelete: 'restrict' }),
+  officeId: integer('office_id')
+    .references(() => offices.id, {
+      onDelete: 'restrict',
+    })
+    .notNull(),
   externalId: varchar('external_id', { length: 255 }).unique(),
   status: customerStatusEnum('status')
     .notNull()

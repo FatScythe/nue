@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schemas';
 import * as dotenv from 'dotenv';
-import { v4 as uuidv4 } from 'uuid';
+import { uuidv7 } from 'uuidv7';
 
 dotenv.config({ path: '../../_env/core.env' });
 
@@ -56,7 +56,7 @@ async function seed() {
           firstName: 'Core',
           lastName: 'Engine',
           emailAddress: 'api@nuecore.com',
-          secretKey: `nsk_test_1234567890`,
+          secretKey: `nsk_live_7a2b9c51e3d84f026m9q1r4s8v0w`,
           scopes: [
             'customer',
             'account',
@@ -74,6 +74,7 @@ async function seed() {
       const [assetLedger] = await tx
         .insert(schema.generalLedger)
         .values({
+          id: uuidv7(),
           tenantId: business.id,
           code: '1000-01',
           name: 'Main Cash Vault',
@@ -85,6 +86,7 @@ async function seed() {
       const [savingsLiabilityLedger] = await tx
         .insert(schema.generalLedger)
         .values({
+          id: uuidv7(),
           tenantId: business.id,
           code: '2000-01',
           name: 'Customer Savings Control Account',

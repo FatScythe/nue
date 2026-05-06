@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
+    "module": "ESNext",                 // Modern standard for bundlers
+    "moduleResolution": "bundler",      // The replacement for "node" (node10)
+    "target": "ES2023",
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": false, // Set to true only if noEmit is true
+    "resolvePackageJsonExports": true,   // Now valid with "bundler"
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -11,7 +14,6 @@
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "strictPropertyInitialization": false,
-    "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
     "incremental": true,
@@ -19,18 +21,16 @@
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-   "paths": {
+    "paths": {
       "@app/*": ["./apps/*"],
-      "@auth": ["././libs/auth/src"], 
+      "@auth": ["./libs/auth/src/index"], 
       "@auth/*": ["./libs/auth/src/*"],
-      "@database": ["./libs/database/src"],
+      "@database": ["./libs/database/src/index"],
       "@database/*": ["./libs/database/src/*"],
-      "@common/*": ["./libs/common/*"],
-      "@utils": ["./libs/common/utils"],
-      "@utils/*": ["./libs/common/utils/*"]
-   }
-  },
-  
+      "@common": ["./libs/common/src/index"],
+      "@common/*": ["./libs/common/src/*"],
+      "@utils": ["./libs/common/src/utils/index"],
+      "@utils/*": ["./libs/common/src/utils/*"]
+    }
+  }
 }

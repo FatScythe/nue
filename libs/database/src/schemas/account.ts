@@ -26,7 +26,7 @@ export const accountStatusEnum = pgEnum(
 );
 
 export const accounts = pgTable('accounts', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   customerId: uuid('customer_id')
     .notNull()
     .references(() => customers.id, { onDelete: 'restrict' }),
@@ -53,9 +53,11 @@ export const accounts = pgTable('accounts', {
   approvedBy: uuid('approved_by').references(() => users.id, {
     onDelete: 'restrict',
   }), // id of the user or api
-  officeId: integer('office_id').references(() => offices.id, {
-    onDelete: 'restrict',
-  }),
+  officeId: integer('office_id')
+    .references(() => offices.id, {
+      onDelete: 'restrict',
+    })
+    .notNull(),
   metadata: jsonb('metadata').$type<AccountLoopEntries>().default({}).notNull(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true })

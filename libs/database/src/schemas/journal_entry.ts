@@ -8,7 +8,7 @@ import { sql } from 'drizzle-orm';
 import { offices } from './offices';
 
 export const journalEntries = pgTable('journal_entries', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   tenantId: uuid('tenant_id')
     .references(() => businesses.id)
     .notNull(),

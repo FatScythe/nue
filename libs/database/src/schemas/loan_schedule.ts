@@ -19,7 +19,7 @@ export const loanScheduleStatusEnum = pgEnum(
 );
 
 export const loanSchedules = pgTable('loan_schedules', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   accountId: uuid('account_id')
     .references(() => accounts.id, { onDelete: 'restrict' })
     .notNull(),

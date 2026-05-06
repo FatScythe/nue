@@ -15,7 +15,7 @@ export const lienStatusEnum = pgEnum(
 );
 
 export const accountLiens = pgTable('account_liens', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   accountId: uuid('account_id')
     .notNull()
     .references(() => accounts.id),

@@ -6,7 +6,7 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "tsConfigPath": "apps/core-service/tsconfig.app.json"
+    "tsConfigPath": "tsconfig.json"
   },
   "projects": {
     "core-service": {
@@ -15,7 +15,16 @@
       "entryFile": "main",
       "sourceRoot": "apps/core-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/core-service/tsconfig.app.json"
+        "webpack": true,
+        "webpackConfigPath": "webpack.config.js",
+        "tsConfigPath": "apps/core-service/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "../../_env/core.env",
+            "outDir": "dist/apps/core-service",
+            "watchMode": true
+          }
+        ]
       }
     },
     "portal-service": {
@@ -24,7 +33,16 @@
       "entryFile": "main",
       "sourceRoot": "apps/portal-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/portal-service/tsconfig.app.json"
+        "webpack": true,
+        "webpackConfigPath": "webpack.config.js",
+        "tsConfigPath": "apps/portal-service/tsconfig.app.json",
+        "assets": [
+          {
+            "include": "../../_env/portal.env",
+            "outDir": "dist/apps/portal-service",
+            "watchMode": true
+          }
+        ]
       }
     },
     "worker-service": {
@@ -33,6 +51,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/worker-service/src",
       "compilerOptions": {
+        "webpack": true,
+        "webpackConfigPath": "webpack.config.js",
         "tsConfigPath": "apps/worker-service/tsconfig.app.json"
       }
     },
@@ -43,6 +63,24 @@
       "sourceRoot": "libs/database/src",
       "compilerOptions": {
         "tsConfigPath": "libs/database/tsconfig.lib.json"
+      }
+    },
+    "auth": {
+      "type": "library",
+      "root": "libs/auth",
+      "entryFile": "index",
+      "sourceRoot": "libs/auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/auth/tsconfig.lib.json"
+      }
+    },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
       }
     }
   }

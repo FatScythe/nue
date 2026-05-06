@@ -6,6 +6,7 @@ import { BaseRepository } from '@database/base.repository';
 import { customers } from '@database/schemas';
 import { DATABASE_CONNECTION } from '@database/drizzle.provider';
 import { CustomerStatus, CustomerType } from '@database/enums';
+import { uuidv7 } from 'uuidv7';
 
 @Injectable()
 export class CustomerRepository extends BaseRepository<typeof customers> {
@@ -75,7 +76,7 @@ export class CustomerRepository extends BaseRepository<typeof customers> {
 
     return {
       ...data,
-
+      id: uuidv7(),
       ...(firstName && { firstName: firstName.toUpperCase().trim() }),
       ...(lastName && { lastName: lastName.toUpperCase().trim() }),
       ...(data.middleName && {

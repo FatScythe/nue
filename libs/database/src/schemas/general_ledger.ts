@@ -3,7 +3,7 @@ import { businesses } from './business';
 import { users } from './user';
 
 export const generalLedger = pgTable('general_ledgers', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: uuid('id').primaryKey(),
   tenantId: uuid('tenant_id')
     .notNull()
     .references(() => businesses.id, { onDelete: 'restrict' }),
