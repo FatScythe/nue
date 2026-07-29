@@ -1,10 +1,11 @@
-import { Resources, UserType } from '@database/enums';
+import { UserType } from '@database/drizzle/enums';
+import { ApiScope } from '@database/drizzle/types';
 
 export type CoreReqUser = {
   id: string;
   secretKey: string | null;
   whitelistedIps: string[] | null;
   type: UserType;
-  scopes: Resources[] | null;
+  scopes: ApiScope[] | null;
   tenantId: string | null;
 };
