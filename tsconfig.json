@@ -23,8 +23,6 @@
     "noImplicitAny": false,
     "paths": {
       "@app/*": ["./apps/*"],
-      "@auth": ["./libs/auth/src/index"], 
-      "@auth/*": ["./libs/auth/src/*"],
       "@database": ["./libs/database/src/index"],
       "@database/*": ["./libs/database/src/*"],
       "@common": ["./libs/common/src/index"],
