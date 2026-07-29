@@ -1,6 +1,6 @@
 import { SetMetadata } from '@nestjs/common';
-import { Resources } from '@database/enums';
-import { Permission } from '@database/types';
+import { Resources } from '@database/drizzle/enums';
+import { Permission } from '@database/drizzle/types';
 
 export const PERMISSION_CHECK_KEY = 'permission_check';
 

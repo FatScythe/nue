@@ -1,24 +1,22 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+
+// libs...
+import { plainToInstance } from 'class-transformer';
+import { CoreReqUser } from '@common';
+import { RedisService } from '@database';
 
 import { ApiException } from '../common/exception';
 import { ApiErrorCode } from '../common/enums';
-
-// workspace services
-import { AuthService as GAuthService } from '@auth/auth.service';
-import { REDIS_CLIENT } from '@database/redis.provider';
-
-import { Redis } from 'ioredis';
 import { GetAccessRespDto } from './dto';
-import { plainToInstance } from 'class-transformer';
-import { CoreReqUser } from '@lib/common/src/types';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly globalAuthService: GAuthService,
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly jwtService: JwtService,
+    private readonly redisService: RedisService,
   ) {}
 
   async getAccessToken(user: CoreReqUser): Promise<GetAccessRespDto> {
@@ -35,10 +33,10 @@ export class AuthService {
     const cacheKey = `accesstoken_${user.id}`;
 
     try {
-      const cachedToken = await this.redis.get(cacheKey);
+      const cachedToken = await this.redisService.get(cacheKey);
 
       if (cachedToken) {
-        const ttl = await this.redis.ttl(cacheKey);
+        const ttl = await this.redisService.getTTL(cacheKey);
 
         return plainToInstance(GetAccessRespDto, {
           message: `token will expire in ${Math.ceil(ttl / 60)} minutes`,
@@ -53,7 +51,7 @@ export class AuthService {
       this.logger.error({ message: 'Error accessing redis cache', error });
     }
 
-    const { access_token } = await this.globalAuthService.generateToken(
+    const { access_token } = await this.generateToken(
       {
         sub: userId,
       },
@@ -61,7 +59,7 @@ export class AuthService {
     );
 
     try {
-      await this.redis.setex(cacheKey, expiresIn, access_token);
+      await this.redisService.setEx(cacheKey, expiresIn, access_token);
     } catch (error) {
       this.logger.error({ message: 'Error setting redis cache', error });
     }
@@ -74,5 +72,26 @@ export class AuthService {
         tokenType: 'Bearer',
       },
     });
+  }
+
+  async generateToken(
+    payload: { sub: string; email: string } | { sub: string },
+    options?: {
+      expiresIn?: number;
+    },
+  ) {
+    return {
+      access_token: this.jwtService.sign(payload, {
+        ...(options?.expiresIn && { expiresIn: options.expiresIn }),
+      }),
+    };
+  }
+
+  async validateToken(token: string) {
+    try {
+      return this.jwtService.verify(token);
+    } catch (error) {
+      return null;
+    }
   }
 }

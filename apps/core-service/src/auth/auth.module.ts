@@ -1,16 +1,29 @@
-import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
+
+// libs...
+import { DatabaseModule } from '@database';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { AuthGuard } from './guard';
-
-import { DatabaseModule } from '@database';
-import { AuthModule } from '@auth';
-import { ScopeGuard } from './guard/scope.guard';
+import { AuthGuard, ScopeGuard } from './guard';
 
 @Module({
-  imports: [DatabaseModule, AuthModule],
+  imports: [
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService): Promise<JwtModuleOptions> => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: (config.get<string>('JWT_EXPIRY') ?? '5m') as any,
+        },
+      }),
+    }),
+    DatabaseModule,
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,
@@ -23,4 +36,4 @@ import { ScopeGuard } from './guard/scope.guard';
   ],
   exports: [AuthService],
 })
-export class CoreAuthModule {}
+export class AuthModule {}

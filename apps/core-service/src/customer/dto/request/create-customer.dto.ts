@@ -1,5 +1,9 @@
 import { IsValidDate, IsValidReference } from '@lib/common/src/validators';
-import { CustomerGender, CustomerTier, CustomerType } from '@database/enums';
+import {
+  CustomerGender,
+  CustomerTier,
+  CustomerType,
+} from '@database/drizzle/enums';
 import {
   IsBoolean,
   IsEmail,

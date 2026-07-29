@@ -1,7 +1,9 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+// libs...
+import { CoreRequest } from '@common';
+
 import { ApiException } from '../exception';
 import { ApiErrorCode } from '../enums';
-import { CoreRequest } from '@lib/common/src/interfaces';
 
 export const GetUser = createParamDecorator(
   (data: string | undefined, ctx: ExecutionContext) => {

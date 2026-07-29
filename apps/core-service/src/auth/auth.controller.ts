@@ -1,8 +1,11 @@
 import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+
+// libs...
+import type { CoreReqUser } from '@common';
+
 import { GetUser, NoToken } from '../common/decorator';
 import { AuthService } from './auth.service';
 import { GetAccessRespDto } from './dto';
-import type { CoreReqUser } from '@lib/common/src/types';
 
 @Controller('auth')
 export class AuthController {

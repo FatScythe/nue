@@ -7,6 +7,10 @@ class RequiredEnvironmentVariables {
   @IsNotEmpty()
   NODE_ENV: Environment;
 
+  @IsNotEmpty()
+  @IsString()
+  APP_NAME: string;
+
   // @IsNumber()
   @IsNotEmpty()
   PORT: number;

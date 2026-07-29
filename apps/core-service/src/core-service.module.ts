@@ -6,24 +6,27 @@ import {
   Scope,
 } from '@nestjs/common';
 
+// libs...
+import { Calculator } from '@common';
+import { RedisModule } from '@database';
+
 import { CoreServiceController } from './core-service.controller';
 import { CoreServiceService } from './core-service.service';
-import { CConfigModule } from './config/config.module';
 import { RequestLoggerMiddleware } from './common/middleware';
 
-import { AuthModule as GAuthModule } from '@auth';
-import { CoreAuthModule } from './auth/auth.module';
+// modules
+import { AuthModule } from './auth/auth.module';
 import { CustomerModule } from './customer/customer.module';
 import { AccountModule } from './account/account.module';
-import { Calculator } from '@common';
+import { CConfigModule } from './config/config.module';
 
 @Module({
   imports: [
     CConfigModule,
-    GAuthModule,
-    CoreAuthModule,
+    AuthModule,
     CustomerModule,
     AccountModule,
+    RedisModule,
   ],
   controllers: [CoreServiceController],
   providers: [

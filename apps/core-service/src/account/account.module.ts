@@ -1,6 +1,9 @@
 import { Module, Scope } from '@nestjs/common';
+
 import { AccountService } from './account.service';
 import { AccountController } from './account.controller';
+
+//libs...
 import { DatabaseModule } from '@database';
 import { Calculator } from '@common';
 

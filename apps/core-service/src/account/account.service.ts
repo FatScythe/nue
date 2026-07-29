@@ -1,24 +1,30 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { CreateSavingsAccountDto, CreateSavingsAcctRespDto } from './dto';
-import { DBTransaction } from '@database/types';
-import { AccountRepository } from '@database/repository';
-import {
-  AccountProducts,
-  AccountProductStatus,
-  AccountStatus,
-  CustomerStatus,
-  CustomerType,
-} from '@database/enums';
-import moment from 'moment';
-import type { CoreReqUser } from '@lib/common/src/types';
-import { DATABASE_CONNECTION } from '@database/drizzle.provider';
-import * as schema from '@database/schemas';
+
+// ext-libs...
+import { plainToInstance } from 'class-transformer';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, count, eq } from 'drizzle-orm';
+import moment from 'moment';
+
+// libs...
+import {
+  DATABASE_CONNECTION,
+  // AccountProducts,
+  // AccountProductStatus,
+  AccountStatus,
+  AccountType,
+  CustomerStatus,
+  CustomerType,
+  AccountRepository,
+  DBTransaction,
+} from '@database';
+import * as schema from '@database/drizzle/schemas';
+import { Calculator } from '@common';
+
+import type { CoreReqUser } from '@lib/common/src/types';
 import { ApiException } from '../common/exception';
 import { ApiErrorCode } from '../common/enums';
-import { plainToInstance } from 'class-transformer';
-import { Calculator } from '@common';
+import { CreateSavingsAccountDto, CreateSavingsAcctRespDto } from './dto';
 
 @Injectable()
 export class AccountService {
@@ -64,6 +70,7 @@ export class AccountService {
       );
     }
 
+    /*
     // verify account product...
     const product = await dbClient.query.accountProducts.findFirst({
       where: and(
@@ -78,6 +85,7 @@ export class AccountService {
         error_code: 'CSA003',
       });
     }
+    */
 
     // resolve effective data...
     const effectiveOfficeId = customer.officeId;
@@ -91,11 +99,12 @@ export class AccountService {
     const result = await this.createAccountRecord({
       tenantId: user.tenantId!,
       customerId: dto.customerId,
-      productId: dto.productId,
+      // productId: dto.productId, // Product feature temporarily bypassed
+      type: AccountType.Savings,
       accountName: effectiveAccountName,
       officeId: effectiveOfficeId,
       userId: user.id,
-      productType: AccountProducts.Savings,
+      // productType: AccountProducts.Savings,
       status: dto.activate ? AccountStatus.Active : AccountStatus.Pending,
       createdAt: dto.createdDate ? moment(dto.createdDate).toDate() : undefined,
       openingBalance: dto.openingBalance,
@@ -115,11 +124,12 @@ export class AccountService {
     data: {
       tenantId: string;
       customerId: string;
-      productId: number;
+      // productId?: number;
+      type?: AccountType;
       accountName: string;
       officeId: number;
       userId: string;
-      productType: AccountProducts;
+      // productType?: AccountProducts;
       status?: AccountStatus;
       createdAt?: Date;
       externalId?: string;
@@ -141,9 +151,9 @@ export class AccountService {
     // insert into db via repository layer...
     const account = await this.accountRepo.create(
       {
-        id: '', // repo generates uuidv7
         tenantId: data.tenantId,
-        productId: data.productId,
+        // productId: data.productId,
+        type: data.type || AccountType.Savings,
         customerId: data.customerId,
         accountName: data.accountName,
         accountNumber,

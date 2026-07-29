@@ -1,24 +1,29 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { CreateCustomerDto, CreateCustomerRespDto } from './dto';
-import { CustomerRepository } from '@database/repository';
+
+import { plainToInstance } from 'class-transformer';
+import { and, eq } from 'drizzle-orm';
+import * as schema from '@database/drizzle/schemas';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
+
 import {
-  AccountProducts,
-  AccountProductStatus,
+  // AccountProducts,
+  // AccountProductStatus,
   AccountStatus,
+  AccountType,
   CustomerGender,
   CustomerStatus,
   CustomerType,
-} from '@database/enums';
-import moment from 'moment';
-import { CoreReqUser } from '@lib/common/src/types';
-import { AccountService } from '../account/account.service';
-import { DATABASE_CONNECTION } from '@database/drizzle.provider';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as schema from '@database/schemas';
-import { and, eq } from 'drizzle-orm';
+  CustomerRepository,
+} from '@database';
+import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
+import { CoreReqUser } from '@common';
+
 import { ApiException } from '../common/exception';
 import { ApiErrorCode } from '../common/enums';
-import { plainToInstance } from 'class-transformer';
+
+import { CreateCustomerDto, CreateCustomerRespDto } from './dto';
+import { AccountService } from '../account/account.service';
 
 @Injectable()
 export class CustomerService {
@@ -43,6 +48,7 @@ export class CustomerService {
       columns: { id: true },
     });
 
+    /*
     const productCheck = dto.createSavingsAccount
       ? dbClient.query.accountProducts.findFirst({
           where: and(
@@ -52,9 +58,11 @@ export class CustomerService {
           columns: { id: true, status: true },
         })
       : Promise.resolve(true);
+    */
 
-    // we check if the office and/or acct product id belongs to the tenant...
-    const [office, product] = await Promise.all([officeCheck, productCheck]);
+    // we check if the office belongs to the tenant...
+    const office = await officeCheck;
+    // const [office, product] = await Promise.all([officeCheck, productCheck]);
 
     if (!office) {
       throw new ApiException(
@@ -64,6 +72,7 @@ export class CustomerService {
       );
     }
 
+    /*
     if (!product) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
@@ -82,6 +91,7 @@ export class CustomerService {
         'account product is not active',
         { error_code: 'CC0003' },
       );
+    */
 
     const customerExist = await this.customerRepo.exists(
       and(
@@ -109,7 +119,6 @@ export class CustomerService {
       // create customer...
       const customer = await this.customerRepo.create(
         {
-          id: '',
           tenantId: user.tenantId!,
           officeId: dto.officeId,
           createdBy: user.id,
@@ -161,23 +170,24 @@ export class CustomerService {
             ? `${customer.firstName} ${customer.lastName}`.trim()
             : customer.businessName!;
 
-        // create account...
+        // create account using enum type...
         const accountResult = await this.accountService.createAccountRecord(
           {
             customerId: customer.id,
-            productId: dto.productId,
+            // productId: dto.productId, // Product feature temporarily bypassed
+            type: AccountType.Savings,
+
             accountName: effectiveAccountName,
             openingBalance: 0,
             officeId: dto.officeId,
             userId: user.id,
-            productType: AccountProducts.Savings,
             tenantId: user.tenantId!,
             ...(dto.createdDate && {
               createdAt: moment(dto.createdDate).toDate(),
             }),
             ...(dto.activateCustomer && { status: AccountStatus.Active }),
           },
-          tx, //  pass db transaction...
+          tx, // pass db transaction...
         );
 
         savingsId = accountResult.accountId;

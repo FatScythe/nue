@@ -1,11 +1,12 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { AccountService } from './account.service';
-import { Resources } from '@database/enums';
+import { Body, Controller, Post, HttpStatus, HttpCode } from '@nestjs/common';
+
+// libs...
+import { Resources } from '@database';
+import type { CoreReqUser } from '@common';
+
 import { GetUser, Scopes } from '../common/decorator';
-import { HttpCode } from '@nestjs/common';
-import { HttpStatus } from '@nestjs/common';
 import { CreateSavingsAccountDto, CreateSavingsAcctRespDto } from './dto';
-import type { CoreReqUser } from '@common/types';
+import { AccountService } from './account.service';
 
 @Controller('accounts')
 @Scopes(Resources.Account)

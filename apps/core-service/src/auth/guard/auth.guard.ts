@@ -6,18 +6,23 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
+// ext-libs...
 import { and, eq, SQL } from 'drizzle-orm';
+
+// libs...
+import {
+  UserRepository,
+  ApiScope,
+  users,
+  UserStatus,
+  UserType,
+} from '@database';
+import { CoreRequest } from '@common';
 
 import { IS_NON_TOKEN, IS_PUBLIC_KEY } from '../../common/decorator';
 import { ApiException } from '../../common/exception';
 import { ApiErrorCode } from '../../common/enums';
-
-import { AuthService } from '@auth';
-
-import { UserRepository } from '@database/repository';
-import { users } from '@database/schemas';
-import { Resources, UserStatus, UserType } from '@database/enums';
-import { CoreRequest } from '@lib/common/src/interfaces';
+import { AuthService } from '../auth.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -167,7 +172,7 @@ export class AuthGuard implements CanActivate {
       secretKey: user.secretKey ?? '',
       whitelistedIps: user.whitelistedIps ?? [],
       type: user.type as UserType,
-      scopes: (user.scopes || []) as Resources[],
+      scopes: (user.scopes || []) as ApiScope[],
       tenantId: user.tenantId,
     };
 
