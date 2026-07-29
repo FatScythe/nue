@@ -1,3 +1,5 @@
+import { DEFAULT_PERMISSION, Resources } from '@database';
+import { RolePermissions } from '@database/drizzle/types';
 import { createHash, createHmac } from 'crypto';
 import { Request } from 'express';
 import { customAlphabet } from 'nanoid';
@@ -192,4 +194,40 @@ export const stripPhoneCountryCode = (phone: string): string => {
   }
 
   return phone;
+};
+
+export const rebuildPermission = (
+  incoming: Record<string, any>,
+  defaultBool = false,
+): RolePermissions => {
+  // global default...
+  const defaults = DEFAULT_PERMISSION;
+
+  const sanitized: Record<string, Record<Resources | string, boolean>> = {};
+
+  /**
+   * we iterate over defaults to ensure we don't allow "garbage" resources
+   * that aren't defined in our system.
+   */
+
+  Object.keys(defaults).forEach((resource) => {
+    const defaultActions = defaults[resource];
+    const incomingActions = incoming?.[resource] || {};
+
+    sanitized[resource] = {};
+
+    Object.keys(defaultActions).forEach((action) => {
+      /**
+       * we only accept the value if it's strictly a boolean.
+       * otherwise, we default to the system default i.e false.
+       * unless we want to create a super admin like permission
+       */
+      //
+      const value = incomingActions[action];
+      sanitized[resource][action] =
+        typeof value === 'boolean' ? value : defaultBool;
+    });
+  });
+
+  return sanitized as RolePermissions;
 };
