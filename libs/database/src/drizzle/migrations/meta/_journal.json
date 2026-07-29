@@ -1,0 +1,83 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785356296450,
+      "tag": "0000_ct_business",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785356316100,
+      "tag": "0001_ct_office",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785356346916,
+      "tag": "0002_ct_role-user",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785356363938,
+      "tag": "0003_ct_customer",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785356383739,
+      "tag": "0004_ct_account",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785356403468,
+      "tag": "0005_ct_saving_detail",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785356421347,
+      "tag": "0006_ct_loan_detail",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785356431812,
+      "tag": "0007_ct_lien",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785356442633,
+      "tag": "0008_ct_transaction",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785356478310,
+      "tag": "0009_ct_general_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785356501307,
+      "tag": "0010_ct_journal_entry",
+      "breakpoints": true
+    }
+  ]
+}
