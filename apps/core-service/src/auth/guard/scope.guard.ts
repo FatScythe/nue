@@ -5,7 +5,8 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ScopeCondition, SCOPES_KEY } from '../../common/decorator';
+
+import { ScopeCondition, SCOPE_KEY } from '../../common/decorator';
 import { ApiException } from '../../common/exception';
 import { ApiErrorCode } from '../../common/enums';
 
@@ -14,36 +15,26 @@ export class ScopeGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredScopes = this.reflector.getAllAndOverride<ScopeCondition[]>(
-      SCOPES_KEY,
+    const requiredScope = this.reflector.getAllAndOverride<ScopeCondition[]>(
+      SCOPE_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredScopes) return true;
+    if (!requiredScope) return true;
 
     const { user } = context.switchToHttp().getRequest();
-    const userScopes = user?.scopes || [];
+    const userScopes: string[] = user?.scopes || [];
 
-    // helper to evaluate nested requirements...
-    const checkMatch = (required: ScopeCondition): boolean => {
-      if (Array.isArray(required)) {
-        // [[]] - AND...
-        return required.every((s) => checkMatch(s));
-      }
-
-      return userScopes.includes(required);
-    };
-
-    // the top level is an OR: If any of the provided conditions match, let them in.
-    const canPass = requiredScopes.some((condition) => checkMatch(condition));
+    // Check if user has at least one scope starting with the required resource prefix (e.g. "account:")
+    const canPass = requiredScope.some((resource) =>
+      userScopes.some((scope) => scope.startsWith(`${resource}:`)),
+    );
 
     if (!canPass) {
       throw new ApiException(
         ApiErrorCode.AccessForbidden,
         'the provided credentials do not have the required scopes for this resource.',
-        {
-          error_code: 'SCG001',
-        },
+        { error_code: 'SCG001' },
         HttpStatus.FORBIDDEN,
       );
     }

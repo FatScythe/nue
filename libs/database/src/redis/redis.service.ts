@@ -47,7 +47,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.client.on('ready', () => {
-      this.logger.log(`✅ Redis connected! (Key Prefix: "${keyPrefix}")`);
+      this.logger.log(`✅ Redis connected with prefix: "${keyPrefix}"`);
     });
   }
 

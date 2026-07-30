@@ -3,10 +3,18 @@ import { SetMetadata } from '@nestjs/common';
 // libs...
 import { Resources } from '@database';
 
-export const SCOPES_KEY = 'scopes_check';
+export const SCOPE_KEY = 'scopes_check';
 
-// This allows: Resource, [Resource, Resource], or [[Resource, Resource], Resource]
-export type ScopeCondition = Resources | Resources[] | any[];
+/**
+ * Defines the resource condition required for controller-level access.
+ * Restricted strictly to a single Resources enum value.
+ */
+export type ScopeCondition = Resources;
 
-export const Scopes = (...scopes: ScopeCondition[]) =>
-  SetMetadata(SCOPES_KEY, scopes);
+/**
+ * Decorator to enforce broad, module-level resource boundaries on controllers.
+ *
+ * Usage Example:
+ * @Scopes(Resources.Account)
+ */
+export const Scope = (scope: ScopeCondition) => SetMetadata(SCOPE_KEY, [scope]);

@@ -1,5 +1,7 @@
 import 'tsconfig-paths/register';
-import { HttpAdapterHost, NestFactory, Reflector } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { CoreServiceModule } from './core-service.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import {
@@ -33,6 +35,37 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
+  const config = new DocumentBuilder()
+    .setTitle('Core Banking Application API')
+    .setDescription(
+      'Production-ready CBA API supporting dual Auth: Bearer JWTs and Secret Keys.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT access token generated from /auth/access-token',
+        in: 'header',
+      },
+      'bearer-token',
+    )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'nue-sec-key',
+        in: 'header',
+        description: 'Enter secret key starting with nsk_',
+      },
+      'api-key',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/v1/docs', app, document);
+
   // validate dtos...
   app.useGlobalPipes(
     new ValidationPipe({
@@ -56,6 +89,7 @@ async function bootstrap() {
 
   await app.listen(port);
 
+  Logger.warn(`🚀 Core Service docs on: http://localhost:${port}/api/v1/docs`);
   Logger.warn(`🚀 Core Service is running on: http://localhost:${port}/api/v1`);
 }
 

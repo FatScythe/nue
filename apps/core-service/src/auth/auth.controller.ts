@@ -3,10 +3,12 @@ import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 // libs...
 import type { CoreReqUser } from '@common';
 
-import { GetUser, NoToken } from '../common/decorator';
+import { GetUser, NoToken, ApiSuccessResponseData } from '../common/decorator';
 import { AuthService } from './auth.service';
 import { GetAccessRespDto } from './dto';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -14,7 +16,11 @@ export class AuthController {
   @NoToken()
   @Get('access-token')
   @HttpCode(HttpStatus.OK)
-  getAccessToken(@GetUser() user: CoreReqUser): Promise<GetAccessRespDto> {
+  @ApiOperation({ summary: 'Generate access token for active session' })
+  @ApiSuccessResponseData(GetAccessRespDto, {
+    description: 'Access token successfully generated',
+  })
+  getAccessToken(@GetUser() user: CoreReqUser) {
     return this.authService.getAccessToken(user);
   }
 }

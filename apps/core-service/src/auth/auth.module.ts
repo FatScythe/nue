@@ -8,7 +8,7 @@ import { DatabaseModule } from '@database';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { AuthGuard, ScopeGuard } from './guard';
+import { AuthGuard, PermissionGuard, ScopeGuard } from './guard';
 
 @Module({
   imports: [
@@ -31,6 +31,10 @@ import { AuthGuard, ScopeGuard } from './guard';
     // { useClass: ThrottlerBehindProxyGuard, provide: APP_GUARD }, // system wide rate limit
     {
       useClass: ScopeGuard,
+      provide: APP_GUARD,
+    },
+    {
+      useClass: PermissionGuard,
       provide: APP_GUARD,
     },
   ],
