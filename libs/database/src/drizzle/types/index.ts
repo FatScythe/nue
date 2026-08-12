@@ -55,6 +55,7 @@ export const validScopes = [
   // account...
   `${Resources.Account}:read`,
   `${Resources.Account}:create`,
+  `${Resources.Account}:update`,
 
   // transaction...
   `${Resources.Transaction}:read`,

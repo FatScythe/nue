@@ -76,7 +76,6 @@ async function seed() {
           lastName: 'Human',
           emailAddress: 'human@nuecore.com',
           roleId: role.id,
-          scopes: validScopes as unknown as ApiScope[],
           ipWhitelist: [],
           isOtpEnabled: false,
           createdBy: sysAdmin.id,
