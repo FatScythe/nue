@@ -3,8 +3,11 @@ import { Pool } from 'pg';
 import * as schema from './schemas';
 import * as dotenv from 'dotenv';
 import { uuidv7 } from 'uuidv7';
+
 import { GlCategory, GlNormalBalance, UserStatus, UserType } from './enums';
+import { DEFAULT_API_KEY } from './database.constant';
 import { ApiScope, validScopes } from './types';
+
 import { rebuildPermission } from '@common';
 
 dotenv.config({ path: '../../_env/core.env' });
@@ -95,7 +98,7 @@ async function seed() {
           firstName: 'Core',
           lastName: 'Engine',
           emailAddress: 'api@nuecore.com',
-          secretKey: `nsk_live_7a2b9c51e3d84f026m9q1r4s8v0w`,
+          secretKey: DEFAULT_API_KEY,
           scopes: validScopes as unknown as ApiScope[],
           ipWhitelist: [],
           isOtpEnabled: false,
