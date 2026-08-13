@@ -26,7 +26,9 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
 
   async createSavingDetails(
     data: typeof savingsDetails.$inferInsert,
+    tx?: DBTransaction,
   ): Promise<typeof savingsDetails.$inferSelect | null> {
+    const db = tx || this.db;
     const { accountId, tenantId } = data;
 
     const errOpt = {
@@ -45,14 +47,16 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
 
     if (!accountId) throw new Error('parent account id is required', errOpt);
 
-    const result = await this.db.insert(savingsDetails).values(data);
+    const result = await db.insert(savingsDetails).values(data);
 
     return result[0] || null;
   }
 
   async createLoanDetails(
     data: typeof loanDetails.$inferInsert,
+    tx?: DBTransaction,
   ): Promise<typeof loanDetails.$inferSelect | null> {
+    const db = tx || this.db;
     const { accountId, tenantId } = data;
 
     const errOpt = {
@@ -71,7 +75,7 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
 
     if (!accountId) throw new Error('parent account id is required', errOpt);
 
-    const result = await this.db.insert(loanDetails).values(data);
+    const result = await db.insert(loanDetails).values(data);
 
     return result[0] || null;
   }

@@ -33,20 +33,23 @@ export abstract class BaseRepository<TTable extends PgTable> {
     return result[0] || null;
   }
 
-  async findOne<T extends Record<string, any>>(
+  async findOne<T extends Record<string, any> = TTable['_']['inferSelect']>(
     {
       where,
       selectFn,
       joinFn,
     }: {
       where: SQL | undefined;
-      selectFn: (table: TTable) => T;
+      selectFn?: (table: TTable) => Record<string, any>;
       joinFn?: (query: any) => any;
     },
     tx?: DBTransaction,
   ): Promise<T | null> {
     const client = this.getClient(tx);
-    let query = client.select(selectFn(this.table)).from(this.table as any);
+
+    let query = selectFn
+      ? client.select(selectFn(this.table)).from(this.table as any)
+      : client.select().from(this.table as any);
 
     if (joinFn) {
       query = joinFn(query);
@@ -57,10 +60,10 @@ export abstract class BaseRepository<TTable extends PgTable> {
     if (!results || (Array.isArray(results) && results.length === 0))
       return null;
 
-    return results[0] as T;
+    return results[0] as unknown as T;
   }
 
-  async findAll<T extends Record<string, any>>(
+  async findAll<T extends Record<string, any> = TTable['_']['inferSelect']>(
     {
       where,
       selectFn,
@@ -69,7 +72,7 @@ export abstract class BaseRepository<TTable extends PgTable> {
       offset,
     }: {
       where?: SQL;
-      selectFn: (table: TTable) => T;
+      selectFn?: (table: TTable) => Record<string, any>;
       joinFn?: (query: any) => any;
       limit?: number;
       offset?: number;
@@ -77,9 +80,10 @@ export abstract class BaseRepository<TTable extends PgTable> {
     tx?: DBTransaction,
   ): Promise<T[]> {
     const client = this.getClient(tx);
-    let query: any = client
-      .select(selectFn(this.table))
-      .from(this.table as any);
+
+    let query: any = selectFn
+      ? client.select(selectFn(this.table)).from(this.table as any)
+      : client.select().from(this.table as any);
 
     if (joinFn) query = joinFn(query);
 
@@ -93,7 +97,8 @@ export abstract class BaseRepository<TTable extends PgTable> {
       query = query.offset(offset);
     }
 
-    return await query;
+    const results = await query;
+    return results as unknown as T[];
   }
 
   async update<T extends Record<string, any> = TTable['_']['inferSelect']>(
@@ -123,6 +128,17 @@ export abstract class BaseRepository<TTable extends PgTable> {
     const client = this.getClient(tx);
     const [result] = await client.delete(this.table).where(where).returning();
     return result;
+  }
+
+  async count(where?: SQL, tx?: DBTransaction): Promise<number> {
+    const client = this.getClient(tx);
+
+    const result = await client
+      .select({ count: sql`count(*)` })
+      .from(this.table as any)
+      .where(where);
+
+    return Number(result[0]?.count ?? 0);
   }
 
   async exists(where: SQL | undefined, tx?: DBTransaction): Promise<boolean> {

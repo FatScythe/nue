@@ -43,6 +43,12 @@ export const loanDetails = pgTable(
     tenantId: varchar('tenant_id', { length: 36 })
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
+    // disbursementAccountId: varchar('disbursement_account_id', {
+    //   length: 36,
+    // }).references(() => accounts.id, { onDelete: 'restrict' }),
+    // repaymentAccountId: varchar('repayment_account_id', {
+    //   length: 36,
+    // }).references(() => accounts.id, { onDelete: 'restrict' }),
     principalAmount: bigint('principal_amount', { mode: 'bigint' }).notNull(),
     outstandingBalance: bigint('outstanding_balance', {
       mode: 'bigint',
