@@ -33,7 +33,7 @@ export class CreateCustomerDto {
     enum: CustomerTier,
     description: 'Customer tier classification level',
     default: CustomerTier.TierZero,
-    example: CustomerTier.TierZero,
+    example: CustomerTier.TierOne,
   })
   @IsEnum(CustomerTier)
   @IsString()
@@ -44,7 +44,7 @@ export class CreateCustomerDto {
     description:
       'Flag indicating whether to immediately activate customer account',
     default: false,
-    example: false,
+    example: true,
   })
   @IsBoolean()
   @IsOptional()
@@ -77,7 +77,7 @@ export class CreateCustomerDto {
 
   @ApiPropertyOptional({
     description: 'Date of creation in YYYY-MM-DD format',
-    example: '2026-07-30',
+    example: moment().format('YYYY-MM-DD'),
   })
   @IsOptional()
   @IsValidDate()
@@ -95,7 +95,7 @@ export class CreateCustomerDto {
   @ApiPropertyOptional({
     description:
       'Date of incorporation in YYYY-MM-DD format (Required if customer type is Corporate)',
-    example: '2020-01-15',
+    example: moment().subtract(5, 'years').format('YYYY-MM-DD'),
   })
   @ValidateIf((dto) => dto.type === CustomerType.Corporate)
   @IsValidDate()
@@ -105,7 +105,7 @@ export class CreateCustomerDto {
   @ApiPropertyOptional({
     description:
       'Date of birth in YYYY-MM-DD format (Required if customer type is Individual)',
-    example: '1995-05-20',
+    example: moment().subtract(27, 'years').format('YYYY-MM-DD'),
   })
   @ValidateIf((dto) => dto.type === CustomerType.Individual)
   @IsValidDate()
@@ -125,7 +125,7 @@ export class CreateCustomerDto {
     description:
       'Gender of the customer (Applicable if customer type is Individual)',
     default: CustomerGender.Nil,
-    example: CustomerGender.Nil,
+    example: CustomerGender.Male,
   })
   @ValidateIf((dto) => dto.type === CustomerType.Individual)
   @IsEnum(CustomerGender)
