@@ -14,6 +14,7 @@ import helmet from 'helmet';
 import { AllExceptionsFilter } from './filters';
 import { TransformInterceptor } from './interceptors';
 import { configuration } from './config';
+import { DEFAULT_API_KEY } from '@database';
 
 async function bootstrap() {
   const app =
@@ -57,7 +58,8 @@ async function bootstrap() {
         type: 'apiKey',
         name: 'nue-sec-key',
         in: 'header',
-        description: 'Enter secret key starting with nsk_',
+        'x-tokenName': 'nue-sec-key',
+        description: `Enter secret key starting with nsk_ ... e,g ${DEFAULT_API_KEY}`,
       },
       'api-key',
     )
