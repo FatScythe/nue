@@ -1,3 +1,4 @@
+import { PaginationMeta } from '@common/types';
 import { DEFAULT_PERMISSION, Resources } from '@database';
 import { RolePermissions } from '@database/drizzle/types';
 import { createHash, createHmac } from 'crypto';
@@ -230,4 +231,23 @@ export const rebuildPermission = (
   });
 
   return sanitized as RolePermissions;
+};
+
+export const calculatePaginationMeta = (
+  totalRecords: number,
+  page: number,
+  limit: number,
+): PaginationMeta => {
+  const totalPages = Math.ceil(totalRecords / limit);
+  const previous = page > 1 ? page - 1 : null;
+  const next = page < totalPages ? page + 1 : null;
+
+  return {
+    totalRecords,
+    page,
+    limit,
+    totalPages,
+    previous,
+    next,
+  };
 };
