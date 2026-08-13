@@ -61,7 +61,12 @@ export class AuthGuard implements CanActivate {
   }: {
     request: CoreRequest;
   }): Promise<boolean> {
-    const key = request.headers['nue-sec-key'] as string;
+    const rawKey = request.headers['nue-sec-key'] as
+      | string
+      | string[]
+      | undefined;
+
+    const key = Array.isArray(rawKey) ? rawKey[0] : rawKey;
 
     if (!key || !key.startsWith('nsk_') || key.length < 20) {
       throw new ApiException(

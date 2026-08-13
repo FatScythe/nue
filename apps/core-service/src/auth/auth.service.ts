@@ -9,7 +9,10 @@ import { RedisService } from '@database';
 import { ApiException } from '../common/exception';
 import { ApiErrorCode } from '../common/enums';
 import { GetAccessRespDto } from './dto';
+import { configuration } from '../config';
+import { Environment } from '../config/types';
 
+const isDev = configuration().nodeEnv === Environment.Development;
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -29,7 +32,7 @@ export class AuthService {
         { error_code: 'GAT001' },
       );
 
-    const expiresIn = 5 * 60;
+    const expiresIn = isDev ? 24 * 60 * 60 : 5 * 60;
     const cacheKey = `accesstoken_${user.id}`;
 
     try {
