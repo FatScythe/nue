@@ -3,20 +3,24 @@ import { IsValidDate, IsValidReference } from '@lib/common/src/validators';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
-  IsInt,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  Min,
 } from 'class-validator';
+import { AccountType } from '@database';
+import { DATE_FORMAT } from '@common';
+import moment from 'moment';
 
 export class CreateSavingsAccountDto {
   @ApiPropertyOptional({
     description:
       'Flag indicating whether to immediately activate the savings account',
     default: false,
-    example: false,
+    example: true,
   })
   @IsOptional()
   @IsBoolean()
@@ -48,18 +52,27 @@ export class CreateSavingsAccountDto {
   @IsString()
   accountName?: string;
 
-  @ApiProperty({
-    description:
-      'Identifier of the savings product associated with this account',
-    example: 101,
+  @ApiPropertyOptional({
+    description: 'Account type',
+    enum: AccountType,
+    example: AccountType.Savings,
   })
-  @IsInt()
-  @IsNotEmpty()
-  productId: number;
+  @IsEnum(AccountType)
+  @IsString()
+  type: AccountType;
+
+  // @ApiProperty({
+  //   description:
+  //     'Identifier of the savings product associated with this account',
+  //   example: 101,
+  // })
+  // @IsInt()
+  // @IsNotEmpty()
+  // productId: number;
 
   @ApiPropertyOptional({
     description: 'Creation date in YYYY-MM-DD format',
-    example: '2026-07-30',
+    example: moment().format(DATE_FORMAT),
   })
   @IsValidDate()
   @IsOptional()
@@ -67,10 +80,35 @@ export class CreateSavingsAccountDto {
 
   @ApiPropertyOptional({
     description: 'Initial deposit amount on account opening',
-    example: 5000,
+    example: 0.0,
   })
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   openingBalance?: number;
+
+  @ApiPropertyOptional({
+    description: 'Target amount for target savings in major units',
+    example: null,
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  targetAmount?: number;
+
+  @ApiPropertyOptional({
+    description: 'Target date (YYYY-MM-DD)',
+    example: null,
+  })
+  @IsString()
+  @IsOptional()
+  targetDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Lock period end timestamp/date',
+    example: null,
+  })
+  @IsString()
+  @IsOptional()
+  lockPeriodEnd?: string;
 }

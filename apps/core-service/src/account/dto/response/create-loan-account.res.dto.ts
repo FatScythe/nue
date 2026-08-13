@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
-export class CreateSavingsAcctRespDto {
+export class CreateLoanAcctRespDto {
   @ApiProperty({
-    description: 'Unique UUID v7 identifier for the created savings account',
+    description: 'Unique UUID v7 identifier for the created loan account',
     example: '018f3a5e-5678-7a2b-8123-456789abcdef',
   })
   @Expose()
