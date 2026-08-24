@@ -52,14 +52,14 @@ export class CreateSavingsAccountDto {
   @IsString()
   accountName?: string;
 
-  @ApiPropertyOptional({
-    description: 'Account type',
-    enum: AccountType,
-    example: AccountType.Savings,
-  })
-  @IsEnum(AccountType)
-  @IsString()
-  type: AccountType;
+  // @ApiPropertyOptional({
+  //   description: 'Account type',
+  //   enum: AccountType,
+  //   example: AccountType.Savings,
+  // })
+  // @IsEnum(AccountType)
+  // @IsString()
+  // type: AccountType;
 
   // @ApiProperty({
   //   description:
