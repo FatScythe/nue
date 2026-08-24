@@ -24,6 +24,7 @@ export class CreateLoanAccountDto {
 
   @ApiPropertyOptional({
     description: 'Custom account name. Defaults to customer full name.',
+    example: 'John Doe Loan',
   })
   @IsString()
   @IsOptional()
