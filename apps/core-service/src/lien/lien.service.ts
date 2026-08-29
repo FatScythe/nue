@@ -38,6 +38,9 @@ export class LienService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'expiry date must be in the future',
+        {
+          error_code: 'PLI001',
+        },
       );
     }
 
@@ -51,13 +54,18 @@ export class LienService {
         .for('update');
 
       if (!account) {
-        throw new ApiException(ApiErrorCode.BadRequest, 'account not found');
+        throw new ApiException(ApiErrorCode.BadRequest, 'account not found', {
+          error_code: 'PLI002',
+        });
       }
 
       if (account.status !== AccountStatus.Active) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'account is not active',
+          {
+            error_code: 'PLI003',
+          },
         );
       }
 
@@ -72,6 +80,9 @@ export class LienService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'insufficient available balance to place lien',
+          {
+            error_code: 'PLI004',
+          },
         );
       }
 
@@ -110,6 +121,9 @@ export class LienService {
         throw new ApiException(
           ApiErrorCode.InternalServerError,
           'unable to place lien',
+          {
+            error_code: 'PLI005',
+          },
         );
       }
 
@@ -137,6 +151,9 @@ export class LienService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'lien record not found',
+          {
+            error_code: 'RLI001',
+          },
         );
       }
 
@@ -144,10 +161,14 @@ export class LienService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'lien is no longer active',
+          {
+            error_code: 'RLI002',
+          },
         );
       }
 
       // handle expired lien cleanly within transaction...
+      // TODO: If expiresAt is less than a certain time push with delay to bkg message queue...
       const isExpired = lien.expiresAt && moment(lien.expiresAt).isBefore();
       const targetStatus = isExpired ? LienStatus.Voided : LienStatus.Released;
 
@@ -167,6 +188,9 @@ export class LienService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'associated account not found',
+          {
+            error_code: 'RLI003',
+          },
         );
       }
 
@@ -178,6 +202,9 @@ export class LienService {
         throw new ApiException(
           ApiErrorCode.InternalServerError,
           'releasing lien would cause available balance to exceed book balance',
+          {
+            error_code: 'RLI004',
+          },
         );
       }
 
