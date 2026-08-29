@@ -107,7 +107,7 @@ export class AccountingService {
     return {
       message: 'created general ledger sucessfully',
       data: plainToInstance(CreateGlAccountRespDto, {
-        glAccountId: glAccount.id,
+        glCode: glAccount.code,
       }),
     };
   }
