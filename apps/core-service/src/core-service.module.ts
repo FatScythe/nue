@@ -14,11 +14,14 @@ import { CoreServiceController } from './core-service.controller';
 import { CoreServiceService } from './core-service.service';
 import { RequestLoggerMiddleware } from './common/middleware';
 
-// modules
+// modules...
 import { AuthModule } from './auth/auth.module';
 import { CustomerModule } from './customer/customer.module';
 import { AccountModule } from './account/account.module';
 import { CConfigModule } from './config/config.module';
+import { LienModule } from './lien/lien.module';
+import { TransactionModule } from './transaction/transaction.module';
+import { AccountingModule } from './accounting/accounting.module';
 
 @Module({
   imports: [
@@ -27,6 +30,9 @@ import { CConfigModule } from './config/config.module';
     CustomerModule,
     AccountModule,
     RedisModule,
+    LienModule,
+    TransactionModule,
+    AccountingModule,
   ],
   controllers: [CoreServiceController],
   providers: [
