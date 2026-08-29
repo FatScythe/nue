@@ -6,8 +6,17 @@ import {
   DrizzleProvider,
 } from '@database/drizzle/drizzle.provider';
 import { CustomerRepository } from '@database/drizzle/repository/customer';
-import { AccountRepository } from '@database/drizzle/repository/account';
+import {
+  AccountRepository,
+  GeneralLedgerRepository,
+} from '@database/drizzle/repository/account';
 import { UserRepository } from '@database/drizzle/repository/user';
+import {
+  JournalEntryLineRepository,
+  JournalEntryRepository,
+  LienRepository,
+  TransactionRepository,
+} from './repository';
 // import { REDIS_CLIENT, RedisProvider } from '@database/drizzle/redis.provider';
 
 @Global()
@@ -19,6 +28,11 @@ import { UserRepository } from '@database/drizzle/repository/user';
     CustomerRepository,
     AccountRepository,
     UserRepository,
+    LienRepository,
+    GeneralLedgerRepository,
+    JournalEntryRepository,
+    TransactionRepository,
+    JournalEntryLineRepository,
   ],
   exports: [
     DATABASE_CONNECTION,
@@ -26,6 +40,11 @@ import { UserRepository } from '@database/drizzle/repository/user';
     CustomerRepository,
     AccountRepository,
     UserRepository,
+    LienRepository,
+    GeneralLedgerRepository,
+    JournalEntryRepository,
+    TransactionRepository,
+    JournalEntryLineRepository,
   ],
 })
 export class DatabaseModule implements OnApplicationShutdown {
