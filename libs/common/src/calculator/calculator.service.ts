@@ -32,6 +32,14 @@ export class Calculator {
     return BigInt(bigNum.times(scale).round(0).toFixed());
   }
 
+  /**
+   * Converts a minor unit value (e.g., kobo/cents) to its major unit (e.g., Naira/USD) based on a scale (default 100 for 2DP).
+   * Useful for converting DB BigInts to numbers for client responses.
+   */
+  toMajor(minorAmount: BigSource, scale = 100): number {
+    return new Big(minorAmount).div(scale).toNumber();
+  }
+
   /** Adds two numbers. */
   add(num1: BigSource, num2: BigSource): string {
     const bigNum1 = new Big(num1);
