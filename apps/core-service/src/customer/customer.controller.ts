@@ -18,6 +18,10 @@ import {
   Scope,
 } from '../common/decorator';
 
+// libs...
+import { Resources } from '@database';
+import { ParseUUID, type CoreReqUser } from '@common';
+
 import {
   CreateCustomerDto,
   CreateCustomerRespDto,
@@ -26,9 +30,6 @@ import {
   GetSingleCustomerResponseDto,
   PaginatedCustomersResponseDto,
 } from './dto';
-
-import { Resources } from '@database';
-import type { CoreReqUser } from '@common';
 
 @ApiTags('Customers')
 @ApiSecurity('bearer-token')
@@ -57,6 +58,7 @@ export class CustomerController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all customers with pagination and filters' })
   @ApiSuccessResponseData(PaginatedCustomersResponseDto, {
+    status: HttpStatus.OK,
     description: 'Customers retrieved successfully',
   })
   getCustomers(
@@ -71,10 +73,11 @@ export class CustomerController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get customer with their accounts' })
   @ApiSuccessResponseData(GetCustomerWithAccountsResponseDto, {
+    status: HttpStatus.OK,
     description: 'Customer with accounts retrieved successfully',
   })
   getCustomerWithAccounts(
-    @Param('id') customerId: string,
+    @Param('id', ParseUUID) customerId: string,
     @GetUser() user: CoreReqUser,
   ): Promise<GetCustomerWithAccountsResponseDto> {
     return this.customerService.getCustomerWithAccounts(customerId, user);
@@ -85,10 +88,11 @@ export class CustomerController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get a single customer by id' })
   @ApiSuccessResponseData(GetSingleCustomerResponseDto, {
+    status: HttpStatus.OK,
     description: 'Customer retrieved successfully',
   })
   getSingleCustomer(
-    @Param('id') customerId: string,
+    @Param('id', ParseUUID) customerId: string,
     @GetUser() user: CoreReqUser,
   ): Promise<GetSingleCustomerResponseDto> {
     return this.customerService.getSingleCustomer(customerId, user);
