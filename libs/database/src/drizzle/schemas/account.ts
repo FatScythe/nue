@@ -96,5 +96,17 @@ export const accounts = pgTable(
       table.tenantId,
       table.status,
     ),
+    // balanceLteBookBalance: check(
+    //   'chk_accounts_balance_lte_book_balance',
+    //   sql`${table.balance} <= ${table.bookBalance}`,
+    // ),
+    // balanceNonNegative: check(
+    //   'chk_accounts_balance_non_negative',
+    //   sql`${table.balance} >= 0`,
+    // ),
+    // bookBalanceNonNegative: check(
+    //   'chk_accounts_book_balance_non_negative',
+    //   sql`${table.bookBalance} >= 0`,
+    // ),
   }),
 );
