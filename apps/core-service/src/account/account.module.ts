@@ -1,23 +1,16 @@
-import { Module, Scope } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
 import { AccountService } from './account.service';
 import { AccountController } from './account.controller';
 
 //libs...
 import { DatabaseModule } from '@database';
-import { Calculator } from '@common';
+import { CalculatorModule } from '@common';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, CalculatorModule],
   controllers: [AccountController],
-  providers: [
-    AccountService,
-    {
-      provide: Calculator,
-      useClass: Calculator,
-      scope: Scope.TRANSIENT,
-    },
-  ],
+  providers: [AccountService],
   exports: [AccountService],
 })
 export class AccountModule {}

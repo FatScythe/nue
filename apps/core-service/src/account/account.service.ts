@@ -257,22 +257,25 @@ export class AccountService {
         this.calculator.toMinor(dto.processingFee || 0),
       );
 
-      await this.accountRepo.createLoanDetails({
-        accountId: createdAccount.accountId,
-        tenantId: user.tenantId!,
-        // disbursementAccountId: dto.disbursementAccountId || null,
-        // repaymentAccountId: dto.repaymentAccountId || null,
-        principalAmount: principalMinor,
-        outstandingBalance: principalMinor,
-        tenor: dto.tenor,
-        repaymentFrequency: dto.repaymentFrequency,
-        interestRate: dto.interestRate.toFixed(2),
-        status: LoanStatus.Active,
-        processingFee: processingFeeMinor,
-        moratoriumType: dto.moratoriumType || MoratoriumType.None,
-        moratoriumPeriod: dto.moratoriumPeriod || 0,
-        repaymentStartDate: moment().endOf('month').toDate(),
-      });
+      await this.accountRepo.createLoanDetails(
+        {
+          accountId: createdAccount.accountId,
+          tenantId: user.tenantId!,
+          // disbursementAccountId: dto.disbursementAccountId || createdAccount.accountId,
+          // repaymentAccountId: dto.repaymentAccountId || createdAccount.accountId,
+          principalAmount: principalMinor,
+          outstandingBalance: principalMinor,
+          tenor: dto.tenor,
+          repaymentFrequency: dto.repaymentFrequency,
+          interestRate: dto.interestRate.toFixed(2),
+          status: LoanStatus.Active,
+          processingFee: processingFeeMinor,
+          moratoriumType: dto.moratoriumType || MoratoriumType.None,
+          moratoriumPeriod: dto.moratoriumPeriod || 0,
+          repaymentStartDate: moment().endOf('month').toDate(),
+        },
+        tx,
+      );
 
       accountId = createdAccount.accountId;
       accountNumber = createdAccount.accountNumber;
@@ -343,8 +346,8 @@ export class AccountService {
     // convert balance to number for presentation...
     const formattedData = accountsList.map((acc) => ({
       ...acc,
-      balance: this.calculator.toNumber(acc.balance),
-      bookBalance: this.calculator.toNumber(acc.bookBalance),
+      balance: this.calculator.toMajor(acc.balance),
+      bookBalance: this.calculator.toMajor(acc.bookBalance),
     }));
 
     return plainToInstance(PaginatedAccountsRespDto, {
@@ -437,8 +440,8 @@ export class AccountService {
 
     const result = {
       ...account,
-      balance: this.calculator.toNumber(account.balance),
-      bookBalance: this.calculator.toNumber(account.bookBalance),
+      balance: this.calculator.toMajor(account.balance),
+      bookBalance: this.calculator.toMajor(account.bookBalance),
       savingsDetails,
       loanDetails,
     };

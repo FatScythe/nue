@@ -12,9 +12,10 @@ import {
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 // libs...
-import type { CoreReqUser } from '@common';
+import { ParseUUID, type CoreReqUser } from '@common';
 import { Resources } from '@database';
 
+import { AccountService } from './account.service';
 import {
   ApiSuccessResponseData,
   GetUser,
@@ -32,7 +33,6 @@ import {
   CreateLoanAccountDto,
   CreateLoanAcctRespDto,
 } from './dto';
-import { AccountService } from './account.service';
 
 @ApiTags('Accounts')
 @ApiSecurity('bearer-token')
@@ -93,7 +93,7 @@ export class AccountController {
     description: 'Account details retrieved successfully',
   })
   getSingleAccount(
-    @Param('id') accountId: string,
+    @Param('id', ParseUUID) accountId: string,
     @GetUser() user: CoreReqUser,
   ): Promise<AccountItemRespDto> {
     return this.accountService.getSingleAccount(accountId, user);
