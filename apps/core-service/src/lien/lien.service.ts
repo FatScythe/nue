@@ -44,6 +44,19 @@ export class LienService {
       );
     }
 
+    const refExist = await this.lienRepo.exists(
+      and(eq(liens.reference, dto.reference), eq(liens.tenantId, tenantId!)),
+    );
+
+    if (refExist)
+      throw new ApiException(
+        ApiErrorCode.Conflict,
+        'reference is already used',
+        {
+          error_code: 'PLI002',
+        },
+      );
+
     const { id: lienId } = await this.db.transaction(async (tx) => {
       const [account] = await tx
         .select()
@@ -55,7 +68,7 @@ export class LienService {
 
       if (!account) {
         throw new ApiException(ApiErrorCode.BadRequest, 'account not found', {
-          error_code: 'PLI002',
+          error_code: 'PLI003',
         });
       }
 
@@ -64,7 +77,7 @@ export class LienService {
           ApiErrorCode.BadRequest,
           'account is not active',
           {
-            error_code: 'PLI003',
+            error_code: 'PLI004',
           },
         );
       }
@@ -81,7 +94,7 @@ export class LienService {
           ApiErrorCode.BadRequest,
           'insufficient available balance to place lien',
           {
-            error_code: 'PLI004',
+            error_code: 'PLI005',
           },
         );
       }
@@ -122,7 +135,7 @@ export class LienService {
           ApiErrorCode.InternalServerError,
           'unable to place lien',
           {
-            error_code: 'PLI005',
+            error_code: 'PLI006',
           },
         );
       }
