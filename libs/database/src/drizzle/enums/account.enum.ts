@@ -16,4 +16,6 @@ export enum AccountStatus {
 export enum AccountType {
   Savings = 'savings',
   Loan = 'loan',
+  // Current = 'current',
+  // FixedDeposit = 'fixed_deposit',
 }
