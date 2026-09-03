@@ -19,11 +19,9 @@ export const savingsDetails = pgTable(
       .primaryKey()
       .references(() => accounts.id, { onDelete: 'restrict' }),
 
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, {
-        onDelete: 'restrict',
-      }),
+      .references(() => businesses.id, { onDelete: 'restrict' }),
 
     targetAmount: bigint('target_amount', { mode: 'bigint' }), // nullable for basic deposit accounts...
     targetDate: timestamp('target_date', { withTimezone: true }), // nullable for basic deposit accounts...

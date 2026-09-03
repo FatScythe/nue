@@ -455,7 +455,7 @@ export class AccountService {
    */
   async createAccountRecord(
     data: {
-      tenantId: string;
+      tenantId: number;
       customerId: string;
       type?: AccountType;
       accountName: string;
@@ -514,7 +514,7 @@ export class AccountService {
   }
 
   private async generateAccountNumber(
-    tenantId: string,
+    tenantId: number,
     officeId: number,
     tx: NodePgDatabase<typeof schema>,
   ): Promise<string> {

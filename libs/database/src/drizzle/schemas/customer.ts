@@ -47,7 +47,7 @@ export const customers = pgTable(
   'customers',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
     officeId: integer('office_id')

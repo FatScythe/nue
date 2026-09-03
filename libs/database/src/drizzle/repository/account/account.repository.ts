@@ -155,7 +155,7 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
   }
 
   async getBalance(
-    { accountId, tenantId }: { accountId: string; tenantId: string },
+    { accountId, tenantId }: { accountId: string; tenantId: number },
     tx?: DBTransaction,
   ) {
     const result = await this.getClient(tx)

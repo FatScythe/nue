@@ -64,7 +64,7 @@ export class JournalEntryRepository extends BaseRepository<
    * Fetch a journal entry by ID ensuring tenant isolation.
    */
   async findById(
-    tenantId: string,
+    tenantId: number,
     id: string,
     tx?: DBTransaction,
   ): Promise<typeof journalEntries.$inferSelect | null> {
@@ -85,7 +85,7 @@ export class JournalEntryRepository extends BaseRepository<
    * Fetch journal entries linked to a specific user-facing transaction ID.
    */
   async findByTransactionId(
-    tenantId: string,
+    tenantId: number,
     transactionId: string,
     tx?: DBTransaction,
   ): Promise<(typeof journalEntries.$inferSelect)[]> {

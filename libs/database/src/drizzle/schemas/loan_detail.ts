@@ -40,7 +40,7 @@ export const loanDetails = pgTable(
     accountId: varchar('account_id', { length: 36 })
       .primaryKey()
       .references(() => accounts.id, { onDelete: 'restrict' }),
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
     // disbursementAccountId: varchar('disbursement_account_id', {

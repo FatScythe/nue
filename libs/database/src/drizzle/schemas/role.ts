@@ -7,6 +7,7 @@ import {
   AnyPgColumn,
   uniqueIndex,
   index,
+  integer,
 } from 'drizzle-orm/pg-core';
 
 import { RolePermissions } from '@database/drizzle/types';
@@ -19,12 +20,9 @@ export const roles = pgTable(
   'roles',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()
-    tenantId: varchar('tenant_id', { length: 36 }).references(
-      () => businesses.id,
-      {
-        onDelete: 'restrict',
-      },
-    ), // nullable for default system roles...
+    tenantId: integer('tenant_id').references(() => businesses.id, {
+      onDelete: 'restrict',
+    }), // nullable for default system roles...
     name: text('name').notNull(),
     permissions: jsonb('permissions')
       .$type<RolePermissions>()

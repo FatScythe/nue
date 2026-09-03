@@ -8,6 +8,7 @@ import {
   index,
   AnyPgColumn,
   boolean,
+  integer,
 } from 'drizzle-orm/pg-core';
 
 import { GlCategory, GlNormalBalance } from '@database/drizzle/enums';
@@ -29,7 +30,7 @@ export const generalLedgers = pgTable(
   'general_ledgers',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
 

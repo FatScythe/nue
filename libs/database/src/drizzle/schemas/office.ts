@@ -2,6 +2,7 @@ import {
   boolean,
   date,
   index,
+  integer,
   pgTable,
   serial,
   text,
@@ -16,9 +17,9 @@ export const offices = pgTable(
   'offices',
   {
     id: serial('id').primaryKey(),
-    tenantId: varchar('tenant_id', { length: 36 })
-      .references(() => businesses.id, { onDelete: 'restrict' })
-      .notNull(),
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'restrict' }),
     name: text('name').notNull(), // e.g., "Lagos Main Branch" or "Virtual Operations"
     code: text('code').notNull(), // e.g., "HQ-01"
     isHeadOffice: boolean('is_head_office').default(false),

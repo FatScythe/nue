@@ -7,6 +7,7 @@ import {
   varchar,
   uniqueIndex,
   index,
+  integer,
 } from 'drizzle-orm/pg-core';
 import { accounts, businesses, users } from '.';
 import { LienStatus } from '@database/drizzle/enums';
@@ -23,7 +24,7 @@ export const liens = pgTable(
     accountId: varchar('account_id', { length: 36 })
       .notNull()
       .references(() => accounts.id, { onDelete: 'restrict' }),
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
 

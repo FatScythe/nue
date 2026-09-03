@@ -24,7 +24,7 @@ export const journalEntries = pgTable(
   'journal_entries',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
     transactionId: varchar('transaction_id', { length: 36 }).references(

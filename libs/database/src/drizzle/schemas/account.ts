@@ -37,10 +37,12 @@ export const accounts = pgTable(
     customerId: varchar('customer_id', { length: 36 })
       .notNull()
       .references(() => customers.id, { onDelete: 'restrict' }),
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
     type: accountTypeEnum('type').notNull().default(AccountType.Savings),
+    productId: varchar('product_id', { length: 36 }),
+    // .notNull().references(() => accountProducts.id) add once mvp is done
     status: accountStatusEnum('status')
       .notNull()
       .default(AccountStatus.Pending),

@@ -7,5 +7,5 @@ export type CoreReqUser = {
   whitelistedIps: string[] | null;
   type: UserType;
   scopes: ApiScope[] | null;
-  tenantId: string | null;
+  tenantId: number | null;
 };

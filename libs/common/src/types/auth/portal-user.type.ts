@@ -10,5 +10,5 @@ export type PortalReqUser = {
     name: string;
     permissions: RolePermissions;
   } | null;
-  tenantId: string | null;
+  tenantId: number | null;
 };

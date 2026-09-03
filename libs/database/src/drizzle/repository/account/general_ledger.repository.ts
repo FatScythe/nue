@@ -73,7 +73,7 @@ export class GeneralLedgerRepository extends BaseRepository<
    * Find GL account by unique tenant ID and GL code combination.
    */
   async findByCode(
-    tenantId: string,
+    tenantId: number,
     code: string,
     tx?: DBTransaction,
   ): Promise<typeof generalLedgers.$inferSelect | null> {
@@ -97,7 +97,7 @@ export class GeneralLedgerRepository extends BaseRepository<
    * Fetch sub-GL accounts under a given parent GL account.
    */
   async findSubAccounts(
-    tenantId: string,
+    tenantId: number,
     parentId: string,
     tx?: DBTransaction,
   ): Promise<(typeof generalLedgers.$inferSelect)[]> {

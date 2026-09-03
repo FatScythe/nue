@@ -37,12 +37,9 @@ export const users = pgTable(
   'users',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
-    tenantId: varchar('tenant_id', { length: 36 }).references(
-      () => businesses.id,
-      {
-        onDelete: 'restrict',
-      },
-    ), // nullable for sys admin...
+    tenantId: integer('tenant_id').references(() => businesses.id, {
+      onDelete: 'restrict',
+    }), // nullable for sys admin...
     type: userTypeEnum('type').notNull(),
     status: userStatusEnum('status').notNull(),
     emailAddress: text('email_address'),

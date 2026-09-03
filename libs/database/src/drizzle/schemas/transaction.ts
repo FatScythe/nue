@@ -38,11 +38,9 @@ export const transactions = pgTable(
   'transactions',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
-    tenantId: varchar('tenant_id', { length: 36 })
+    tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, {
-        onDelete: 'restrict',
-      }),
+      .references(() => businesses.id, { onDelete: 'restrict' }),
     senderAccountId: varchar('sender_account_id', { length: 36 }).references(
       () => accounts.id,
       {

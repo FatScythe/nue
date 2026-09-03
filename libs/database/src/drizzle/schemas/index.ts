@@ -5,6 +5,7 @@ export * from './role';
 export * from './user';
 export * from './customer';
 export * from './account';
+// export * from './account_product';
 export * from './savings_detail';
 export * from './loan_detail';
 export * from './lien';

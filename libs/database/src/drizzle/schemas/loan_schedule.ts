@@ -25,9 +25,9 @@ export const loanSchedules = pgTable(
     accountId: varchar('account_id', { length: 36 })
       .references(() => accounts.id, { onDelete: 'restrict' })
       .notNull(),
-    tenantId: varchar('tenant_id', { length: 36 })
-      .references(() => businesses.id, { onDelete: 'restrict' })
-      .notNull(),
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'restrict' }),
     installmentNumber: integer('installment_number').notNull(), // e.g., 1 of 12
     dueDate: timestamp('due_date', { withTimezone: true }).notNull(),
     principalAmount: bigint('principal_amount', { mode: 'bigint' }).notNull(),
