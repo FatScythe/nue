@@ -16,12 +16,18 @@
 Nue follows a clean, domain-driven structure to separate concerns across banking operations:
 
 - **Apps:**
-  - `core-service`: The engine for primary banking logic, ledgers, and transactions.
-  - `portal-api`: Dedicated API for administrative tasks and staff management.
-  - `worker-service`: Background worker for asynchronous tasks like notifications and transaction processing.
+- `core-service`: The engine for primary banking logic, ledgers, and transactions.
+- `portal-service`: Dedicated API for administrative tasks and staff management.
+- `worker-service`: Background worker for asynchronous tasks like notifications and transaction processing.
+
 - **Libs:**
-  - `database`: Centralized schema definitions, migrations, and shared repositories.
-  - `common`: Shared utilities, DTOs, and global filters.
+- `database`: Centralized schema definitions, migrations, and shared repositories.
+- `background-process`: Central contract provider and queue infrastructure shared across services.
+- `common`: Shared utilities, DTOs, and global filters.
+
+> **Dependency Rule:** Apps consume Libs (`apps/*` $\rightarrow$ `libs/*`). Libs must **never** import from `apps/*`, and root `package.json` remains strictly for workspace tooling.
+
+---
 
 ## 🛠️ Getting Started
 
@@ -39,18 +45,17 @@ Nue uses environment variables to manage connections. Copy the example file to g
 
 ```bash
 cd _env
-```
-
-```bash
 cp .env.example .env
+
 ```
 
 ### 3. Install Project Dependencies
 
-Run this from the root directory to install all packages for the apps and shared libraries:
+Run this from the root directory to install all packages across the workspace:
 
 ```bash
 pnpm install
+
 ```
 
 ### 4. Running the Application
@@ -58,14 +63,15 @@ pnpm install
 Nue is built as a monorepo. You can run each service individually in development mode using the following commands:
 
 ```bash
-# start the Core Banking Engine (Port 3000)
+# Start the Core Banking Engine (Port 3000)
 pnpm run start:dev
 
-# start the Portal Service
+# Start the Portal Service
 pnpm run start:dev:portal
 
-# start the Worker Service
+# Start the Worker Service
 pnpm run start:dev:worker
+
 ```
 
 ### 5. Production Build
@@ -73,87 +79,136 @@ pnpm run start:dev:worker
 To prepare the application for a production environment:
 
 ```bash
-# build all services
+# Build all services
 pnpm run build
 
-# run the production build for the core service
+# Run the production build for the core service
 pnpm run start:prod
+
 ```
 
-Since you are using a custom wrapper (`db-migrate.mjs`) to handle the environment variables from your `_env` folder, your documentation needs to reflect how to call that script via `pnpm` while still utilizing the power of `dbmate`.
-
-Here is the continuation of your markdown guide:
-
 ---
 
-### 6. Database Migrations (Drizzle Kit)
+## 📦 Monorepo Workspace Management
 
-Use **Drizzle Kit** for database schema management. Instead of calling the CLI directly, use the provided `pnpm` scripts. These scripts automatically handle environment variable injection (like `DATABASE_URL` and/or `DATABASE_NAME`) from your `_env/core.env` file using the configuration defined in `drizzle.config.ts`.
+Nue strictly enforces package isolation using `pnpm` workspaces. Runtime dependencies belong inside the specific `package.json` of the app or library that consumes them, keeping the root `package.json` reserved strictly for repository-wide development tooling (`typescript`, `eslint`, `prettier`, `jest`).
 
-#### Available Migration Commands
+### 1. Adding and Removing Packages (`pnpm --filter`)
 
-| Action       | Command                              | Description                                                                             |
-| :----------- | :----------------------------------- | :-------------------------------------------------------------------------------------- |
-| **Generate** | `pnpm run db:generate --name <name>` | Compares your TS schema to the last snapshot and creates a named `.sql` migration file. |
-| **Migrate**  | `pnpm run db:migrate`                | Applies all pending `.sql` migrations to the local PostgreSQL database.                 |
-| **Studio**   | `pnpm run db:studio`                 | Opens a GUI in your browser to view and edit your database data.                        |
-| **Seed**     | `pnpm run db:seed`                   | Populates the database with initial required data (e.g., system roles, offices).        |
+Always target specific packages when managing dependencies using the `--filter` flag with a package name or relative directory path:
 
-#### Usage Examples
+#### Adding Dependencies to a Service or Library
 
-- **To create a new migration (after changing your TypeScript schema):**
+```bash
+# Target by package name (defined in package.json)
+pnpm --filter @lib/background-process add @nestjs/bullmq bullmq
 
-  ```bash
-  pnpm run db:generate --name add_office_to_users
-  ```
+# Target by relative directory path
+pnpm --filter ./apps/worker-service add class-validator class-transformer
 
-  _This generates a versioned `.sql` file in `libs/database/migrations`. Review this file before applying._
+```
 
-- **To apply schema changes to your local database:**
+#### Removing Dependencies from a Service or Library
 
-  ```bash
-  pnpm run db:migrate
-  ```
+```bash
+pnpm --filter @lib/background-process remove bullmq
+pnpm --filter ./apps/worker-service remove class-validator
 
-- **To push changes instantly (Development Only):**
-  _Use `drizzle-kit push` if you want to sync the DB without creating migration files (Note: this can be destructive)._
+```
 
----
+#### Managing Root Development Tooling
 
-### 7. Migration Logic & Workflow
+```bash
+# Install shared dev tooling at root (-w / --workspace-root)
+pnpm add -Dw typescript eslint prettier
 
-Drizzle Kit operates on a **Forward-Only** philosophy. Unlike `dbmate`, there is no explicit `db:down` command.
+# Remove package accidentally installed at root
+pnpm remove -w @nestjs/common bullmq
 
-1. **Schema-First:** Always update your TypeScript files in `libs/database/src/lib/schema/` first.
-2. **Type Safety:** The generator will verify that your foreign key references match (e.g., ensuring `office_id` is an `integer` if it references a `serial` primary key).
-3. **Environment Injection:** The toolkit reads the `core.env` file to establish the connection string: `postgresql://<user>:<pass>@localhost:5432/<db_name>`.
+```
 
----
+### 2. Generating Workspace Modules
 
-### 8. Troubleshooting Migrations
+#### Creating a New Application (`apps/`)
 
-If you encounter an `ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL` or connection errors:
+To generate a new microservice or standalone application inside `apps/`:
 
-1. **Type Mismatch:** Ensure Primary Keys and Foreign Keys share the exact same data type (e.g., `UUID` to `UUID`, not `UUID` to `Integer`).
-2. **Null Violations:** If you `SET NOT NULL` on a column that already has data, the migration will fail. You must clear or update existing rows first.
-3. **Connection Refused:**
-   - Verify PostgreSQL is running on port `5432`.
-   - If using Node 18+, ensure your `DATABASE_URL` uses `127.0.0.1` instead of `localhost` to avoid IPv6 resolution issues.
-4. **Out of Sync:** If the migration state becomes corrupted during development, you can safely drop the `public` schema and re-run `db:migrate` to start fresh.
+```bash
+pnpm exec nest g app <app-name>
 
----
+```
 
-### Root package.json Scripts
+#### Creating a Shared Library (`libs/`)
+
+To generate a shared library inside `libs/`:
+
+```bash
+pnpm exec nest g lib <lib-name>
+
+```
+
+When prompted for the library prefix, enter **`@lib`**:
+
+```text
+? What prefix would you like to use for the library? @lib
+
+```
+
+This automatically updates your root `tsconfig.json` path mappings:
 
 ```json
-"scripts": {
-  "db:generate": "pnpm --filter ./libs/database run db:generate",
-  "db:migrate": "pnpm --filter ./libs/database run db:migrate",
-  "db:studio": "pnpm --filter ./libs/database run db:studio",
-  "db:seed": "pnpm --filter @lib/database run db:seed"
+"paths": {
+  "@lib/your-lib": ["libs/your-lib/src"],
+  "@lib/your-lib/*": ["libs/your-lib/src/*"]
 }
-```
 
 ```
 
+---
+
+## 🗄️ Database Migrations (Drizzle Kit)
+
+Use **Drizzle Kit** for database schema management. Instead of calling the CLI directly, use the provided `pnpm` workspace scripts. These scripts automatically handle environment variable injection from your `_env` files.
+
+### Available Migration Commands
+
+| Action       | Command                              | Description                                                                  |
+| ------------ | ------------------------------------ | ---------------------------------------------------------------------------- |
+| **Generate** | `pnpm run db:generate --name <name>` | Compares TS schema against the snapshot and creates a `.sql` migration file. |
+| **Migrate**  | `pnpm run db:migrate`                | Applies all pending `.sql` migrations to the local PostgreSQL database.      |
+| **Studio**   | `pnpm run db:studio`                 | Opens a browser GUI to view and edit database rows.                          |
+| **Seed**     | `pnpm run db:seed`                   | Populates initial required system data (e.g., offices, roles, seed users).   |
+
+### Usage Examples
+
+- **Create a new migration (after updating TypeScript schema files):**
+
+```bash
+pnpm run db:generate --name add_office_to_users
+
 ```
+
+- **Apply pending migrations:**
+
+```bash
+pnpm run db:migrate
+
+```
+
+---
+
+## 🔄 Migration Logic & Workflow
+
+Drizzle Kit operates on a **Forward-Only** philosophy.
+
+1. **Schema-First:** Always update your TypeScript schema files in `libs/database/src/lib/schema/` first.
+2. **Type Safety:** The generator verifies that foreign key references match exact column types (e.g., `serial` to `integer` or `uuid` to `uuid`).
+3. **Environment Injection:** Connection settings are driven by `DATABASE_URL` (e.g., `postgresql://<user>:<pass>@127.0.0.1:5432/<db_name>`).
+
+---
+
+## 🔧 Troubleshooting
+
+1. **Type Mismatch Errors:** Ensure Primary Keys and Foreign Keys share identical types.
+2. **Missing Package Filters:** If `pnpm --filter <pkg>` returns _No projects matched_, check the `"name"` property in that module's `package.json` or use relative path syntax (`pnpm --filter ./libs/your-lib ...`).
+3. **Connection Refused:** Ensure PostgreSQL is running on port `5432` and use `127.0.0.1` instead of `localhost` on Node.js 18+ to avoid IPv6 resolution issues.
