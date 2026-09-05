@@ -6,9 +6,10 @@ import { LienController } from './lien.controller';
 //libs...
 import { CalculatorModule } from '@common';
 import { DatabaseModule } from '@database';
+import { BackgroundProcessModule } from '@background-process';
 
 @Module({
-  imports: [DatabaseModule, CalculatorModule],
+  imports: [DatabaseModule, CalculatorModule, BackgroundProcessModule],
   controllers: [LienController],
   providers: [LienService],
 })

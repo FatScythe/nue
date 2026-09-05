@@ -1,9 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import moment from 'moment';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { uuidv7 } from 'uuidv7';
+import { plainToInstance } from 'class-transformer';
 
 //libs...
 import {
@@ -16,11 +17,11 @@ import {
 } from '@database';
 import { Calculator, CoreReqUser } from '@common';
 import * as schema from '@database/drizzle/schemas';
+import { BackgroundProcess, LienWorkerEnum } from '@background-process';
 
 import { ApiException } from '../common/exception';
 import { ApiErrorCode } from '../common/enums';
 import { PlaceLienDto, PlaceLienRespDto } from './dto';
-import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class LienService {
@@ -29,15 +30,23 @@ export class LienService {
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly lienRepo: LienRepository,
     private readonly calculator: Calculator,
+    private readonly backgroundProcess: BackgroundProcess,
   ) {}
 
   async placeLien(dto: PlaceLienDto, user: CoreReqUser) {
     const { id: userId, tenantId } = user;
 
-    if (dto.expiresAt && moment(dto.expiresAt).isBefore()) {
+    const MIN_EXPIRATION_BUFFER_SECONDS = 10;
+
+    if (
+      dto.expiresAt &&
+      moment(dto.expiresAt).isBefore(
+        moment().add(MIN_EXPIRATION_BUFFER_SECONDS, 'seconds'),
+      )
+    ) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
-        'expiry date must be in the future',
+        `expiry date must be at least ${MIN_EXPIRATION_BUFFER_SECONDS} seconds in the future`,
         {
           error_code: 'PLI001',
         },
@@ -48,7 +57,7 @@ export class LienService {
       and(eq(liens.reference, dto.reference), eq(liens.tenantId, tenantId!)),
     );
 
-    if (refExist)
+    if (refExist) {
       throw new ApiException(
         ApiErrorCode.Conflict,
         'reference is already used',
@@ -56,8 +65,9 @@ export class LienService {
           error_code: 'PLI002',
         },
       );
+    }
 
-    const { id: lienId } = await this.db.transaction(async (tx) => {
+    const lien = await this.db.transaction(async (tx) => {
       const [account] = await tx
         .select()
         .from(accounts)
@@ -115,7 +125,7 @@ export class LienService {
           and(eq(accounts.id, account.id), eq(accounts.tenantId, tenantId!)),
         );
 
-      const lien = await this.lienRepo.create(
+      const createdLien = await this.lienRepo.create(
         {
           id: uuidv7(),
           tenantId: tenantId!,
@@ -130,7 +140,7 @@ export class LienService {
         tx,
       );
 
-      if (!lien) {
+      if (!createdLien) {
         throw new ApiException(
           ApiErrorCode.InternalServerError,
           'unable to place lien',
@@ -140,12 +150,39 @@ export class LienService {
         );
       }
 
-      return lien;
+      return createdLien;
     });
+
+    const MAX_EXPIRATION_HOURS = 2;
+
+    if (lien.expiresAt) {
+      const now = moment();
+      const expiresAt = moment(lien.expiresAt);
+      const threshold = moment().add(MAX_EXPIRATION_HOURS, 'hours');
+
+      // check that lien expires in the future and within 2 hours from now...
+      if (expiresAt.isAfter(now) && expiresAt.isBefore(threshold)) {
+        const delayMs = expiresAt.diff(now);
+
+        await this.backgroundProcess.dispatchLien(
+          LienWorkerEnum.ProcessLienExpiration,
+          {
+            lienId: lien.id,
+            tenantId: lien.tenantId,
+            accountId: lien.accountId,
+          },
+          {
+            delay: delayMs,
+            jobId: `process-lien-expiration-${lien.id}`,
+            removeOnComplete: true,
+          },
+        );
+      }
+    }
 
     return {
       message: 'lien placed successfully',
-      data: plainToInstance(PlaceLienRespDto, { lienId }),
+      data: plainToInstance(PlaceLienRespDto, { lienId: lien.id }),
     };
   }
 
