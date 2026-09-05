@@ -6,4 +6,7 @@ export const configuration = (): AppConfig => ({
   dbUrl: process.env.DATABASE_URL || '',
   dbName: process.env.DATABASE_NAME || 'nue',
   poolSize: parseInt(process.env.POOL_SIZE!, 10) || 2,
+  redisUrl: process.env.REDIS_URL || '',
+  jwtSecret: process.env.JWT_SECRET || 'jwt_super_secret',
+  jwtExpiry: process.env.JWT_EXPIRY || '10s',
 });

@@ -1,5 +1,14 @@
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsNotEmpty, IsString, validateSync } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  validateSync,
+} from 'class-validator';
+
+import { IsMsDuration } from '@common';
+
 import { Environment } from './types';
 
 class RequiredEnvironmentVariables {
@@ -26,6 +35,16 @@ class RequiredEnvironmentVariables {
   @IsNotEmpty()
   @IsString()
   DATABASE_NAME: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(8)
+  JWT_SECRET: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @IsMsDuration()
+  JWT_EXPIRY: string;
 }
 
 export function validate<T = Record<string, any>>(

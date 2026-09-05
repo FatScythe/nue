@@ -22,13 +22,34 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "paths": {
-      "@app/*": ["./apps/*"],
-      "@database": ["./libs/database/src/index"],
-      "@database/*": ["./libs/database/src/*"],
-      "@common": ["./libs/common/src/index"],
-      "@common/*": ["./libs/common/src/*"],
-      "@utils": ["./libs/common/src/utils/index"],
-      "@utils/*": ["./libs/common/src/utils/*"]
-    }
+      "@app/*": [
+        "./apps/*"
+      ],
+      "@common": [
+        "./libs/common/src/index"
+      ],
+      "@common/*": [
+        "./libs/common/src/*"
+      ],
+      "@database": [
+        "./libs/database/src/index"
+      ],
+      "@database/*": [
+        "./libs/database/src/*"
+      ],
+      "@background-process": [
+        "libs/background-process/src/index"
+      ],
+      "@background-process/*": [
+        "libs/background-process/src/*"
+      ],
+      "@utils": [
+        "./libs/common/src/utils/index"
+      ],
+      "@utils/*": [
+        "./libs/common/src/utils/*"
+      ]
+    },
+    "baseUrl": "./"
   }
 }

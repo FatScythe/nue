@@ -14,6 +14,7 @@
     "@lib/common": "workspace:*",
     "@lib/database": "workspace:*",
     "@nestjs/common": "^11.1.19",
+    "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^11.1.19",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/mapped-types": "*",

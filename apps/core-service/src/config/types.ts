@@ -10,4 +10,7 @@ export interface AppConfig {
   dbUrl: string;
   dbName: string;
   poolSize: number;
+  redisUrl: string;
+  jwtSecret: string;
+  jwtExpiry: string;
 }
