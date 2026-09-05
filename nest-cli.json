@@ -9,6 +9,33 @@
     "tsConfigPath": "tsconfig.json"
   },
   "projects": {
+    "auth": {
+      "type": "library",
+      "root": "libs/auth",
+      "entryFile": "index",
+      "sourceRoot": "libs/auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/auth/tsconfig.lib.json"
+      }
+    },
+    "background-process": {
+      "type": "library",
+      "root": "libs/background-process",
+      "entryFile": "index",
+      "sourceRoot": "libs/background-process/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/background-process/tsconfig.lib.json"
+      }
+    },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/common/tsconfig.lib.json"
+      }
+    },
     "core-service": {
       "type": "application",
       "root": "apps/core-service",
@@ -25,6 +52,15 @@
             "watchMode": true
           }
         ]
+      }
+    },
+    "database": {
+      "type": "library",
+      "root": "libs/database",
+      "entryFile": "index",
+      "sourceRoot": "libs/database/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
     },
     "portal-service": {
@@ -54,33 +90,6 @@
         "webpack": true,
         "webpackConfigPath": "webpack.config.js",
         "tsConfigPath": "apps/worker-service/tsconfig.app.json"
-      }
-    },
-    "database": {
-      "type": "library",
-      "root": "libs/database",
-      "entryFile": "index",
-      "sourceRoot": "libs/database/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/database/tsconfig.lib.json"
-      }
-    },
-    "auth": {
-      "type": "library",
-      "root": "libs/auth",
-      "entryFile": "index",
-      "sourceRoot": "libs/auth/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/auth/tsconfig.lib.json"
-      }
-    },
-    "common": {
-      "type": "library",
-      "root": "libs/common",
-      "entryFile": "index",
-      "sourceRoot": "libs/common/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/common/tsconfig.lib.json"
       }
     }
   }
