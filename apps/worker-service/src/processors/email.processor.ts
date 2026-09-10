@@ -7,8 +7,8 @@ import { BaseWorkerHost } from '../abstracts/base.abstract';
 import {
   BULLMQ_DEFAULT_QUEUE_SETTING,
   BULLMQ_EMAIL_QUEUE,
+  EmailWorkerJobEnum,
 } from '@background-process';
-import { EmailWorkerJobEnum } from '../types';
 
 class DummyDto {
   emailAddress: string;

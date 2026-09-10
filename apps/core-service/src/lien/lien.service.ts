@@ -15,7 +15,7 @@ import {
   DATABASE_CONNECTION,
   LienRepository,
 } from '@database';
-import { Calculator, CoreReqUser } from '@common';
+import { Calculator, CoreReqUser, LIEN_EXPIRATION_SWEEP_HOURS } from '@common';
 import * as schema from '@database/drizzle/schemas';
 import { BackgroundProcess, LienWorkerEnum } from '@background-process';
 
@@ -153,7 +153,7 @@ export class LienService {
       return createdLien;
     });
 
-    const MAX_EXPIRATION_HOURS = 2;
+    const MAX_EXPIRATION_HOURS = LIEN_EXPIRATION_SWEEP_HOURS; // so it syncs w/ bkg job...
 
     if (lien.expiresAt) {
       const now = moment();

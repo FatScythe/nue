@@ -1,6 +1,6 @@
 import { JobsOptions, WorkerOptions } from 'bullmq';
 
-export const BULLMQ_DEFAULT_QUEUE = 'nue-base-cron';
+export const BULLMQ_DEFAULT_QUEUE = 'nue-default-cron';
 export const BULLMQ_EMAIL_QUEUE = 'email_queue';
 export const BULLMQ_LIEN_QUEUE = 'lien_queue';
 export const BULLMQ_CONFIG_KEY = 'nue_mq';

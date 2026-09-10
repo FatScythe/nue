@@ -15,7 +15,7 @@ import {
 import { DatabaseModule } from '@database';
 import { CalculatorModule } from '@common';
 
-import { BaseProcessor, EmailProcessor, LienProcessor } from './processors';
+import { DefaultProcessor, EmailProcessor, LienProcessor } from './processors';
 
 @Module({
   imports: [
@@ -52,7 +52,7 @@ import { BaseProcessor, EmailProcessor, LienProcessor } from './processors';
 
     BackgroundProcessModule,
     // processors...
-    BaseProcessor,
+    DefaultProcessor,
     EmailProcessor,
     LienProcessor,
   ],

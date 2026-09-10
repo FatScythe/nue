@@ -4,6 +4,7 @@ import * as schema from '../schemas';
 import * as dotenv from 'dotenv';
 
 import { runSeedTask } from './seed.runner';
+import { seedCrons } from './handlers/cron.seed';
 import { seedSystemAdmin } from './handlers/system_admin.seed';
 import { seedBusinessTenant } from './handlers/business.seed';
 import { seedCoreRoles } from './handlers/role.seed';
@@ -28,22 +29,27 @@ async function runSeeds() {
 
   try {
     await db.transaction(async (tx) => {
-      // Step 1: System Admin
+      // Step 1: Cron Schedules
+      const cronSchedules = await runSeedTask('Cron Schedules', () =>
+        seedCrons(tx),
+      );
+
+      // Step 2: System Admin
       const sysAdmin = await runSeedTask('System Admin', () =>
         seedSystemAdmin(tx),
       );
 
-      // Step 2: Business Tenant
+      // Step 3: Business Tenant
       const business = await runSeedTask('Business Tenant', () =>
         seedBusinessTenant(tx),
       );
 
-      // Step 3: Core Roles (Requires sysAdmin.id)
+      // Step 4: Core Roles (Requires sysAdmin.id)
       const coreRole = await runSeedTask('Core Admin Role', () =>
         seedCoreRoles(tx, { sysAdminId: sysAdmin.id }),
       );
 
-      // Step 4: Business Users (Requires business.id, sysAdmin.id, coreRole.id)
+      // Step 5: Business Users (Requires business.id, sysAdmin.id, coreRole.id)
       await runSeedTask('Business Users (Human & API)', () =>
         seedBusinessUsers(tx, {
           businessId: business.id,
@@ -52,7 +58,7 @@ async function runSeeds() {
         }),
       );
 
-      // Step 5: General Ledgers (Requires business.id, sysAdmin.id)
+      // Step 6: General Ledgers (Requires business.id, sysAdmin.id)
       await runSeedTask('General Ledgers', () =>
         seedGeneralLedgers(tx, {
           businessId: business.id,
@@ -60,7 +66,7 @@ async function runSeeds() {
         }),
       );
 
-      // Step 6: Offices (Requires business.id)
+      // Step 7: Offices (Requires business.id)
       await runSeedTask('Head Office', () =>
         seedOffices(tx, {
           businessId: business.id,

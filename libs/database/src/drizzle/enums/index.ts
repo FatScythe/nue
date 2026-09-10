@@ -6,3 +6,4 @@ export * from './customer.enum';
 export * from './account.enum';
 export * from './lien.enum';
 export * from './account_product.enum';
+export * from './cron.enum';
