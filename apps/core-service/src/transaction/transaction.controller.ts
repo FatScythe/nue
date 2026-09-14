@@ -1,8 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOperation } from '@nestjs/swagger';
 
-import { TransactionService } from './transaction.service';
-
 //libs...
 import type { CoreReqUser } from '@common';
 
@@ -12,6 +10,7 @@ import {
   AccountToAccountTransferDto,
   TransferResp,
 } from './dto';
+import { TransactionService } from './transaction.service';
 
 @Controller('transactions')
 export class TransactionController {

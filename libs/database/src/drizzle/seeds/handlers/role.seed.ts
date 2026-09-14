@@ -1,6 +1,8 @@
 import { uuidv7 } from 'uuidv7';
-import * as schema from '../../schemas';
+
 import { rebuildPermission } from '@common';
+
+import * as schema from '../../schemas';
 
 export interface SeedRolePayload {
   sysAdminId: string;

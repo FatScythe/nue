@@ -9,9 +9,9 @@ import { Reflector } from '@nestjs/core';
 // libs...
 import { ApiScope } from '@database';
 
-import { ApiException } from '../../common/exception';
-import { ApiErrorCode } from '../../common/enums';
 import { PERMISSION_KEY, PermissionCondition } from '../../common/decorator';
+import { ApiErrorCode } from '../../common/enums';
+import { ApiException } from '../../common/exception';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {

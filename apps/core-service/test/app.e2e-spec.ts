@@ -1,6 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import * as request from 'supertest';
+
 import { CoreServiceModule } from './../src/core-service.module';
 
 describe('CoreServiceController (e2e)', () => {

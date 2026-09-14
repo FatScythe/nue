@@ -1,4 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
+
 import { ApiScope } from '@database';
 
 export const PERMISSION_KEY = 'scope_permissions_check';

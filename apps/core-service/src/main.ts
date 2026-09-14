@@ -1,20 +1,23 @@
 import 'tsconfig-paths/register';
-import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
-import { CoreServiceModule } from './core-service.module';
-import { NestExpressApplication } from '@nestjs/platform-express';
 import {
   Logger,
   ValidationError,
   ValidationPipe,
   VersioningType,
 } from '@nestjs/common';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import helmet from 'helmet';
+
+import { DEFAULT_API_KEY } from '@database';
+
+import { configuration } from './config';
+import { CoreServiceModule } from './core-service.module';
 import { AllExceptionsFilter } from './filters';
 import { TransformInterceptor } from './interceptors';
-import { configuration } from './config';
-import { DEFAULT_API_KEY } from '@database';
 
 async function bootstrap() {
   const app =

@@ -18,10 +18,9 @@ import {
 import { ParseUUID, type CoreReqUser } from '@common';
 import { Resources } from '@database';
 
-import { LienService } from './lien.service';
 import { ApiSuccessResponseData, GetUser, Scope } from '../common/decorator';
-
 import { PlaceLienDto, PlaceLienRespDto } from './dto';
+import { LienService } from './lien.service';
 
 @ApiTags('Liens')
 @ApiSecurity('bearer-token')

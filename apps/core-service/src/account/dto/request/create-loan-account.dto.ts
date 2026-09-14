@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 import {
   IsEnum,
   IsInt,
@@ -9,9 +10,10 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
-import { LoanRepaymentFrequency, MoratoriumType } from '@database';
 import moment from 'moment';
+
 import { DATE_FORMAT } from '@common';
+import { LoanRepaymentFrequency, MoratoriumType } from '@database';
 
 export class CreateLoanAccountDto {
   @ApiProperty({

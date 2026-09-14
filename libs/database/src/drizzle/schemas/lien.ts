@@ -1,16 +1,18 @@
 import {
+  bigint,
+  index,
+  integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
-  pgEnum,
-  bigint,
-  varchar,
   uniqueIndex,
-  index,
-  integer,
+  varchar,
 } from 'drizzle-orm/pg-core';
-import { accounts, businesses, users } from '.';
+
 import { LienStatus } from '@database/drizzle/enums';
+
+import { accounts, businesses, users } from '.';
 
 export const lienStatusEnum = pgEnum(
   'lien_status',

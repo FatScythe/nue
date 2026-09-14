@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsString, validateSync } from 'class-validator';
+
 import { Environment } from './types';
 
 class RequiredEnvironmentVariables {

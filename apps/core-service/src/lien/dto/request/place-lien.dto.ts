@@ -1,4 +1,3 @@
-import { IsValidDate, IsValidReference } from '@common';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
@@ -9,6 +8,8 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
+
+import { IsValidDate, IsValidReference } from '@common';
 
 export class PlaceLienDto {
   @ApiProperty({

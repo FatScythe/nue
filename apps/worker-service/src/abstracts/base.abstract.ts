@@ -1,5 +1,5 @@
-import { Logger, ValidationError } from '@nestjs/common';
 import { OnWorkerEvent, WorkerHost } from '@nestjs/bullmq';
+import { Logger, ValidationError } from '@nestjs/common';
 
 import { Job } from 'bullmq';
 import { ClassConstructor, plainToInstance } from 'class-transformer';

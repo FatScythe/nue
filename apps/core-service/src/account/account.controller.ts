@@ -1,13 +1,13 @@
 import {
   Body,
   Controller,
-  Post,
-  HttpStatus,
-  HttpCode,
   Get,
-  Query,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
+  Post,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
@@ -15,23 +15,23 @@ import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ParseUUID, type CoreReqUser } from '@common';
 import { Resources } from '@database';
 
-import { AccountService } from './account.service';
 import {
   ApiSuccessResponseData,
   GetUser,
   Permissions,
   Scope,
 } from '../common/decorator';
+import { AccountService } from './account.service';
 import {
-  CreateSavingsAcctRespDto,
-  CreateSavingsAccountDto,
-  PaginatedAccountsRespDto,
-  GetAccountsQueryDto,
   AccountItemRespDto,
-  ActivateAccountRespDto,
   ActivateAccountDto,
+  ActivateAccountRespDto,
   CreateLoanAccountDto,
   CreateLoanAcctRespDto,
+  CreateSavingsAccountDto,
+  CreateSavingsAcctRespDto,
+  GetAccountsQueryDto,
+  PaginatedAccountsRespDto,
 } from './dto';
 
 @ApiTags('Accounts')

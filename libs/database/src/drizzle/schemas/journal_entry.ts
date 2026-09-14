@@ -1,19 +1,19 @@
 import {
+  index,
   integer,
   pgEnum,
   pgTable,
+  text,
   timestamp,
   varchar,
-  text,
-  index,
 } from 'drizzle-orm/pg-core';
 
 import { JournalEntryStatus } from '@database/drizzle/enums';
 
-import { users } from './user';
-import { transactions } from './transaction';
 import { businesses } from './business';
 import { offices } from './office';
+import { transactions } from './transaction';
+import { users } from './user';
 
 export const journalEntryStatusEnum = pgEnum(
   'journal_entry_status',

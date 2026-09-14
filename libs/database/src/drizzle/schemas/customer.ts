@@ -1,27 +1,27 @@
 import {
+  date,
+  index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
-  varchar,
-  date,
   uniqueIndex,
-  index,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 import {
+  CustomerGender,
   CustomerStatus,
   CustomerTier,
   CustomerType,
-  CustomerGender,
 } from '@database/drizzle/enums';
 import { CustomerLoopEntries } from '@database/drizzle/types';
 
 import { businesses } from './business';
-import { users } from './user';
 import { offices } from './office';
+import { users } from './user';
 
 export const customerTypeEnum = pgEnum(
   'customer_type',

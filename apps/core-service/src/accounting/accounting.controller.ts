@@ -6,14 +6,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { Resources } from '@database';
 import type { CoreReqUser } from '@common';
+import { Resources } from '@database';
 
 import { ApiSuccessResponseData, GetUser, Scope } from '../common/decorator';
-import { AccountingService } from './accounting.service';
-
-import { CreateGlAccountDto, CreateGlAccountRespDto } from './dto';
 import { TransferResp } from '../transaction/dto';
+import { AccountingService } from './accounting.service';
+import { CreateGlAccountDto, CreateGlAccountRespDto } from './dto';
 
 @ApiTags('Accounting')
 @ApiSecurity('bearer-token')

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 
-import { LienService } from './lien.service';
-import { LienController } from './lien.controller';
-
+import { BackgroundProcessModule } from '@background-process';
 //libs...
 import { CalculatorModule } from '@common';
 import { DatabaseModule } from '@database';
-import { BackgroundProcessModule } from '@background-process';
+
+import { LienController } from './lien.controller';
+import { LienService } from './lien.service';
 
 @Module({
   imports: [DatabaseModule, CalculatorModule, BackgroundProcessModule],

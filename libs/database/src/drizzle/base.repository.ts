@@ -1,11 +1,12 @@
 import { Inject } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import * as schema from '@database/drizzle/schemas';
-import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import { DatabaseClient, DBTransaction } from '@database/drizzle/types';
-import { PgTable } from 'drizzle-orm/pg-core';
 import { sql, SQL } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { PgTable } from 'drizzle-orm/pg-core';
+
+import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
+import * as schema from '@database/drizzle/schemas';
+import { DatabaseClient, DBTransaction } from '@database/drizzle/types';
 
 export abstract class BaseRepository<TTable extends PgTable> {
   constructor(

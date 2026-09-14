@@ -1,12 +1,12 @@
 import { sql } from 'drizzle-orm';
 import {
-  pgTable,
-  varchar,
-  text,
   bigint,
-  timestamp,
   check,
   index,
+  pgTable,
+  text,
+  timestamp,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 import { generalLedgers } from './general_ledger';

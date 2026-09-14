@@ -1,22 +1,24 @@
-import { Global, Module, OnApplicationShutdown, Inject } from '@nestjs/common';
+import { Global, Inject, Module, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import {
   DATABASE_CONNECTION,
   DrizzleProvider,
 } from '@database/drizzle/drizzle.provider';
-import { CustomerRepository } from '@database/drizzle/repository/customer';
 import {
   AccountRepository,
   GeneralLedgerRepository,
 } from '@database/drizzle/repository/account';
+import { CustomerRepository } from '@database/drizzle/repository/customer';
 import { UserRepository } from '@database/drizzle/repository/user';
+
 import {
   JournalEntryLineRepository,
   JournalEntryRepository,
   LienRepository,
   TransactionRepository,
 } from './repository';
+
 // import { REDIS_CLIENT, RedisProvider } from '@database/drizzle/redis.provider';
 
 @Global()

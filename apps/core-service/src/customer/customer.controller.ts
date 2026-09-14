@@ -1,27 +1,26 @@
 import {
   Body,
   Controller,
-  Post,
+  Get,
   HttpCode,
   HttpStatus,
-  Get,
-  Query,
   Param,
+  Post,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
-import { CustomerService } from './customer.service';
+import { ParseUUID, type CoreReqUser } from '@common';
+// libs...
+import { Resources } from '@database';
+
 import {
   ApiSuccessResponseData,
   GetUser,
   Permissions,
   Scope,
 } from '../common/decorator';
-
-// libs...
-import { Resources } from '@database';
-import { ParseUUID, type CoreReqUser } from '@common';
-
+import { CustomerService } from './customer.service';
 import {
   CreateCustomerDto,
   CreateCustomerRespDto,

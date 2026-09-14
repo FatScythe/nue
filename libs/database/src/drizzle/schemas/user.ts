@@ -15,8 +15,8 @@ import { Resources, UserStatus, UserType } from '@database/drizzle/enums';
 import { ApiScope } from '@database/drizzle/types';
 
 import { businesses } from './business';
-import { roles } from './role';
 import { offices } from './office';
+import { roles } from './role';
 
 export const userTypeEnum = pgEnum(
   'user_type',

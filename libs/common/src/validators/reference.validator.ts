@@ -1,8 +1,9 @@
 import {
   registerDecorator,
-  ValidationOptions,
   ValidationArguments,
+  ValidationOptions,
 } from 'class-validator';
+
 import { containsSpecialChars } from '../utils';
 
 export function IsValidReference(validationOptions?: ValidationOptions) {

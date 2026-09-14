@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import * as config from '@nestjs/config';
+
 import { configuration, validate } from '.';
 
 @Module({

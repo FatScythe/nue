@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+
 import { ApiErrorCode } from '../enums';
 
 export default class ConfigError extends Error {

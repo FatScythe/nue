@@ -1,7 +1,7 @@
 import {
   registerDecorator,
-  ValidationOptions,
   ValidationArguments,
+  ValidationOptions,
 } from 'class-validator';
 
 const PHONE_NUMBER_REGEX = /^234(7|8|9)\d{9}$/;

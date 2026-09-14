@@ -1,7 +1,9 @@
 // libs/database/src/database.provider.ts
+import { ConfigService } from '@nestjs/config';
+
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { ConfigService } from '@nestjs/config';
+
 import * as schema from './schemas';
 
 export const DATABASE_CONNECTION = 'DATABASE_CONNECTION';

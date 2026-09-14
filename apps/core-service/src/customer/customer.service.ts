@@ -5,28 +5,29 @@ import { and, eq, ilike, isNull, or, SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import moment from 'moment';
 
-import * as schema from '@database/drizzle/schemas';
-import { accounts, customers, offices, users } from '@database/drizzle/schemas';
-import {
-  // AccountProducts,
-  // AccountProductStatus,
-  AccountStatus,
-  AccountType,
-  CustomerGender,
-  CustomerStatus,
-  CustomerType,
-  CustomerRepository,
-} from '@database';
-import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import {
   calculatePaginationMeta,
   Calculator,
   CoreReqUser,
   DATE_FORMAT,
 } from '@common';
+import {
+  // AccountProducts,
+  // AccountProductStatus,
+  AccountStatus,
+  AccountType,
+  CustomerGender,
+  CustomerRepository,
+  CustomerStatus,
+  CustomerType,
+} from '@database';
+import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
+import * as schema from '@database/drizzle/schemas';
+import { accounts, customers, offices, users } from '@database/drizzle/schemas';
 
-import { ApiException } from '../common/exception';
+import { AccountService } from '../account/account.service';
 import { ApiErrorCode } from '../common/enums';
+import { ApiException } from '../common/exception';
 import {
   AccountResponseDto,
   CreateCustomerDto,
@@ -36,7 +37,6 @@ import {
   GetSingleCustomerResponseDto,
   PaginatedCustomersResponseDto,
 } from './dto';
-import { AccountService } from '../account/account.service';
 import { CustomerWithAccountRow } from './interface';
 
 @Injectable()

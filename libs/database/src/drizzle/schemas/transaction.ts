@@ -1,28 +1,28 @@
-import {
-  pgTable,
-  varchar,
-  integer,
-  text,
-  bigint,
-  jsonb,
-  timestamp,
-  pgEnum,
-  index,
-  check,
-  uniqueIndex,
-} from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import {
+  bigint,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  varchar,
+} from 'drizzle-orm/pg-core';
 
 import {
   TransactionCategory,
   TransactionStatus,
 } from '@database/drizzle/enums';
-import { Currency, dbCurrencyEnum } from './utils';
 
-import { businesses } from './business';
 import { accounts } from './account';
-import { users } from './user';
+import { businesses } from './business';
 import { offices } from './office';
+import { users } from './user';
+import { Currency, dbCurrencyEnum } from './utils';
 
 export const transactionCategoryEnum = pgEnum(
   'transaction_category',

@@ -1,7 +1,9 @@
-import { DATE_FORMAT } from '@common';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
 import { IsOptional, IsString } from 'class-validator';
 import moment from 'moment';
+
+import { DATE_FORMAT } from '@common';
 
 export class ActivateAccountDto {
   @ApiPropertyOptional({ description: 'Optional activation notes or reason' })

@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 
+import { CalculatorModule } from '@common';
 //libs...
 import { DatabaseModule } from '@database';
-import { CalculatorModule } from '@common';
 
-import { CustomerService } from './customer.service';
-import { CustomerController } from './customer.controller';
 import { AccountModule } from '../account/account.module';
+import { CustomerController } from './customer.controller';
+import { CustomerService } from './customer.service';
 
 @Module({
   imports: [DatabaseModule, AccountModule, CalculatorModule],

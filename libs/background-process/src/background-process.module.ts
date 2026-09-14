@@ -1,8 +1,7 @@
-import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { Module } from '@nestjs/common';
 
 import { BackgroundProcess } from './background-process.service';
-
 import {
   BULLMQ_DEFAULT_QUEUE,
   BULLMQ_EMAIL_QUEUE,

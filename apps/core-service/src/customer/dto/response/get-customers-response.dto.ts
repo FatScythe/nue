@@ -1,7 +1,9 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+import { Expose, Type } from 'class-transformer';
+
 import { PaginationMetaResponseDto } from '@common/dto/reponse.dto';
 import { CustomerGender, CustomerStatus, CustomerType } from '@database';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Expose, Type } from 'class-transformer';
 
 export class GetAllCustomerRespDto {
   @ApiProperty({

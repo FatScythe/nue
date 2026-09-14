@@ -1,21 +1,20 @@
-import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { WorkerServiceController } from './worker-service.controller';
-import { WorkerServiceService } from './worker-service.service';
-import { WConfigModule } from './config/config.module';
-
 import {
+  BackgroundProcessModule,
   BULLMQ_DEFAULT_QUEUE,
   BULLMQ_EMAIL_QUEUE,
   BULLMQ_LIEN_QUEUE,
-  BackgroundProcessModule,
 } from '@background-process';
-import { DatabaseModule } from '@database';
 import { CalculatorModule } from '@common';
+import { DatabaseModule } from '@database';
 
+import { WConfigModule } from './config/config.module';
 import { DefaultProcessor, EmailProcessor, LienProcessor } from './processors';
+import { WorkerServiceController } from './worker-service.controller';
+import { WorkerServiceService } from './worker-service.service';
 
 @Module({
   imports: [

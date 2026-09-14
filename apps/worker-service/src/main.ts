@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+
 import { WorkerServiceModule } from './worker-service.module';
 
 async function bootstrap() {

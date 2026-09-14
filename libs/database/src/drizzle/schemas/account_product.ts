@@ -1,17 +1,18 @@
 import {
-  pgTable,
-  varchar,
-  integer,
-  text,
-  numeric,
-  boolean,
   bigint,
-  timestamp,
-  jsonb,
+  boolean,
   index,
-  unique,
+  integer,
+  jsonb,
+  numeric,
   pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  varchar,
 } from 'drizzle-orm/pg-core';
+
 import {
   AccountProductStatus,
   AccountProductType,
@@ -19,8 +20,8 @@ import {
   ShariaContractType,
 } from '../enums';
 import { businesses } from './business';
-import { Currency, dbCurrencyEnum } from './utils';
 import { generalLedgers } from './general_ledger';
+import { Currency, dbCurrencyEnum } from './utils';
 
 export const accountTypeEnum = pgEnum(
   'account_type',

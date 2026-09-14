@@ -1,17 +1,19 @@
+import { sql } from 'drizzle-orm';
 import {
-  pgTable,
   bigint,
   integer,
-  timestamp,
   pgEnum,
+  pgTable,
   text,
+  timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { accounts } from './account';
+
 import { LoanScheduleStatus } from '@database/drizzle/enums';
+
+import { accounts } from './account';
 import { businesses } from './business';
 import { users } from './user';
-import { sql } from 'drizzle-orm';
 
 export const loanScheduleStatusEnum = pgEnum(
   'loan_schedule_status',

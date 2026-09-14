@@ -1,10 +1,10 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import {
   Inject,
   Injectable,
   Logger,
   OnApplicationBootstrap,
 } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
 
 import { Queue } from 'bullmq';
 import { eq } from 'drizzle-orm';

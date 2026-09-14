@@ -1,4 +1,5 @@
 import { generalLedgers } from '@database/drizzle/schemas';
+
 import { GlCategory, GlNormalBalance } from '../../enums';
 
 export const LEDGERS_FIXTURE: Partial<typeof generalLedgers.$inferInsert>[] = [

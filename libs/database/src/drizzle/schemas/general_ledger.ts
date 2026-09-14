@@ -1,14 +1,14 @@
 import {
-  pgTable,
-  varchar,
-  text,
-  timestamp,
-  pgEnum,
-  uniqueIndex,
-  index,
   AnyPgColumn,
   boolean,
+  index,
   integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 import { GlCategory, GlNormalBalance } from '@database/drizzle/enums';

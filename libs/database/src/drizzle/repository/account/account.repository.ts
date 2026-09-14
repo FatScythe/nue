@@ -1,19 +1,20 @@
-import { uuidv7 } from 'uuidv7';
 import { Inject, Injectable } from '@nestjs/common';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, and } from 'drizzle-orm';
 
-import * as schema from '@database/drizzle/schemas';
+import { and, eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { uuidv7 } from 'uuidv7';
+
 import { BaseRepository } from '@database/drizzle/base.repository';
+import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
+import { AccountStatus } from '@database/drizzle/enums';
+import * as schema from '@database/drizzle/schemas';
 import {
   accounts,
   loanDetails,
   savingsDetails,
   // fixedDepositDetails,
 } from '@database/drizzle/schemas';
-import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import { DBTransaction } from '@database/drizzle/types';
-import { AccountStatus } from '@database/drizzle/enums';
 
 @Injectable()
 export class AccountRepository extends BaseRepository<typeof accounts> {

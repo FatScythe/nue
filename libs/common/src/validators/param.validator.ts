@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 
 import {
-  ValidationError,
   isNotEmpty,
   isNumberString,
   isString,
   isUUID,
+  ValidationError,
 } from 'class-validator';
 
 type ValidatorType = 'number_string' | 'uuid' | 'string';

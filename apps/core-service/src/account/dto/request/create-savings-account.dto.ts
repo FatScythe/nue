@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 import { IsValidDate, IsValidReference } from '@lib/common/src/validators';
 import { Type } from 'class-transformer';
 import {
@@ -11,9 +12,10 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
-import { AccountType } from '@database';
-import { DATE_FORMAT } from '@common';
 import moment from 'moment';
+
+import { DATE_FORMAT } from '@common';
+import { AccountType } from '@database';
 
 export class CreateSavingsAccountDto {
   @ApiPropertyOptional({

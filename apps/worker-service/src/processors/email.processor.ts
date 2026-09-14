@@ -1,14 +1,15 @@
-import { Logger } from '@nestjs/common';
 import { OnWorkerEvent, Processor } from '@nestjs/bullmq';
+import { Logger } from '@nestjs/common';
 
 import { Job } from 'bullmq';
 
-import { BaseWorkerHost } from '../abstracts/base.abstract';
 import {
   BULLMQ_DEFAULT_QUEUE_SETTING,
   BULLMQ_EMAIL_QUEUE,
   EmailWorkerJobEnum,
 } from '@background-process';
+
+import { BaseWorkerHost } from '../abstracts/base.abstract';
 
 class DummyDto {
   emailAddress: string;

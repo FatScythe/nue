@@ -1,7 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { AccountStatus, AccountType } from '@database';
+
 import { PaginationParamDto } from '@common/dto';
+import { AccountStatus, AccountType } from '@database';
 
 export class GetAccountsQueryDto extends PaginationParamDto {
   @ApiPropertyOptional()

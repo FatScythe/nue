@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+
 import { Expose, Type } from 'class-transformer';
 import {
   IsEmail,
@@ -8,6 +9,8 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
+
+import { IsValidDate } from '@common';
 import {
   AccountStatus,
   AccountType,
@@ -15,7 +18,6 @@ import {
   CustomerStatus,
   CustomerType,
 } from '@database';
-import { IsValidDate } from '@common';
 
 export class AccountResponseDto {
   @ApiProperty({ example: '019fea66-9270-7e7d-9291-0b163909cbd9' })

@@ -1,8 +1,10 @@
-import { PaginationParamDto } from '@common/dto';
-import { CustomerStatus, CustomerType } from '@database';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
 import { Transform } from 'class-transformer';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
+
+import { PaginationParamDto } from '@common/dto';
+import { CustomerStatus, CustomerType } from '@database';
 
 export class GetCustomersQueryDto extends PaginationParamDto {
   @ApiPropertyOptional({

@@ -1,19 +1,19 @@
 import {
+  AnyPgColumn,
+  index,
+  integer,
   jsonb,
   pgTable,
   text,
   timestamp,
-  varchar,
-  AnyPgColumn,
   uniqueIndex,
-  index,
-  integer,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 import { RolePermissions } from '@database/drizzle/types';
 
-import { users } from './user';
 import { businesses } from './business';
+import { users } from './user';
 import { DEFAULT_PERMISSION } from './utils';
 
 export const roles = pgTable(

@@ -1,4 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
+
 import { Resources } from '@database/drizzle/enums';
 import { Permission } from '@database/drizzle/types';
 

@@ -1,4 +1,5 @@
 import { sql } from 'drizzle-orm';
+
 import * as schema from '../../schemas';
 import { CRON_SCHEDULES_FIXTURE } from '../fixtures/cron.fixture';
 

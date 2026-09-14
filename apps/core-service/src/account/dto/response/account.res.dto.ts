@@ -1,7 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 import { Expose, Type } from 'class-transformer';
-import { AccountStatus, AccountType } from '@database';
+
 import { PaginationMetaResponseDto } from '@common/dto/reponse.dto';
+import { AccountStatus, AccountType } from '@database';
+
 import { LoanDetailsRespDto } from './loan-detail.res.dto';
 import { SavingsDetailsRespDto } from './saving-detail.res.dto';
 

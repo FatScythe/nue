@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+
 import { PortalServiceController } from './portal-service.controller';
 import { PortalServiceService } from './portal-service.service';
 
@@ -11,7 +12,9 @@ describe('PortalServiceController', () => {
       providers: [PortalServiceService],
     }).compile();
 
-    portalServiceController = app.get<PortalServiceController>(PortalServiceController);
+    portalServiceController = app.get<PortalServiceController>(
+      PortalServiceController,
+    );
   });
 
   describe('root', () => {

@@ -1,7 +1,8 @@
 import { uuidv7 } from 'uuidv7';
-import * as schema from '../../schemas';
-import { UserStatus, UserType } from '../../enums';
+
 import { DEFAULT_API_KEY } from '../../database.constant';
+import { UserStatus, UserType } from '../../enums';
+import * as schema from '../../schemas';
 import { ApiScope, validScopes } from '../../types';
 
 export interface SeedUsersPayload {

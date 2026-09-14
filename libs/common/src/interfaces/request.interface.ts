@@ -1,5 +1,6 @@
 import { Request } from 'express';
-import { PortalReqUser, CoreReqUser } from '../types';
+
+import { CoreReqUser, PortalReqUser } from '../types';
 
 export interface PortalRequest extends Request {
   user?: PortalReqUser;

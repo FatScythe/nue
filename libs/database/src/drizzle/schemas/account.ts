@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   bigint,
   index,
@@ -9,16 +10,15 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
 
-import { Currency, dbCurrencyEnum } from './utils';
 import { AccountStatus, AccountType } from '@database/drizzle/enums';
 import { AccountLoopEntries } from '@database/drizzle/types';
 
 import { businesses } from './business';
 import { customers } from './customer';
-import { users } from './user';
 import { offices } from './office';
+import { users } from './user';
+import { Currency, dbCurrencyEnum } from './utils';
 
 export const accountStatusEnum = pgEnum(
   'account_status',

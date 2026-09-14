@@ -1,4 +1,10 @@
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class SendLoginNotificationDto {
   @IsEmail({}, { message: '[email_job]: Email address must be valid' })

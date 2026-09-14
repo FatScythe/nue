@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 import { Expose } from 'class-transformer';
+
 import { LoanRepaymentFrequency, LoanStatus, MoratoriumType } from '@database';
 
 export class LoanDetailsRespDto {

@@ -1,5 +1,6 @@
-import { accounts, customers } from '@database';
 import { type InferSelectModel } from 'drizzle-orm';
+
+import { accounts, customers } from '@database';
 
 export interface CustomerWithAccountRow {
   customer: {

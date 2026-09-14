@@ -1,7 +1,8 @@
 // utils.ts
+import { pgEnum } from 'drizzle-orm/pg-core';
+
 import { Resources } from '@database/drizzle/enums';
 import { RolePermissions } from '@database/drizzle/types';
-import { pgEnum } from 'drizzle-orm/pg-core';
 
 export enum Currency {
   Ngn = 'ngn',
