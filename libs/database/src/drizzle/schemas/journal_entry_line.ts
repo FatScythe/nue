@@ -3,12 +3,14 @@ import {
   bigint,
   check,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
 
+import { businesses } from './business';
 import { generalLedgers } from './general_ledger';
 import { journalEntries } from './journal_entry';
 
@@ -16,6 +18,9 @@ export const journalEntryLines = pgTable(
   'journal_entry_lines',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()
+    tenantId: integer('tenant_id')
+      .notNull()
+      .references(() => businesses.id, { onDelete: 'restrict' }),
     journalEntryId: varchar('journal_entry_id', { length: 36 })
       .notNull()
       .references(() => journalEntries.id, { onDelete: 'cascade' }),

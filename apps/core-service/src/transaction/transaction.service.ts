@@ -241,6 +241,7 @@ export class TransactionService {
       const lines = [
         {
           id: uuidv7(),
+          tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: depositGlId,
           debit: BigInt(totalDeduction),
@@ -249,6 +250,7 @@ export class TransactionService {
         },
         {
           id: uuidv7(),
+          tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: depositGlId,
           debit: BigInt(0),
@@ -261,6 +263,7 @@ export class TransactionService {
       if (this.calculator.compare(feeAmount, 0) === 1 && feeGlId) {
         lines.push({
           id: uuidv7(),
+          tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: feeGlId,
           debit: BigInt(0),
@@ -457,6 +460,7 @@ export class TransactionService {
       // build balanced double-entry gl lines...
       const lines: Array<{
         id: string;
+        tenantId: number;
         journalEntryId: string;
         glAccountId: string;
         debit: bigint;
@@ -468,6 +472,7 @@ export class TransactionService {
         // debit deposit control gl...
         lines.push({
           id: uuidv7(),
+          tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: depositGl.id,
           debit: BigInt(transferAmount),
@@ -478,6 +483,7 @@ export class TransactionService {
         // credit target gl...
         lines.push({
           id: uuidv7(),
+          tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: targetGl.id,
           debit: BigInt(0),
@@ -488,6 +494,7 @@ export class TransactionService {
         // debit target gl...
         lines.push({
           id: uuidv7(),
+          tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: targetGl.id,
           debit: BigInt(transferAmount),
@@ -498,6 +505,7 @@ export class TransactionService {
         // credit deposit control gl...
         lines.push({
           id: uuidv7(),
+          tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: depositGl.id,
           debit: BigInt(0),
