@@ -55,11 +55,18 @@ export const customers = pgTable(
       .notNull(),
     externalId: varchar('external_id', { length: 255 }), // Handled via tenant-scoped unique index
     status: customerStatusEnum('status')
+      .$type<CustomerStatus>()
       .notNull()
       .default(CustomerStatus.PendingVerification),
-    tier: customerTierEnum('tier').notNull().default(CustomerTier.TierZero),
-    type: customerTypeEnum('type').notNull(),
-    gender: customerGenderEnum('gender').default(CustomerGender.Nil).notNull(),
+    tier: customerTierEnum('tier')
+      .$type<CustomerTier>()
+      .notNull()
+      .default(CustomerTier.TierZero),
+    type: customerTypeEnum('type').$type<CustomerType>().notNull(),
+    gender: customerGenderEnum('gender')
+      .$type<CustomerGender>()
+      .default(CustomerGender.Nil)
+      .notNull(),
     firstName: text('first_name'),
     lastName: text('last_name'),
     middleName: text('middle_name'),

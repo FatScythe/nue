@@ -40,8 +40,8 @@ export const users = pgTable(
     tenantId: integer('tenant_id').references(() => businesses.id, {
       onDelete: 'restrict',
     }), // nullable for sys admin...
-    type: userTypeEnum('type').notNull(),
-    status: userStatusEnum('status').notNull(),
+    type: userTypeEnum('type').$type<UserType>().notNull(),
+    status: userStatusEnum('status').$type<UserStatus>().notNull(),
     emailAddress: text('email_address'),
     firstName: text('first_name').notNull(),
     lastName: text('last_name').notNull(),

@@ -34,6 +34,7 @@ export const journalEntries = pgTable(
     entryDate: timestamp('entry_date', { withTimezone: true }).notNull(),
     description: text('description').notNull(),
     status: journalEntryStatusEnum('status')
+      .$type<JournalEntryStatus>()
       .default(JournalEntryStatus.Posted)
       .notNull(),
     createdBy: varchar('created_by', { length: 36 }).references(

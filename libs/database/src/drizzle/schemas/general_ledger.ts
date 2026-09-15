@@ -36,7 +36,7 @@ export const generalLedgers = pgTable(
 
     code: text('code').notNull(), // e.g., "1010" for "Cash"
     name: text('name').notNull(),
-    category: glCategoryEnum('category').notNull(),
+    category: glCategoryEnum('category').$type<GlCategory>().notNull(),
     normalBalance: normalBalanceEnum('normal_balance').notNull(),
 
     // self-referencing FK for account hierarchy (e.g., Sub-GL -> Parent GL)

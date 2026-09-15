@@ -56,15 +56,20 @@ export const loanDetails = pgTable(
     tenor: integer('tenor').notNull(), // tenor in months/days...
     repaymentFrequency: repaymentFrequencyEnum('repayment_frequency')
       .default(LoanRepaymentFrequency.Monthly)
+      .$type<LoanRepaymentFrequency>()
       .notNull(),
     interestRate: numeric('interest_rate', { precision: 5, scale: 2 })
       .default('0.00')
       .notNull(),
-    status: loanStatusEnum('status').default(LoanStatus.Active).notNull(),
+    status: loanStatusEnum('status')
+      .default(LoanStatus.Active)
+      .$type<LoanStatus>()
+      .notNull(),
     processingFee: bigint('processing_fee', { mode: 'bigint' })
       .default(sql`0`)
       .notNull(),
     moratoriumType: moratoriumTypeEnum('moratorium_type')
+      .$type<MoratoriumType>()
       .default(MoratoriumType.None)
       .notNull(),
     moratoriumPeriod: integer('moratorium_period').default(0).notNull(),

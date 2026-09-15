@@ -56,9 +56,13 @@ export const transactions = pgTable(
     fee: bigint('fee', { mode: 'bigint' })
       .default(sql`0`)
       .notNull(),
-    currency: dbCurrencyEnum('currency').notNull().default(Currency.Ngn),
-    category: transactionCategoryEnum('category'),
+    currency: dbCurrencyEnum('currency')
+      .$type<Currency>()
+      .notNull()
+      .default(Currency.Ngn),
+    category: transactionCategoryEnum('category').$type<TransactionCategory>(),
     status: transactionStatusEnum('status')
+      .$type<TransactionStatus>()
       .default(TransactionStatus.Pending)
       .notNull(),
     reference: text('reference').notNull(), // handled via tenant unique index...

@@ -33,7 +33,10 @@ export const liens = pgTable(
     amount: bigint('amount', { mode: 'bigint' }).notNull(),
     reason: text('reason'),
     reference: text('reference'), // Handled via tenant unique index
-    status: lienStatusEnum('status').default(LienStatus.Active).notNull(),
+    status: lienStatusEnum('status')
+      .$type<LienStatus>()
+      .default(LienStatus.Active)
+      .notNull(),
 
     expiresAt: timestamp('expires_at', { withTimezone: true }), // optional hold release date...
 

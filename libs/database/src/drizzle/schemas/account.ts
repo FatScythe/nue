@@ -40,16 +40,23 @@ export const accounts = pgTable(
     tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
-    type: accountTypeEnum('type').notNull().default(AccountType.Savings),
+    type: accountTypeEnum('type')
+      .$type<AccountType>()
+      .notNull()
+      .default(AccountType.Savings),
     productId: varchar('product_id', { length: 36 }),
-    // .notNull().references(() => accountProducts.id) add once mvp is done
+    // .notNull().references(() => accountProducts.id) add once mvp is done...
     status: accountStatusEnum('status')
+      .$type<AccountStatus>()
       .notNull()
       .default(AccountStatus.Pending),
     accountNumber: text('account_number').unique().notNull(),
     accountName: text('account_name').notNull(),
     reference: text('reference'),
-    currency: dbCurrencyEnum('currency').notNull().default(Currency.Ngn),
+    currency: dbCurrencyEnum('currency')
+      .$type<Currency>()
+      .notNull()
+      .default(Currency.Ngn),
     balance: bigint('balance', { mode: 'bigint' })
       .default(sql`0`)
       .notNull(),

@@ -176,8 +176,8 @@ export class AuthGuard implements CanActivate {
       id: user.id,
       secretKey: user.secretKey ?? '',
       whitelistedIps: user.whitelistedIps ?? [],
-      type: user.type as UserType,
-      scopes: (user.scopes || []) as ApiScope[],
+      type: user.type,
+      scopes: user.scopes || [],
       tenantId: user.tenantId,
     };
 

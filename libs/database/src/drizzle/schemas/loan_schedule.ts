@@ -48,6 +48,7 @@ export const loanSchedules = pgTable(
       .default(sql`0`)
       .notNull(),
     status: loanScheduleStatusEnum('status')
+      .$type<LoanScheduleStatus>()
       .default(LoanScheduleStatus.Scheduled)
       .notNull(),
     paidAt: timestamp('paid_at', { withTimezone: true }),
