@@ -19,7 +19,7 @@ export class LoanDetailsRespDto {
 
   @ApiProperty({ enum: LoanRepaymentFrequency })
   @Expose()
-  repaymentFrequency: LoanRepaymentFrequency | string;
+  repaymentFrequency: LoanRepaymentFrequency;
 
   @ApiProperty()
   @Expose()
@@ -27,7 +27,7 @@ export class LoanDetailsRespDto {
 
   @ApiProperty({ enum: LoanStatus })
   @Expose()
-  status: LoanStatus | string;
+  status: LoanStatus;
 
   @ApiProperty()
   @Expose()
@@ -35,7 +35,7 @@ export class LoanDetailsRespDto {
 
   @ApiProperty({ enum: MoratoriumType })
   @Expose()
-  moratoriumType: MoratoriumType | string;
+  moratoriumType: MoratoriumType;
 
   @ApiProperty()
   @Expose()

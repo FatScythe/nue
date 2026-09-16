@@ -41,6 +41,7 @@ export const DEFAULT_PERMISSION = {
     view: false,
     disburse: false,
     repay: false,
+    approve: false,
   },
   [Resources.Ledger]: {
     view: false,

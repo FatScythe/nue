@@ -30,6 +30,7 @@ export type RolePermissions = {
     view: boolean;
     disburse: boolean;
     repay: boolean;
+    approve: boolean;
   };
   [Resources.Ledger]: {
     view: boolean;
@@ -70,6 +71,7 @@ export const validScopes = [
 
   // loan...
   `${Resources.Loan}:read`,
+  `${Resources.Loan}:approve`,
   `${Resources.Loan}:disburse`,
   `${Resources.Loan}:repay`,
 

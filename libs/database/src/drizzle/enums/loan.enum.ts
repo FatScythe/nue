@@ -11,6 +11,8 @@ export enum LoanScheduleStatus {
 export enum LoanRepaymentFrequency {
   Daily = 'daily',
   Weekly = 'weekly',
+  BiWeekly = 'bi_weekly',
+  Quarterly = 'quarterly',
   Monthly = 'monthly',
   Yearly = 'yearly',
 }
@@ -28,4 +30,17 @@ export enum LoanStatus {
   PaidOff = 'paid_off', // outstanding balance reached 0...
   Defaulted = 'defaulted', // optional: past due/unpaid for MVP edge cases...
   WrittenOff = 'written_off', // optional: canceled or uncollectible...
+  // before disbursement..
+  Approved = 'approved',
+  Declined = 'declined',
+}
+
+export enum ChargeCalculationType {
+  Fixed = 'fixed',
+  Percentage = 'percentage',
+}
+
+export enum ChargeTime {
+  Upfront = 'upfront', // deducted at disbursement...
+  Installment = 'installment', // spread/calculated per schedule...
 }

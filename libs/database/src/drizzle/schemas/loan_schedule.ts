@@ -54,6 +54,12 @@ export const loanSchedules = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     lastPaymentDate: timestamp('last_payment_date', { withTimezone: true }),
     comment: text('comment'),
+    // chargeAmount: bigint('charge_amount', { mode: 'bigint' })
+    //   .default(sql`0`)
+    //   .notNull(),
+    // chargePaid: bigint('charge_paid', { mode: 'bigint' })
+    //   .default(sql`0`)
+    //   .notNull(),
     createdBy: varchar('created_by', { length: 36 }).references(
       () => users.id,
       {

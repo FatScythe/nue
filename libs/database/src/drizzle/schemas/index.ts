@@ -9,6 +9,7 @@ export * from './account';
 // export * from './account_product';
 export * from './savings_detail';
 export * from './loan_detail';
+export * from './loan_schedule';
 export * from './lien';
 export * from './transaction';
 export * from './general_ledger';

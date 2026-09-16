@@ -20,6 +20,7 @@ import { CoreServiceController } from './core-service.controller';
 import { CoreServiceService } from './core-service.service';
 import { CustomerModule } from './customer/customer.module';
 import { LienModule } from './lien/lien.module';
+import { LoanModule } from './loan/loan.module';
 import { TransactionModule } from './transaction/transaction.module';
 
 @Module({
@@ -32,6 +33,7 @@ import { TransactionModule } from './transaction/transaction.module';
     LienModule,
     TransactionModule,
     AccountingModule,
+    LoanModule,
   ],
   controllers: [CoreServiceController],
   providers: [

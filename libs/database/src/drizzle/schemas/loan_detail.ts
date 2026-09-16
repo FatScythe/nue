@@ -6,11 +6,14 @@ import {
   numeric,
   pgEnum,
   pgTable,
+  text,
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
 
 import {
+  ChargeCalculationType,
+  ChargeTime,
   LoanRepaymentFrequency,
   LoanStatus,
   MoratoriumType,
@@ -33,6 +36,16 @@ export const moratoriumTypeEnum = pgEnum(
   'moratorium_type',
   Object.values(MoratoriumType) as [string, ...string[]],
 );
+
+// export const chargeCalculationTypeEnum = pgEnum(
+//   'charge_type',
+//   Object.values(ChargeCalculationType) as [string, ...string[]],
+// );
+
+// export const chargeTimeEnum = pgEnum(
+//   'charge_time',
+//   Object.values(ChargeTime) as [string, ...string[]],
+// );
 
 export const loanDetails = pgTable(
   'loan_details',
@@ -68,6 +81,13 @@ export const loanDetails = pgTable(
     processingFee: bigint('processing_fee', { mode: 'bigint' })
       .default(sql`0`)
       .notNull(),
+    // chargeCalculationType: chargeCalculationTypeEnum('charge_calculation_type')
+    //   .$type<ChargeCalculationType>()
+    //   .default(ChargeCalculationType.Fixed),
+    // chargeTime: chargeTimeEnum('charge_time')
+    //   .$type<ChargeTime>()
+    //   .default(ChargeTime.Upfront),
+    // chargeValue: numeric('charge_value', { precision: 10, scale: 2 }),
     moratoriumType: moratoriumTypeEnum('moratorium_type')
       .$type<MoratoriumType>()
       .default(MoratoriumType.None)
@@ -78,6 +98,8 @@ export const loanDetails = pgTable(
     }).notNull(),
     disbursedAt: timestamp('disbursed_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),
+    approvalNote: text('approval_note'),
+    declineReason: text('decline_reason'),
   },
   (table) => ({
     tenantIdx: index('idx_loan_details_tenant').on(table.tenantId),
