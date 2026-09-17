@@ -3,6 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -11,6 +12,7 @@ import {
   Min,
 } from 'class-validator';
 
+import { IsNumericString } from '@common';
 import { LoanRepaymentFrequency, MoratoriumType } from '@database';
 
 export class CalculateLoanRepaymentDto {
@@ -19,10 +21,13 @@ export class CalculateLoanRepaymentDto {
   // @IsOptional()
   // productId?: string;
 
-  @ApiProperty({ description: 'Principal loan amount', example: 100000 })
-  @IsNumber()
-  @IsPositive()
-  principalAmount: number;
+  @ApiProperty({ description: 'Principal loan amount', example: '100000' })
+  @IsNumericString({
+    min: 0,
+    maxDecimalPlaces: 2,
+  })
+  @IsNotEmpty()
+  principalAmount: string;
 
   @ApiProperty({
     description: 'Annual interest rate percentage (0 to 100)',

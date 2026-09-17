@@ -10,7 +10,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 
-import { isNumber, IsValidReference } from '@common';
+import { isNumber, IsNumericString, IsValidReference } from '@common';
 
 export class AccountToAccountTransferDto {
   @ApiProperty({
@@ -42,7 +42,10 @@ export class AccountToAccountTransferDto {
     example: '10000.00',
     description: 'Transfer amount in minor units',
   })
-  @IsNumberString()
+  @IsNumericString({
+    min: 0,
+    maxDecimalPlaces: 2,
+  })
   @IsNotEmpty()
   amount: string;
 

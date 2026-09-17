@@ -1,10 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import { IsValidDate, IsValidReference } from '@lib/common/src/validators';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
-  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -14,8 +12,12 @@ import {
 } from 'class-validator';
 import moment from 'moment';
 
-import { DATE_FORMAT } from '@common';
-import { AccountType } from '@database';
+import {
+  DATE_FORMAT,
+  IsNumericString,
+  IsValidDate,
+  IsValidReference,
+} from '@common';
 
 export class CreateSavingsAccountDto {
   @ApiPropertyOptional({
@@ -82,12 +84,14 @@ export class CreateSavingsAccountDto {
 
   @ApiPropertyOptional({
     description: 'Initial deposit amount on account opening',
-    example: 0.0,
+    example: '0.0',
   })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  openingBalance?: number;
+  @IsNumericString({
+    min: 0,
+    maxDecimalPlaces: 2,
+  })
+  openingBalance?: string;
 
   @ApiPropertyOptional({
     description: 'Target amount for target savings in major units',

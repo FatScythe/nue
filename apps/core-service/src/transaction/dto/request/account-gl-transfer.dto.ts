@@ -3,14 +3,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
   IsNotEmpty,
-  IsNumberString,
   IsOptional,
   IsString,
   IsUUID,
   Length,
 } from 'class-validator';
 
-import { IsValidReference } from '@common';
+import { IsNumericString, IsValidReference } from '@common';
 
 export enum TransferDirection {
   AccountToGl = 'account_to_gl',
@@ -31,7 +30,10 @@ export class AccountGlTransferDto {
     example: '25000.00',
     description: 'Transfer amount in minor units',
   })
-  @IsNumberString()
+  @IsNumericString({
+    min: 0,
+    maxDecimalPlaces: 2,
+  })
   @IsNotEmpty()
   amount: string;
 
