@@ -74,6 +74,18 @@ export class Calculator {
     return bigNum1.times(bigNum2).toFixed(Big.DP);
   }
 
+  /** Multiplies many numbers */
+  multiplyMany(...numbers: BigSource[]): string {
+    if (numbers.length === 0) return '0';
+
+    const bigFinalNum = numbers.reduce(
+      (acc, curr) => acc.times(curr),
+      new Big(1),
+    );
+
+    return bigFinalNum.toFixed(Big.DP);
+  }
+
   /** Divides the first number by the second. */
   divide(num1: BigSource, num2: BigSource): string {
     const bigNum1 = new Big(num1);
@@ -82,6 +94,22 @@ export class Calculator {
       throw new Error('Division by zero is not allowed.');
     }
     return bigNum1.div(bigNum2).toFixed(Big.DP);
+  }
+
+  /** Divides the first number sequentially by each subsequent number in the args[]. */
+  divideMany(...numbers: BigSource[]): string {
+    if (numbers.length === 0) return '0';
+    const bigFinalNum = numbers.reduce((acc, curr, currIndex) => {
+      if (currIndex === 0) return acc;
+
+      const currNum = new Big(curr);
+
+      if (currNum.eq(0)) throw new Error('Division by zero is not allowed.');
+
+      return acc.div(currNum);
+    }, new Big(numbers[0]));
+
+    return bigFinalNum.toFixed(Big.DP);
   }
 
   /** Rounds a number to the configured decimal places using bankers rounding. */
@@ -105,6 +133,37 @@ export class Calculator {
    */
   compare(num1: BigSource, num2: BigSource): number {
     return new Big(num1).cmp(new Big(num2));
+  }
+
+  /** Checks if num1 is equal to num2. */
+  isEqual(num1: BigSource, num2: BigSource): boolean {
+    return new Big(num1).eq(num2);
+  }
+
+  /** Checks if num1 is strictly less than num2. */
+  isLessThan(num1: BigSource, num2: BigSource): boolean {
+    return new Big(num1).lt(num2);
+  }
+
+  /** Checks if num1 is strictly greater than num2. */
+  isGreaterThan(num1: BigSource, num2: BigSource): boolean {
+    return new Big(num1).gt(num2);
+  }
+
+  /** Checks if num1 is less than or equal to num2. */
+  isLessThanOrEqual(num1: BigSource, num2: BigSource): boolean {
+    return new Big(num1).lte(num2);
+  }
+
+  /** Checks if num1 is greater than or equal to num2. */
+  isGreaterThanOrEqual(num1: BigSource, num2: BigSource): boolean {
+    return new Big(num1).gte(num2);
+  }
+
+  /** Raises a base to an integer exponent. */
+  pow(base: BigSource, exponent: number | BigSource): string {
+    const exp = typeof exponent === 'number' ? exponent : Number(exponent);
+    return new Big(base).pow(exp).toFixed(Big.DP);
   }
 
   /** Returns absolute value. */
