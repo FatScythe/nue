@@ -17,6 +17,8 @@ import {
   AccountProductStatus,
   AccountProductType,
   AccountTenorUnit,
+  ChargeCalculationType,
+  ChargeTime,
   ShariaContractType,
 } from '../enums';
 import { businesses } from './business';
@@ -41,6 +43,16 @@ export const productStatusEnum = pgEnum(
 export const tenorUnitEnum = pgEnum(
   'tenor_unit',
   Object.values(AccountTenorUnit) as [string, ...string[]],
+);
+
+export const chargeCalculationTypeEnum = pgEnum(
+  'charge_type',
+  Object.values(ChargeCalculationType) as [string, ...string[]],
+);
+
+export const chargeTimeEnum = pgEnum(
+  'charge_time',
+  Object.values(ChargeTime) as [string, ...string[]],
 );
 
 export const accountProducts = pgTable(
@@ -111,6 +123,15 @@ export const accountProducts = pgTable(
     })
       .default('0.00')
       .notNull(),
+
+    // loan fees...
+    chargeCalculationType: chargeCalculationTypeEnum('charge_calculation_type')
+      .$type<ChargeCalculationType>()
+      .default(ChargeCalculationType.Fixed),
+    chargeTime: chargeTimeEnum('charge_time')
+      .$type<ChargeTime>()
+      .default(ChargeTime.Upfront),
+    chargeValue: bigint('charge_value', { mode: 'bigint' }),
 
     // General Ledger (GL) Accounting Mappings
     controlGlAccountId: varchar('control_gl_account_id', {

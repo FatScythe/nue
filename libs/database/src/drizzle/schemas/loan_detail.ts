@@ -37,15 +37,15 @@ export const moratoriumTypeEnum = pgEnum(
   Object.values(MoratoriumType) as [string, ...string[]],
 );
 
-// export const chargeCalculationTypeEnum = pgEnum(
-//   'charge_type',
-//   Object.values(ChargeCalculationType) as [string, ...string[]],
-// );
+export const chargeCalculationTypeEnum = pgEnum(
+  'charge_type',
+  Object.values(ChargeCalculationType) as [string, ...string[]],
+);
 
-// export const chargeTimeEnum = pgEnum(
-//   'charge_time',
-//   Object.values(ChargeTime) as [string, ...string[]],
-// );
+export const chargeTimeEnum = pgEnum(
+  'charge_time',
+  Object.values(ChargeTime) as [string, ...string[]],
+);
 
 export const loanDetails = pgTable(
   'loan_details',
@@ -56,12 +56,12 @@ export const loanDetails = pgTable(
     tenantId: integer('tenant_id')
       .notNull()
       .references(() => businesses.id, { onDelete: 'restrict' }),
-    // disbursementAccountId: varchar('disbursement_account_id', {
-    //   length: 36,
-    // }).references(() => accounts.id, { onDelete: 'restrict' }),
-    // repaymentAccountId: varchar('repayment_account_id', {
-    //   length: 36,
-    // }).references(() => accounts.id, { onDelete: 'restrict' }),
+    disbursementAccountId: varchar('disbursement_account_id', {
+      length: 36,
+    }).references(() => accounts.id, { onDelete: 'restrict' }),
+    repaymentAccountId: varchar('repayment_account_id', {
+      length: 36,
+    }).references(() => accounts.id, { onDelete: 'restrict' }),
     principalAmount: bigint('principal_amount', { mode: 'bigint' }).notNull(),
     outstandingBalance: bigint('outstanding_balance', {
       mode: 'bigint',
@@ -78,16 +78,13 @@ export const loanDetails = pgTable(
       .default(LoanStatus.Active)
       .$type<LoanStatus>()
       .notNull(),
-    processingFee: bigint('processing_fee', { mode: 'bigint' })
-      .default(sql`0`)
-      .notNull(),
-    // chargeCalculationType: chargeCalculationTypeEnum('charge_calculation_type')
-    //   .$type<ChargeCalculationType>()
-    //   .default(ChargeCalculationType.Fixed),
-    // chargeTime: chargeTimeEnum('charge_time')
-    //   .$type<ChargeTime>()
-    //   .default(ChargeTime.Upfront),
-    // chargeValue: numeric('charge_value', { precision: 10, scale: 2 }),
+    chargeCalculationType: chargeCalculationTypeEnum('charge_calculation_type')
+      .$type<ChargeCalculationType>()
+      .default(ChargeCalculationType.Fixed),
+    chargeTime: chargeTimeEnum('charge_time')
+      .$type<ChargeTime>()
+      .default(ChargeTime.Upfront),
+    chargeValue: bigint('charge_value', { mode: 'bigint' }),
     moratoriumType: moratoriumTypeEnum('moratorium_type')
       .$type<MoratoriumType>()
       .default(MoratoriumType.None)

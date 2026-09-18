@@ -1,6 +1,6 @@
 {
-  "id": "6dbe70cf-1a20-4ffb-a9c8-11c09ea51fe4",
-  "prevId": "f529fe4a-4956-4845-9b4f-cd4ed753bb83",
+  "id": "69883433-c586-49ec-909c-7486807b622a",
+  "prevId": "b0b8b10e-5682-4336-9720-9a092233e74f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -343,7 +343,7 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'{\"office\":{\"view\":false,\"create\":false},\"customer\":{\"view\":false,\"create\":false},\"account\":{\"view\":false,\"create\":false},\"transaction\":{\"view\":false,\"transfer\":false,\"deposit\":false},\"lien\":{\"view\":false,\"create\":false,\"release\":false},\"loan\":{\"view\":false,\"disburse\":false,\"repay\":false},\"ledger\":{\"view\":false,\"create\":false}}'::jsonb"
+          "default": "'{\"office\":{\"view\":false,\"create\":false},\"customer\":{\"view\":false,\"create\":false},\"account\":{\"view\":false,\"create\":false},\"transaction\":{\"view\":false,\"transfer\":false,\"deposit\":false},\"lien\":{\"view\":false,\"create\":false,\"release\":false},\"loan\":{\"view\":false,\"disburse\":false,\"repay\":false,\"approve\":false},\"ledger\":{\"view\":false,\"create\":false}}'::jsonb"
         },
         "created_by": {
           "name": "created_by",
@@ -1144,6 +1144,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1414,6 +1420,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "disbursement_account_id": {
+          "name": "disbursement_account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "repayment_account_id": {
+          "name": "repayment_account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "principal_amount": {
           "name": "principal_amount",
           "type": "bigint",
@@ -1455,12 +1473,27 @@
           "notNull": true,
           "default": "'active'"
         },
-        "processing_fee": {
-          "name": "processing_fee",
+        "charge_calculation_type": {
+          "name": "charge_calculation_type",
+          "type": "charge_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'fixed'"
+        },
+        "charge_time": {
+          "name": "charge_time",
+          "type": "charge_time",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'upfront'"
+        },
+        "charge_value": {
+          "name": "charge_value",
           "type": "bigint",
           "primaryKey": false,
-          "notNull": true,
-          "default": "0"
+          "notNull": false
         },
         "moratorium_type": {
           "name": "moratorium_type",
@@ -1492,6 +1525,18 @@
         "closed_at": {
           "name": "closed_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approval_note": {
+          "name": "approval_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decline_reason": {
+          "name": "decline_reason",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
@@ -1533,6 +1578,227 @@
           "tableTo": "businesses",
           "columnsFrom": [
             "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_details_disbursement_account_id_accounts_id_fk": {
+          "name": "loan_details_disbursement_account_id_accounts_id_fk",
+          "tableFrom": "loan_details",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "disbursement_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_details_repayment_account_id_accounts_id_fk": {
+          "name": "loan_details_repayment_account_id_accounts_id_fk",
+          "tableFrom": "loan_details",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "repayment_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.loan_schedules": {
+      "name": "loan_schedules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "installment_number": {
+          "name": "installment_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "due_date": {
+          "name": "due_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principal_amount": {
+          "name": "principal_amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interest_amount": {
+          "name": "interest_amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_installment": {
+          "name": "total_installment",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principal_paid": {
+          "name": "principal_paid",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "interest_paid": {
+          "name": "interest_paid",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "total_paid": {
+          "name": "total_paid",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "penalty_accrued": {
+          "name": "penalty_accrued",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "status": {
+          "name": "status",
+          "type": "loan_schedule_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'scheduled'"
+        },
+        "paid_at": {
+          "name": "paid_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_payment_date": {
+          "name": "last_payment_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "charge_amount": {
+          "name": "charge_amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "charge_paid": {
+          "name": "charge_paid",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "loan_schedules_account_id_accounts_id_fk": {
+          "name": "loan_schedules_account_id_accounts_id_fk",
+          "tableFrom": "loan_schedules",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_schedules_tenant_id_businesses_id_fk": {
+          "name": "loan_schedules_tenant_id_businesses_id_fk",
+          "tableFrom": "loan_schedules",
+          "tableTo": "businesses",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_schedules_created_by_users_id_fk": {
+          "name": "loan_schedules_created_by_users_id_fk",
+          "tableFrom": "loan_schedules",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by"
           ],
           "columnsTo": [
             "id"
@@ -2415,6 +2681,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "journal_entry_id": {
           "name": "journal_entry_id",
           "type": "varchar(36)",
@@ -2488,6 +2760,19 @@
         }
       },
       "foreignKeys": {
+        "journal_entry_lines_tenant_id_businesses_id_fk": {
+          "name": "journal_entry_lines_tenant_id_businesses_id_fk",
+          "tableFrom": "journal_entry_lines",
+          "tableTo": "businesses",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
         "journal_entry_lines_journal_entry_id_journal_entries_id_fk": {
           "name": "journal_entry_lines_journal_entry_id_journal_entries_id_fk",
           "tableFrom": "journal_entry_lines",
@@ -2629,6 +2914,22 @@
         "loan"
       ]
     },
+    "public.charge_type": {
+      "name": "charge_type",
+      "schema": "public",
+      "values": [
+        "fixed",
+        "percentage"
+      ]
+    },
+    "public.charge_time": {
+      "name": "charge_time",
+      "schema": "public",
+      "values": [
+        "upfront",
+        "installment"
+      ]
+    },
     "public.loan_status": {
       "name": "loan_status",
       "schema": "public",
@@ -2638,7 +2939,9 @@
         "disbursed",
         "paid_off",
         "defaulted",
-        "written_off"
+        "written_off",
+        "approved",
+        "declined"
       ]
     },
     "public.moratorium_type": {
@@ -2656,8 +2959,23 @@
       "values": [
         "daily",
         "weekly",
+        "bi_weekly",
+        "quarterly",
         "monthly",
         "yearly"
+      ]
+    },
+    "public.loan_schedule_status": {
+      "name": "loan_schedule_status",
+      "schema": "public",
+      "values": [
+        "scheduled",
+        "pending_approval",
+        "pending",
+        "paid",
+        "partially_paid",
+        "overdue",
+        "waived"
       ]
     },
     "public.lien_status": {

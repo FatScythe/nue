@@ -8,9 +8,12 @@ CREATE TYPE "public"."customer_tier" AS ENUM('0', '1', '2', '3');--> statement-b
 CREATE TYPE "public"."customer_type" AS ENUM('individual', 'corporate');--> statement-breakpoint
 CREATE TYPE "public"."account_status" AS ENUM('pending', 'active', 'suspended', 'frozen', 'pnc', 'pnd', 'closed', 'rejected');--> statement-breakpoint
 CREATE TYPE "public"."account_type" AS ENUM('savings', 'loan');--> statement-breakpoint
-CREATE TYPE "public"."loan_status" AS ENUM('active', 'pending', 'disbursed', 'paid_off', 'defaulted', 'written_off');--> statement-breakpoint
+CREATE TYPE "public"."charge_type" AS ENUM('fixed', 'percentage');--> statement-breakpoint
+CREATE TYPE "public"."charge_time" AS ENUM('upfront', 'installment');--> statement-breakpoint
+CREATE TYPE "public"."loan_status" AS ENUM('active', 'pending', 'disbursed', 'paid_off', 'defaulted', 'written_off', 'approved', 'declined');--> statement-breakpoint
 CREATE TYPE "public"."moratorium_type" AS ENUM('none', 'principal_only', 'principal_and_interest');--> statement-breakpoint
-CREATE TYPE "public"."repayment_frequency" AS ENUM('daily', 'weekly', 'monthly', 'yearly');--> statement-breakpoint
+CREATE TYPE "public"."repayment_frequency" AS ENUM('daily', 'weekly', 'bi_weekly', 'quarterly', 'monthly', 'yearly');--> statement-breakpoint
+CREATE TYPE "public"."loan_schedule_status" AS ENUM('scheduled', 'pending_approval', 'pending', 'paid', 'partially_paid', 'overdue', 'waived');--> statement-breakpoint
 CREATE TYPE "public"."lien_status" AS ENUM('active', 'released', 'voided', 'pending_approval');--> statement-breakpoint
 CREATE TYPE "public"."transaction_category" AS ENUM('transfer', 'deposit', 'withdrawal', 'fee', 'interest', 'refund', 'reversal');--> statement-breakpoint
 CREATE TYPE "public"."transaction_status" AS ENUM('successful', 'failed', 'pending', 'processing', 'reversed', 'pending_approval');--> statement-breakpoint
@@ -49,7 +52,7 @@ CREATE TABLE "roles" (
 	"id" varchar(36) PRIMARY KEY NOT NULL,
 	"tenant_id" integer,
 	"name" text NOT NULL,
-	"permissions" jsonb DEFAULT '{"office":{"view":false,"create":false},"customer":{"view":false,"create":false},"account":{"view":false,"create":false},"transaction":{"view":false,"transfer":false,"deposit":false},"lien":{"view":false,"create":false,"release":false},"loan":{"view":false,"disburse":false,"repay":false},"ledger":{"view":false,"create":false}}'::jsonb NOT NULL,
+	"permissions" jsonb DEFAULT '{"office":{"view":false,"create":false},"customer":{"view":false,"create":false},"account":{"view":false,"create":false},"transaction":{"view":false,"transfer":false,"deposit":false},"lien":{"view":false,"create":false,"release":false},"loan":{"view":false,"disburse":false,"repay":false,"approve":false},"ledger":{"view":false,"create":false}}'::jsonb NOT NULL,
 	"created_by" varchar(36),
 	"approved_by" varchar(36),
 	"deleted_at" timestamp with time zone,
@@ -129,6 +132,7 @@ CREATE TABLE "accounts" (
 	"office_id" integer NOT NULL,
 	"metadata" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"deleted_at" timestamp with time zone,
+	"activated_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "accounts_account_number_unique" UNIQUE("account_number")
@@ -146,18 +150,49 @@ CREATE TABLE "savings_details" (
 CREATE TABLE "loan_details" (
 	"account_id" varchar(36) PRIMARY KEY NOT NULL,
 	"tenant_id" integer NOT NULL,
+	"disbursement_account_id" varchar(36),
+	"repayment_account_id" varchar(36),
 	"principal_amount" bigint NOT NULL,
 	"outstanding_balance" bigint NOT NULL,
 	"tenor" integer NOT NULL,
 	"repayment_frequency" "repayment_frequency" DEFAULT 'monthly' NOT NULL,
 	"interest_rate" numeric(5, 2) DEFAULT '0.00' NOT NULL,
 	"status" "loan_status" DEFAULT 'active' NOT NULL,
-	"processing_fee" bigint DEFAULT 0 NOT NULL,
+	"charge_calculation_type" charge_type DEFAULT 'fixed',
+	"charge_time" charge_time DEFAULT 'upfront',
+	"charge_value" bigint,
 	"moratorium_type" "moratorium_type" DEFAULT 'none' NOT NULL,
 	"moratorium_period" integer DEFAULT 0 NOT NULL,
 	"repayment_start_date" timestamp with time zone NOT NULL,
 	"disbursed_at" timestamp with time zone,
-	"closed_at" timestamp with time zone
+	"closed_at" timestamp with time zone,
+	"approval_note" text,
+	"decline_reason" text
+);
+--> statement-breakpoint
+CREATE TABLE "loan_schedules" (
+	"id" varchar(36) PRIMARY KEY NOT NULL,
+	"account_id" varchar(36) NOT NULL,
+	"tenant_id" integer NOT NULL,
+	"installment_number" integer NOT NULL,
+	"due_date" timestamp with time zone NOT NULL,
+	"principal_amount" bigint NOT NULL,
+	"interest_amount" bigint NOT NULL,
+	"total_installment" bigint NOT NULL,
+	"principal_paid" bigint DEFAULT 0 NOT NULL,
+	"interest_paid" bigint DEFAULT 0 NOT NULL,
+	"total_paid" bigint DEFAULT 0 NOT NULL,
+	"penalty_accrued" bigint DEFAULT 0 NOT NULL,
+	"status" "loan_schedule_status" DEFAULT 'scheduled' NOT NULL,
+	"paid_at" timestamp with time zone,
+	"last_payment_date" timestamp with time zone,
+	"comment" text,
+	"charge_amount" bigint DEFAULT 0 NOT NULL,
+	"charge_paid" bigint DEFAULT 0 NOT NULL,
+	"created_by" varchar(36),
+	"deleted_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "liens" (
@@ -229,6 +264,7 @@ CREATE TABLE "journal_entries" (
 --> statement-breakpoint
 CREATE TABLE "journal_entry_lines" (
 	"id" varchar(36) PRIMARY KEY NOT NULL,
+	"tenant_id" integer NOT NULL,
 	"journal_entry_id" varchar(36) NOT NULL,
 	"gl_account_id" varchar(36) NOT NULL,
 	"debit" bigint DEFAULT 0 NOT NULL,
@@ -259,6 +295,11 @@ ALTER TABLE "savings_details" ADD CONSTRAINT "savings_details_account_id_account
 ALTER TABLE "savings_details" ADD CONSTRAINT "savings_details_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_disbursement_account_id_accounts_id_fk" FOREIGN KEY ("disbursement_account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_repayment_account_id_accounts_id_fk" FOREIGN KEY ("repayment_account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_schedules" ADD CONSTRAINT "loan_schedules_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_schedules" ADD CONSTRAINT "loan_schedules_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_schedules" ADD CONSTRAINT "loan_schedules_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "liens" ADD CONSTRAINT "liens_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "liens" ADD CONSTRAINT "liens_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "liens" ADD CONSTRAINT "liens_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -277,6 +318,7 @@ ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_transaction_id_tra
 ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_office_id_offices_id_fk" FOREIGN KEY ("office_id") REFERENCES "public"."offices"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "journal_entry_lines" ADD CONSTRAINT "journal_entry_lines_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "journal_entry_lines" ADD CONSTRAINT "journal_entry_lines_journal_entry_id_journal_entries_id_fk" FOREIGN KEY ("journal_entry_id") REFERENCES "public"."journal_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "journal_entry_lines" ADD CONSTRAINT "journal_entry_lines_gl_account_id_general_ledgers_id_fk" FOREIGN KEY ("gl_account_id") REFERENCES "public"."general_ledgers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_offices_tenant_code_unique" ON "offices" USING btree ("tenant_id","code");--> statement-breakpoint

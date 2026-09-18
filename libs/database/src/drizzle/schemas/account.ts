@@ -85,6 +85,7 @@ export const accounts = pgTable(
       .default({})
       .notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    activationDate: timestamp('activated_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
       .notNull(),
