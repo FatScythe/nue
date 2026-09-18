@@ -9,7 +9,7 @@ export class SavingsDetailsRespDto {
 
   @ApiPropertyOptional()
   @Expose()
-  targetAmount?: number | null;
+  targetAmount?: string | null;
 
   // @ApiPropertyOptional()
   // @Expose()

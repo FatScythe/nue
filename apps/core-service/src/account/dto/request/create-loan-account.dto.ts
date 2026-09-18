@@ -7,12 +7,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
+  Max,
   Min,
 } from 'class-validator';
 import moment from 'moment';
 
-import { DATE_FORMAT } from '@common';
+import { DATE_FORMAT, IsNumericString, IsValidDate } from '@common';
 import { LoanRepaymentFrequency, MoratoriumType } from '@database';
 
 export class CreateLoanAccountDto {
@@ -34,11 +34,11 @@ export class CreateLoanAccountDto {
 
   @ApiProperty({
     description: 'Principal amount in major currency (e.g. 50000.00)',
-    example: 50000.0,
+    example: '50000.00',
   })
-  @IsNumber({ maxDecimalPlaces: 2 })
+  @IsNumericString({ maxDecimalPlaces: 2 })
   @Min(0)
-  principalAmount: number;
+  principalAmount: string;
 
   @ApiProperty({ description: 'Loan tenor in months or periods', example: 12 })
   @IsInt()
@@ -55,16 +55,16 @@ export class CreateLoanAccountDto {
   @ApiProperty({ description: 'Interest rate percentage', example: 0.0 })
   @IsNumber({ maxDecimalPlaces: 3 })
   @Min(0)
+  @Max(100)
   interestRate: number;
 
   @ApiPropertyOptional({
     description: 'Processing fee in major currency',
-    example: 500.0,
+    example: '500.0',
   })
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
+  @IsNumericString({ maxDecimalPlaces: 2 })
   @IsOptional()
-  processingFee?: number;
+  processingFee?: string;
 
   @ApiPropertyOptional({ enum: MoratoriumType, default: MoratoriumType.None })
   @IsEnum(MoratoriumType)
@@ -72,8 +72,9 @@ export class CreateLoanAccountDto {
   moratoriumType?: MoratoriumType;
 
   @ApiPropertyOptional({ description: 'Moratorium duration', default: 0 })
-  @IsInt({})
+  @IsInt()
   @Min(0)
+  @Max(100)
   @IsOptional()
   moratoriumPeriod?: number;
 
@@ -89,7 +90,7 @@ export class CreateLoanAccountDto {
     example: moment().format(DATE_FORMAT),
     description: 'Override creation date (YYYY-MM-DD)',
   })
-  @IsString()
+  @IsValidDate()
   @IsOptional()
   createdDate?: string;
 

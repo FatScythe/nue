@@ -191,7 +191,7 @@ export class CustomerService {
             type: AccountType.Savings,
 
             accountName: effectiveAccountName,
-            openingBalance: 0,
+            openingBalance: '0',
             officeId: dto.officeId,
             userId: user.id,
             tenantId: user.tenantId!,

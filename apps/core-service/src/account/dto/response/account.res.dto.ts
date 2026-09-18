@@ -35,11 +35,11 @@ export class AccountItemRespDto {
 
   @ApiProperty()
   @Expose()
-  balance: number;
+  balance: string;
 
   @ApiProperty()
   @Expose()
-  bookBalance: number;
+  bookBalance: string;
 
   @ApiProperty()
   @Expose()

@@ -7,11 +7,11 @@ import { LoanRepaymentFrequency, LoanStatus, MoratoriumType } from '@database';
 export class LoanDetailsRespDto {
   @ApiProperty()
   @Expose()
-  principalAmount: number;
+  principalAmount: string;
 
   @ApiProperty()
   @Expose()
-  outstandingBalance: number;
+  outstandingBalance: string;
 
   @ApiProperty()
   @Expose()

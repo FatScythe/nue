@@ -14,21 +14,29 @@ export class RepaymentScheduleItemDto {
   @Expose()
   dueDate: Date;
 
-  @ApiProperty({ example: 8333.33 })
+  @ApiProperty({ example: '8333.33' })
   @Expose()
-  principalAmount: number;
+  principalAmount: string;
 
-  @ApiProperty({ example: 1041.67 })
+  @ApiProperty({ example: '0.00' })
   @Expose()
-  interestAmount: number;
+  interestAmount: string;
 
-  @ApiProperty({ example: 9375.0 })
+  @ApiProperty({ example: '9375.00' })
   @Expose()
-  totalInstallment: number;
+  totalInstallment: string;
 
-  @ApiProperty({ example: 91666.67 })
+  @ApiProperty({ example: '91666.67' })
   @Expose()
-  remainingBalance: number;
+  remainingBalance: string;
+
+  @ApiProperty({ example: '0' })
+  @Expose()
+  chargeAmount: string;
+
+  @ApiProperty({ example: '0' })
+  @Expose()
+  chargePaid: string;
 }
 
 export class SingleLoanRespDto {
@@ -52,13 +60,13 @@ export class SingleLoanRespDto {
   @Expose()
   status: AccountStatus;
 
-  @ApiProperty({ example: 100000 })
+  @ApiProperty({ example: '100000' })
   @Expose()
-  balance: number;
+  balance: string;
 
-  @ApiProperty({ example: 100000 })
+  @ApiProperty({ example: '100000' })
   @Expose()
-  bookBalance: number;
+  bookBalance: string;
 
   @ApiProperty({ type: () => LoanDetailsRespDto })
   @Expose()

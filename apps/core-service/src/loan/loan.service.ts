@@ -1,13 +1,14 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { plainToInstance } from 'class-transformer';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import moment from 'moment';
 import { uuidv7 } from 'uuidv7';
 
 import { Calculator, CoreReqUser, DATE_FORMAT } from '@common';
 import {
+  AccountRepository,
   accounts,
   AccountStatus,
   AccountType,
@@ -39,11 +40,12 @@ export class LoanService {
     private readonly accountService: AccountService,
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
+    private readonly accountRepo: AccountRepository,
     private readonly calculator: Calculator,
   ) {}
 
   /**
-   * fetch a single loan account with its associated loan details and dynamic repayment schedule
+   * fetch a single loan account with its associated loan details and dynamic repayment schedule...
    */
   async getSingleLoan(
     accountId: string,
@@ -65,13 +67,71 @@ export class LoanService {
 
     const loanDetails = accountData.loanDetails;
 
-    // Convert principal from minor unit (bigint) to major unit for repayment calculation
-    const principalMajor = this.calculator.toMajor(loanDetails.principalAmount);
+    // check if loan is active or disbursed (persisted DB schedule exists)...
+    if (
+      [LoanStatus.Active, LoanStatus.Disbursed].includes(loanDetails.status)
+    ) {
+      const schedules = await this.db
+        .select()
+        .from(loanSchedules)
+        .where(
+          and(
+            eq(loanSchedules.accountId, accountId),
+            eq(loanSchedules.tenantId, user.tenantId!),
+            isNull(loanSchedules.deletedAt),
+          ),
+        )
+        .orderBy(asc(loanSchedules.installmentNumber));
 
-    // TODO: If it is a loan w/ schedules i.e disbursed, this will be replaced...
+      let runningBalance = this.calculator.round(loanDetails.principalAmount);
+
+      const formattedSchedules: RepaymentScheduleItemDto[] = schedules.map(
+        (scheduleItem) => {
+          // calculate remaining principal balance step-by-step...
+          const principalVal = scheduleItem.principalAmount;
+          const updatedBalance = this.calculator.subtract(
+            runningBalance,
+            principalVal,
+          );
+          runningBalance = this.calculator.isLessThan(updatedBalance, 0)
+            ? '0'
+            : updatedBalance;
+
+          return {
+            id: scheduleItem.id,
+            installmentNumber: scheduleItem.installmentNumber,
+            dueDate: scheduleItem.dueDate,
+            principalAmount: this.calculator.round(
+              scheduleItem.principalAmount,
+            ),
+            interestAmount: this.calculator.round(scheduleItem.interestAmount),
+            totalInstallment: this.calculator.round(
+              scheduleItem.totalInstallment,
+            ),
+            remainingBalance: runningBalance,
+            chargeAmount: this.calculator.round(scheduleItem.chargeAmount),
+            chargePaid: this.calculator.round(scheduleItem.chargePaid),
+          };
+        },
+      );
+
+      return plainToInstance(SingleLoanRespDto, {
+        accountId: accountData.id,
+        accountNumber: accountData.accountNumber,
+        accountName: accountData.accountName,
+        customerId: accountData.customerId,
+        status: accountData.status,
+        balance: this.calculator.round(accountData.balance),
+        bookBalance: this.calculator.round(accountData.bookBalance),
+        loanDetails,
+        repaymentSchedule: formattedSchedules,
+      });
+    }
+
+    // fallback to calculated preview schedule for pending/un-disbursed loans...
     const repaymentCalculation = this.calculateLoanRepayment({
-      principalAmount: principalMajor,
-      interestRate: Number(loanDetails.interestRate),
+      principalAmount: loanDetails.principalAmount,
+      interestRate: loanDetails.interestRate,
       tenor: loanDetails.tenor,
       repaymentFrequency: loanDetails.repaymentFrequency,
       repaymentStartDate: loanDetails.repaymentStartDate
@@ -87,8 +147,8 @@ export class LoanService {
       accountName: accountData.accountName,
       customerId: accountData.customerId,
       status: accountData.status,
-      balance: accountData.balance,
-      bookBalance: accountData.bookBalance,
+      balance: this.calculator.round(accountData.balance),
+      bookBalance: this.calculator.round(accountData.bookBalance),
       loanDetails,
       repaymentSchedule: repaymentCalculation.schedule,
     });
@@ -110,10 +170,15 @@ export class LoanService {
     } = dto;
 
     const periodsPerYear = this.getPeriodsPerYear(repaymentFrequency);
-    const periodicRate = interestRate / 100 / periodsPerYear;
+    const periodicRate = this.calculator.divideMany(
+      interestRate,
+      100,
+      periodsPerYear,
+    );
 
-    const activeTenor = tenor - moratoriumPeriod;
-    if (activeTenor <= 0) {
+    const activeTenor = this.calculator.subtract(tenor, moratoriumPeriod);
+
+    if (this.calculator.isLessThanOrEqual(activeTenor, 0)) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'tenor must be greater than moratorium period',
@@ -122,16 +187,26 @@ export class LoanService {
     }
 
     // EMI Formula: P * r * (1 + r)^n / ((1 + r)^n - 1)
-    const emi =
-      periodicRate === 0
-        ? principalAmount / activeTenor
-        : (principalAmount *
-            periodicRate *
-            Math.pow(1 + periodicRate, activeTenor)) /
-          (Math.pow(1 + periodicRate, activeTenor) - 1);
+    let emi: string;
+
+    if (this.calculator.isEqual(periodicRate, 0)) {
+      emi = this.calculator.divide(principalAmount, activeTenor);
+    } else {
+      const onePlusR = this.calculator.add(1, periodicRate);
+      const ratePow = this.calculator.pow(onePlusR, activeTenor);
+
+      const numerator = this.calculator.multiplyMany(
+        principalAmount,
+        periodicRate,
+        ratePow,
+      );
+      const denominator = this.calculator.subtract(ratePow, 1);
+
+      emi = this.calculator.divide(numerator, denominator);
+    }
 
     let balance = principalAmount;
-    let totalInterest = 0;
+    let totalInterest = '0';
     const schedule: RepaymentScheduleItemDto[] = [];
     let currentDate = repaymentStartDate
       ? moment(repaymentStartDate, DATE_FORMAT)
@@ -139,27 +214,37 @@ export class LoanService {
 
     for (let i = 1; i <= tenor; i++) {
       const isMoratorium = i <= moratoriumPeriod;
-      let interestComponent = balance * periodicRate;
-      let principalComponent = 0;
-      let installmentAmount = 0;
+      const interestComponent = this.calculator.multiply(balance, periodicRate);
+      let principalComponent = '0';
+      let installmentAmount = '0';
 
       if (isMoratorium) {
         installmentAmount = interestComponent;
       } else {
         installmentAmount = emi;
-        principalComponent = installmentAmount - interestComponent;
-        balance = Math.max(0, balance - principalComponent);
+        principalComponent = this.calculator.subtract(
+          installmentAmount,
+          interestComponent,
+        );
+
+        const newBalance = this.calculator.subtract(
+          balance,
+          principalComponent,
+        );
+        balance = this.calculator.isLessThan(newBalance, 0) ? '0' : newBalance;
       }
 
-      totalInterest += interestComponent;
+      totalInterest = this.calculator.add(totalInterest, interestComponent);
 
       schedule.push({
         installmentNumber: i,
         dueDate: currentDate.toDate(),
-        principalAmount: Number(principalComponent.toFixed(2)),
-        interestAmount: Number(interestComponent.toFixed(2)),
-        totalInstallment: Number(installmentAmount.toFixed(2)),
-        remainingBalance: Number(balance.toFixed(2)),
+        principalAmount: principalComponent,
+        interestAmount: interestComponent,
+        totalInstallment: installmentAmount,
+        remainingBalance: balance,
+        chargeAmount: '0',
+        chargePaid: '0',
       });
 
       currentDate = this.incrementDateByFrequency(
@@ -168,12 +253,14 @@ export class LoanService {
       );
     }
 
+    const totalRepayment = this.calculator.add(principalAmount, totalInterest);
+
     return plainToInstance(
       CalculateLoanRepaymentRespDto,
       {
         totalPrincipal: principalAmount,
-        totalInterest: Number(totalInterest.toFixed(2)),
-        totalRepayment: Number((principalAmount + totalInterest).toFixed(2)),
+        totalInterest,
+        totalRepayment,
         schedule,
       },
       { excludeExtraneousValues: true },
@@ -362,27 +449,93 @@ export class LoanService {
     dto: DisburseLoanDto,
     user: CoreReqUser,
   ) {
-    const account = await this.accountService.getSingleAccount(accountId, user);
+    const {
+      disbursementAccountId,
+      repaymentAccountId,
+      glLoanAccountCode,
+      disbursementDate,
+    } = dto;
 
-    const accLoanDetails = account.loanDetails;
+    // prevent direct self-linking...
+    if (
+      accountId === disbursementAccountId ||
+      accountId === repaymentAccountId
+    ) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'disbursement and repayment account cannot be the same as loan account id',
+        { error_code: 'DSL001' },
+      );
+    }
+
+    // fetch loan account...
+    const loanAccount = await this.accountService.getSingleAccount(
+      accountId,
+      user,
+    );
+
+    const accLoanDetails = loanAccount.loanDetails;
 
     if (!accLoanDetails || accLoanDetails.status !== LoanStatus.Approved) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'only approved loans can be disbursed',
-        { error_code: 'DSL001' },
+        { error_code: 'DSL002' },
       );
     }
 
-    const disbursementDate = dto.disbursementDate
-      ? moment(dto.disbursementDate, DATE_FORMAT).toDate()
-      : new Date();
+    // extract unique linked accounts to validate...
+    const linkedAccountIds = Array.from(
+      new Set(
+        [disbursementAccountId, repaymentAccountId].filter(Boolean) as string[],
+      ),
+    );
 
-    const principalMajor = this.calculator.toMajor(loanDetails.principalAmount);
+    if (linkedAccountIds.length > 0) {
+      const targetAccounts = await this.accountRepo.findAll({
+        where: and(
+          inArray(accounts.id, linkedAccountIds),
+          eq(accounts.tenantId, user.tenantId!),
+          isNull(accounts.deletedAt),
+        ),
+      });
+
+      // ensure all requested accounts exist within the tenant...
+      if (targetAccounts.length !== linkedAccountIds.length) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          'one or more linked accounts were not found',
+          { error_code: 'DSL003' },
+        );
+      }
+
+      // validate ownership and account type...
+      for (const targetAcc of targetAccounts) {
+        if (targetAcc.customerId !== loanAccount.customerId) {
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            `account ${targetAcc.id} does not belong to the loan customer`,
+            { error_code: 'DSL004' },
+          );
+        }
+
+        if (targetAcc.type === AccountType.Loan) {
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            `account ${targetAcc.id} is a loan account and cannot be used for disbursement or repayment`,
+            { error_code: 'DSL005' },
+          );
+        }
+      }
+    }
+
+    const disbursedAt = disbursementDate
+      ? moment(disbursementDate, DATE_FORMAT).toDate()
+      : new Date();
 
     // calculate amortization schedule...
     const repaymentCalculation = this.calculateLoanRepayment({
-      principalAmount: principalMajor,
+      principalAmount: accLoanDetails.principalAmount,
       interestRate: Number(accLoanDetails.interestRate),
       tenor: accLoanDetails.tenor,
       repaymentFrequency: accLoanDetails.repaymentFrequency,
@@ -413,14 +566,16 @@ export class LoanService {
       updatedAt: new Date(),
     }));
 
-    // TODO: Gl Transactions and update account balance with -ve...
+    // TODO: Gl Transactions from loan gl and fund disbursement account...
     await this.db.transaction(async (tx) => {
       // mark loan as active and set disbursement date...
       await tx
         .update(loanDetails)
         .set({
-          status: LoanStatus.Active,
-          disbursedAt: disbursementDate,
+          status: LoanStatus.Disbursed,
+          disbursementAccountId,
+          repaymentAccountId,
+          disbursedAt,
         })
         .where(eq(loanDetails.accountId, accountId));
 
@@ -429,8 +584,8 @@ export class LoanService {
         .update(accounts)
         .set({
           status: AccountStatus.Active,
-          balance: this.calculator.toMinor(loanDetails.principalAmount),
-          bookBalance: this.calculator.toMinor(loanDetails.principalAmount),
+          balance: -this.calculator.toMinor(loanDetails.principalAmount),
+          bookBalance: -this.calculator.toMinor(loanDetails.principalAmount),
           updatedAt: new Date(),
         })
         .where(eq(accounts.id, accountId));

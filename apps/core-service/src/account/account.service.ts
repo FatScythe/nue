@@ -3,7 +3,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import type { CoreReqUser } from '@lib/common/src/types';
 // ext-libs...
 import { plainToInstance } from 'class-transformer';
-import { and, count, desc, eq, inArray, like, or } from 'drizzle-orm';
+import { and, count, desc, eq, isNull, like } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import moment from 'moment';
 
@@ -20,6 +20,8 @@ import {
   // AccountProductStatus,
   AccountStatus,
   AccountType,
+  ChargeCalculationType,
+  ChargeTime,
   CustomerRepository,
   CustomerStatus,
   DATABASE_CONNECTION,
@@ -28,7 +30,12 @@ import {
   MoratoriumType,
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
-import { accounts, customers } from '@database/drizzle/schemas';
+import {
+  accounts,
+  customers,
+  loanDetails,
+  savingsDetails,
+} from '@database/drizzle/schemas';
 
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
@@ -62,6 +69,7 @@ export class AccountService {
         eq(customers.id, dto.customerId),
         eq(customers.tenantId, user.tenantId!),
         eq(customers.status, CustomerStatus.Active),
+        isNull(customers.deletedAt),
       ),
       selectFn: (customer) => ({
         id: customer.id,
@@ -100,7 +108,7 @@ export class AccountService {
 
       // create savings details record...
       const targetAmountBigInt = dto.targetAmount
-        ? BigInt(this.calculator.toMinor(dto.targetAmount))
+        ? this.calculator.toMinor(dto.targetAmount)
         : null;
 
       await this.accountRepo.createSavingDetails(
@@ -158,9 +166,10 @@ export class AccountService {
     const updated = await this.accountRepo.update(eq(accounts.id, accountId), {
       status: AccountStatus.Active,
       approvedBy: user.id,
-      updatedAt: dto.activationDate // TODO: add actiavation date to table
+      activationDate: dto.activationDate
         ? moment(dto.activationDate, DATE_FORMAT).toDate()
         : new Date(),
+      updatedAt: new Date(),
     });
 
     if (!updated) {
@@ -182,6 +191,7 @@ export class AccountService {
         eq(customers.id, dto.customerId),
         eq(customers.tenantId, user.tenantId!),
         eq(customers.status, CustomerStatus.Active),
+        isNull(customers.deletedAt),
       ),
       selectFn: (customer) => ({
         id: customer.id,
@@ -242,7 +252,7 @@ export class AccountService {
           officeId: Number(customer.officeId),
           userId: user.id,
           status: dto.activate ? AccountStatus.Active : AccountStatus.Pending,
-          openingBalance: 0, // TODO: This should open with loan amount
+          openingBalance: '0',
           ...(dto.createdDate && {
             createdAt: moment(dto.createdDate, DATE_FORMAT).toDate(),
           }),
@@ -250,29 +260,28 @@ export class AccountService {
         tx,
       );
 
-      const principalMinor = BigInt(
-        this.calculator.toMinor(dto.principalAmount),
+      const principalMinor = this.calculator.toMinor(dto.principalAmount);
+      const processingFeeMinor = this.calculator.toMinor(
+        dto.processingFee || 0,
       );
-      const processingFeeMinor = BigInt(
-        this.calculator.toMinor(dto.processingFee || 0),
-      );
-
       await this.accountRepo.createLoanDetails(
         {
           accountId: createdAccount.accountId,
           tenantId: user.tenantId!,
-          // disbursementAccountId: dto.disbursementAccountId || createdAccount.accountId,
-          // repaymentAccountId: dto.repaymentAccountId || createdAccount.accountId,
+          disbursementAccountId: null,
+          repaymentAccountId: null,
           principalAmount: principalMinor,
           outstandingBalance: principalMinor,
           tenor: dto.tenor,
           repaymentFrequency: dto.repaymentFrequency,
-          interestRate: dto.interestRate.toFixed(2),
+          interestRate: this.calculator.round(dto.interestRate),
           status: LoanStatus.Active,
-          processingFee: processingFeeMinor,
+          chargeCalculationType: ChargeCalculationType.Fixed,
+          chargeTime: ChargeTime.Upfront,
+          chargeValue: processingFeeMinor,
           moratoriumType: dto.moratoriumType || MoratoriumType.None,
           moratoriumPeriod: dto.moratoriumPeriod || 0,
-          repaymentStartDate: moment().endOf('month').toDate(),
+          repaymentStartDate: moment().endOf('month').toDate(), // TODO: this will depend on tenor and repayment freq...
         },
         tx,
       );
@@ -301,30 +310,31 @@ export class AccountService {
     const limit = query.limit || 10;
     const offset = (page - 1) * limit;
 
-    const conditions = [eq(schema.accounts.tenantId, user.tenantId!)];
+    const conditions = [
+      eq(accounts.tenantId, user.tenantId!),
+      isNull(accounts.deletedAt),
+    ];
 
     if (query.customerId) {
-      conditions.push(eq(schema.accounts.customerId, query.customerId));
+      conditions.push(eq(accounts.customerId, query.customerId));
     }
     if (query.type) {
-      conditions.push(eq(schema.accounts.type, query.type));
+      conditions.push(eq(accounts.type, query.type));
     }
     if (query.status) {
-      conditions.push(eq(schema.accounts.status, query.status));
+      conditions.push(eq(accounts.status, query.status));
     }
     if (query.search) {
       if (isNumber(query.search)) {
-        conditions.push(
-          like(schema.accounts.accountNumber, `%${query.search}%`),
-        );
+        conditions.push(like(accounts.accountNumber, `%${query.search}%`));
       } else {
-        conditions.push(like(schema.accounts.accountName, `%${query.search}%`));
+        conditions.push(like(accounts.accountName, `%${query.search}%`));
       }
 
       // conditions.push(
       //   or(
-      //     like(schema.accounts.accountNumber, `%${query.search}%`),
-      //     like(schema.accounts.accountName, `%${query.search}%`),
+      //     like(accounts.accountNumber, `%${query.search}%`),
+      //     like(accounts.accountName, `%${query.search}%`),
       //   )!,
       // );
     }
@@ -337,17 +347,17 @@ export class AccountService {
     // fetch paginated account records...
     const accountsList = await this.db
       .select()
-      .from(schema.accounts)
+      .from(accounts)
       .where(whereClause)
       .limit(limit)
       .offset(offset)
-      .orderBy(desc(schema.accounts.createdAt));
+      .orderBy(desc(accounts.createdAt));
 
     // convert balance to number for presentation...
     const formattedData = accountsList.map((acc) => ({
       ...acc,
-      balance: this.calculator.toMajor(acc.balance),
-      bookBalance: this.calculator.toMajor(acc.bookBalance),
+      balance: this.calculator.round(acc.balance),
+      bookBalance: this.calculator.round(acc.bookBalance),
     }));
 
     return plainToInstance(PaginatedAccountsRespDto, {
@@ -359,8 +369,9 @@ export class AccountService {
   async getSingleAccount(accountId: string, user: CoreReqUser) {
     const account = await this.accountRepo.findOne({
       where: and(
-        eq(schema.accounts.id, accountId),
-        eq(schema.accounts.tenantId, user.tenantId!),
+        eq(accounts.id, accountId),
+        eq(accounts.tenantId, user.tenantId!),
+        isNull(accounts.deletedAt),
       ),
     });
 
@@ -373,15 +384,15 @@ export class AccountService {
       );
     }
 
-    let loanDetails: LoanDetailsRespDto | null = null;
-    let savingsDetails: SavingsDetailsRespDto | null = null;
+    let accLoanDetails: LoanDetailsRespDto | null = null;
+    let accSavingsDetails: SavingsDetailsRespDto | null = null;
 
-    // conditionally fetch loan details if account is of type 'Loan'...
+    // Conditionally fetch loan details if account is of type 'Loan'
     if (account.type === AccountType.Loan) {
       const rawLoan = await this.db.query.loanDetails.findFirst({
         where: and(
-          eq(schema.loanDetails.accountId, account.id),
-          eq(schema.loanDetails.tenantId, user.tenantId!),
+          eq(loanDetails.accountId, account.id),
+          eq(loanDetails.tenantId, user.tenantId!),
         ),
       });
 
@@ -397,18 +408,16 @@ export class AccountService {
           disbursedAt,
         } = rawLoan;
 
-        loanDetails = {
+        accLoanDetails = {
           moratoriumPeriod,
           moratoriumType,
           repaymentFrequency,
           repaymentStartDate,
           status,
           tenor,
-          principalAmount: this.calculator.toNumber(rawLoan.principalAmount),
-          outstandingBalance: this.calculator.toNumber(
-            rawLoan.outstandingBalance,
-          ),
-          processingFee: this.calculator.toNumber(rawLoan.processingFee),
+          principalAmount: this.calculator.round(rawLoan.principalAmount),
+          outstandingBalance: this.calculator.round(rawLoan.outstandingBalance),
+          processingFee: this.calculator.toNumber(rawLoan.chargeValue),
           interestRate: Number(rawLoan.interestRate),
           closedAt: closedAt || undefined,
           disbursedAt: disbursedAt || undefined,
@@ -416,20 +425,20 @@ export class AccountService {
       }
     }
 
-    // conditionally fetch savings details if account is of type 'Savings'...
+    // Conditionally fetch savings details if account is of type 'Savings'
     if (account.type === AccountType.Savings) {
       const rawSavings = await this.db.query.savingsDetails.findFirst({
         where: and(
-          eq(schema.savingsDetails.accountId, account.id),
-          eq(schema.savingsDetails.tenantId, user.tenantId!),
+          eq(savingsDetails.accountId, account.id),
+          eq(savingsDetails.tenantId, user.tenantId!),
         ),
       });
 
       if (rawSavings) {
-        savingsDetails = {
+        accSavingsDetails = {
           ...rawSavings,
           targetAmount: rawSavings.targetAmount
-            ? this.calculator.toNumber(rawSavings.targetAmount)
+            ? this.calculator.round(rawSavings.targetAmount)
             : null,
           // interestRate: rawSavings.interestRate // TODO: Add this maybe?
           //   ? Number(rawSavings.interestRate)
@@ -440,10 +449,10 @@ export class AccountService {
 
     const result = {
       ...account,
-      balance: this.calculator.toMajor(account.balance),
-      bookBalance: this.calculator.toMajor(account.bookBalance),
-      savingsDetails,
-      loanDetails,
+      balance: this.calculator.round(account.balance),
+      bookBalance: this.calculator.round(account.bookBalance),
+      savingsDetails: accSavingsDetails,
+      loanDetails: accLoanDetails,
     };
 
     return plainToInstance(AccountItemRespDto, result);
@@ -466,7 +475,7 @@ export class AccountService {
       status?: AccountStatus;
       createdAt?: Date;
       externalId?: string;
-      openingBalance?: number;
+      openingBalance?: string;
     },
     tx?: DBTransaction,
   ) {
@@ -481,6 +490,7 @@ export class AccountService {
 
     const balance = this.calculator.toMinor(data.openingBalance || 0);
 
+    const createdAt = data.createdAt || new Date();
     // insert into db via repository layer...
     const account = await this.accountRepo.create(
       {
@@ -496,7 +506,8 @@ export class AccountService {
         status: data.status || AccountStatus.Pending,
         approvedBy: data.userId,
         createdBy: data.userId,
-        createdAt: data.createdAt || new Date(),
+        activationDate: data.status === AccountStatus.Active ? createdAt : null,
+        createdAt,
         reference: data.externalId || null,
       },
       tx,
