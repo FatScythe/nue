@@ -80,10 +80,12 @@ export const loanDetails = pgTable(
       .notNull(),
     chargeCalculationType: chargeCalculationTypeEnum('charge_calculation_type')
       .$type<ChargeCalculationType>()
-      .default(ChargeCalculationType.Fixed),
+      .default(ChargeCalculationType.Fixed)
+      .notNull(),
     chargeTime: chargeTimeEnum('charge_time')
       .$type<ChargeTime>()
-      .default(ChargeTime.Upfront),
+      .default(ChargeTime.Upfront)
+      .notNull(),
     chargeValue: bigint('charge_value', { mode: 'bigint' }),
     moratoriumType: moratoriumTypeEnum('moratorium_type')
       .$type<MoratoriumType>()

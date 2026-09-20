@@ -37,7 +37,26 @@ export class DisburseLoanDto {
   @IsValidReference()
   @Length(1, 10)
   @IsNotEmpty()
-  glLoanAccountCode: string;
+  loanGlCode: string;
+
+  @ApiProperty({
+    example: '1010',
+    description:
+      'Disbursement GL Account Code where principal amount is disbursed to',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsNotEmpty()
+  depositGlCode: string;
+
+  @ApiProperty({
+    example: '3310',
+    description: 'Loan Fees GL Account Code where loan fee is disbursed to',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsOptional()
+  feeGlCode?: string;
 
   @ApiPropertyOptional({
     description: 'Disbursement timestamp override (YYYY-MM-DD)',

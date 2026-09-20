@@ -12,12 +12,21 @@ import {
   accounts,
   AccountStatus,
   AccountType,
+  ChargeCalculationType,
+  ChargeTime,
   DATABASE_CONNECTION,
+  generalLedgers,
+  journalEntries,
+  journalEntryLines,
+  JournalEntryStatus,
   loanDetails,
   LoanRepaymentFrequency,
   loanSchedules,
   LoanScheduleStatus,
   LoanStatus,
+  TransactionCategory,
+  transactions,
+  TransactionStatus,
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
 
@@ -449,10 +458,13 @@ export class LoanService {
     dto: DisburseLoanDto,
     user: CoreReqUser,
   ) {
+    const { tenantId, id: userId } = user;
     const {
       disbursementAccountId,
       repaymentAccountId,
-      glLoanAccountCode,
+      depositGlCode,
+      loanGlCode,
+      feeGlCode,
       disbursementDate,
     } = dto;
 
@@ -491,11 +503,14 @@ export class LoanService {
       ),
     );
 
+    let disbursementAccount: typeof accounts.$inferSelect | null = null;
+    let repaymentAccount: typeof accounts.$inferSelect | null = null;
+
     if (linkedAccountIds.length > 0) {
       const targetAccounts = await this.accountRepo.findAll({
         where: and(
           inArray(accounts.id, linkedAccountIds),
-          eq(accounts.tenantId, user.tenantId!),
+          eq(accounts.tenantId, tenantId!),
           isNull(accounts.deletedAt),
         ),
       });
@@ -526,12 +541,28 @@ export class LoanService {
             { error_code: 'DSL005' },
           );
         }
+
+        if (targetAcc.id === disbursementAccountId)
+          disbursementAccount = targetAcc;
+        if (targetAcc.id === repaymentAccountId) repaymentAccount = targetAcc;
       }
     }
 
+    if (!disbursementAccount || !repaymentAccount) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        `invalid linked accounts provided`,
+        {
+          error_code: 'DSL007',
+        },
+      );
+    }
+
+    const transactionAt = new Date();
+
     const disbursedAt = disbursementDate
       ? moment(disbursementDate, DATE_FORMAT).toDate()
-      : new Date();
+      : transactionAt;
 
     // calculate amortization schedule...
     const repaymentCalculation = this.calculateLoanRepayment({
@@ -546,11 +577,11 @@ export class LoanService {
       moratoriumPeriod: accLoanDetails.moratoriumPeriod,
     });
 
-    // Construct schedule records with minor unit conversions (BigInt)
+    // construct schedule records with minor unit conversions...
     const scheduleRecords = repaymentCalculation.schedule.map((item) => ({
       id: uuidv7(),
       accountId,
-      tenantId: user.tenantId!,
+      tenantId: tenantId!,
       installmentNumber: item.installmentNumber,
       dueDate: item.dueDate,
       principalAmount: this.calculator.toMinor(item.principalAmount),
@@ -562,12 +593,172 @@ export class LoanService {
       penaltyAccrued: BigInt(0),
       status: LoanScheduleStatus.Scheduled,
       createdBy: user.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: transactionAt,
+      updatedAt: transactionAt,
     }));
 
-    // TODO: Gl Transactions from loan gl and fund disbursement account...
     await this.db.transaction(async (tx) => {
+      // from debit loanGl ---> credit depositGl ---> debit depositGl ---> credit disbursementAccount --> mark loan account balance as negative balance...
+      const transactionGlCodes = Array.from(
+        new Set(
+          [depositGlCode, loanGlCode, feeGlCode].filter(Boolean) as string[],
+        ),
+      );
+
+      const glCodes = await tx
+        .select()
+        .from(generalLedgers)
+        .where(
+          and(
+            eq(generalLedgers.tenantId, tenantId!),
+            inArray(generalLedgers.code, transactionGlCodes),
+          ),
+        );
+
+      const depositGlId = glCodes.find((i) => i.code === depositGlCode)?.id;
+      const loanGlId = glCodes.find((i) => i.code === loanGlCode)?.id;
+      const feeGlId = feeGlCode
+        ? glCodes.find((i) => i.code === feeGlCode)?.id
+        : null;
+
+      if (glCodes.length !== transactionGlCodes.length) {
+        if (glCodes.length === 0)
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            `invalid loan, deposit, or fee gl codes provided`,
+            { error_code: 'DSL008' },
+          );
+
+        transactionGlCodes.forEach((glCode) => {
+          if (!glCodes.find((i) => i.code === glCode))
+            throw new ApiException(
+              ApiErrorCode.BadRequest,
+              `invalid gl code ${glCode}`,
+              { error_code: 'DSL009' },
+            );
+        });
+      }
+
+      const [disburseAccount] = await tx
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, disbursementAccountId))
+        .for('update');
+
+      const loanFeeAmount = accLoanDetails.chargeValue;
+      const loanPrincipalAmount = accLoanDetails.principalAmount;
+      const principalMinor = BigInt(
+        this.calculator.toMinor(loanPrincipalAmount),
+      );
+      const feeMinor = BigInt(this.calculator.toMinor(loanFeeAmount || '0'));
+
+      const chargeIsUpfrontAndFixed =
+        accLoanDetails.chargeTime === ChargeTime.Upfront &&
+        accLoanDetails.chargeCalculationType === ChargeCalculationType.Fixed;
+
+      const isUpfrontFeeApplied =
+        chargeIsUpfrontAndFixed && feeMinor > BigInt(0);
+
+      if (isUpfrontFeeApplied && !feeGlId) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `fee gl code is required for upfront fee disbursement`,
+          { error_code: 'DSL010' },
+        );
+      }
+
+      const netDisbursementMinor = isUpfrontFeeApplied
+        ? principalMinor - feeMinor
+        : principalMinor;
+
+      // audit disbursement account transaction record...
+      const [txn] = await tx
+        .insert(transactions)
+        .values({
+          id: uuidv7(),
+          tenantId: tenantId!,
+          senderAccountId: null,
+          receiverAccountId: disbursementAccountId,
+          amount: netDisbursementMinor,
+          fee: feeMinor,
+          category: TransactionCategory.Deposit,
+          status: TransactionStatus.Successful,
+          reference: `LOAN-${loanAccount.id}`,
+          narration: 'loan disbursed',
+          officeId: loanAccount.officeId,
+          createdBy: userId,
+        })
+        .returning();
+
+      // post double-entry journal header...
+      const [journal] = await tx
+        .insert(journalEntries)
+        .values({
+          id: uuidv7(),
+          tenantId: tenantId!,
+          transactionId: txn.id,
+          entryDate: transactionAt,
+          description: `disburse loan to disbursement account number ${disburseAccount.accountNumber}`,
+          status: JournalEntryStatus.Posted,
+          officeId: loanAccount.officeId,
+          createdBy: userId,
+          approvedBy: userId,
+        })
+        .returning();
+
+      const lines: Array<typeof journalEntryLines.$inferInsert> = [
+        {
+          id: uuidv7(),
+          tenantId: tenantId!,
+          journalEntryId: journal.id,
+          glAccountId: loanGlId!,
+          debit: principalMinor,
+          credit: BigInt(0),
+          description: `Debit Loan Gl: For loan account number ${loanAccount.accountNumber} (Principal)`,
+        },
+        {
+          id: uuidv7(),
+          tenantId: tenantId!,
+          journalEntryId: journal.id,
+          glAccountId: depositGlId!,
+          credit: netDisbursementMinor,
+          debit: BigInt(0),
+          description: `Credit Deposit Gl: For loan account number ${loanAccount.accountNumber} (Principal)`,
+        },
+        ...(isUpfrontFeeApplied && feeGlId
+          ? [
+              {
+                id: uuidv7(),
+                tenantId: tenantId!,
+                journalEntryId: journal.id,
+                glAccountId: feeGlId,
+                credit: feeMinor,
+                debit: BigInt(0),
+                description: `Credit Fee Gl: For loan account number ${loanAccount.accountNumber} (Fee)`,
+              },
+            ]
+          : []),
+      ];
+
+      await tx.insert(journalEntryLines).values(lines);
+
+      // update disbursement account balance
+      await tx
+        .update(accounts)
+        .set({
+          bookBalance: BigInt(
+            this.calculator.add(
+              disburseAccount.bookBalance,
+              netDisbursementMinor,
+            ),
+          ),
+          balance: BigInt(
+            this.calculator.add(disburseAccount.balance, netDisbursementMinor),
+          ),
+          updatedAt: transactionAt,
+        })
+        .where(eq(accounts.id, disburseAccount.id));
+
       // mark loan as active and set disbursement date...
       await tx
         .update(loanDetails)
@@ -579,14 +770,14 @@ export class LoanService {
         })
         .where(eq(loanDetails.accountId, accountId));
 
-      // activate main account & update balance...
+      // activate main loan account & update balance...
       await tx
         .update(accounts)
         .set({
           status: AccountStatus.Active,
-          balance: -this.calculator.toMinor(loanDetails.principalAmount),
-          bookBalance: -this.calculator.toMinor(loanDetails.principalAmount),
-          updatedAt: new Date(),
+          balance: -principalMinor,
+          bookBalance: -principalMinor,
+          updatedAt: transactionAt,
         })
         .where(eq(accounts.id, accountId));
 
