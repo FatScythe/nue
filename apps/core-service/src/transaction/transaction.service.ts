@@ -238,16 +238,29 @@ export class TransactionService {
         .returning();
 
       // build balanced double-entry gl lines...
-      const lines = [
+      const lines: Array<typeof journalEntryLines.$inferInsert> = [
         {
           id: uuidv7(),
           tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: depositGlId,
-          debit: BigInt(totalDeduction),
+          debit: BigInt(transferAmount),
           credit: BigInt(0),
-          description: `Debit Sender: ${sender.accountNumber} (Principal + Fee)`,
+          description: `Debit Sender: ${sender.accountNumber} (Principal)`,
         },
+        ...(this.calculator.isGreaterThan(feeAmount, 0)
+          ? [
+              {
+                id: uuidv7(),
+                tenantId: tenantId!,
+                journalEntryId: journal.id,
+                glAccountId: depositGlId,
+                debit: BigInt(feeAmount),
+                credit: BigInt(0),
+                description: `Debit Sender Fee: ${sender.accountNumber} (Fee)`,
+              },
+            ]
+          : []),
         {
           id: uuidv7(),
           tenantId: tenantId!,
@@ -260,7 +273,7 @@ export class TransactionService {
       ];
 
       // add fee income gl line if fee applies...
-      if (this.calculator.compare(feeAmount, 0) === 1 && feeGlId) {
+      if (this.calculator.isGreaterThan(feeAmount, 0) && feeGlId) {
         lines.push({
           id: uuidv7(),
           tenantId: tenantId!,
@@ -458,15 +471,7 @@ export class TransactionService {
         .returning();
 
       // build balanced double-entry gl lines...
-      const lines: Array<{
-        id: string;
-        tenantId: number;
-        journalEntryId: string;
-        glAccountId: string;
-        debit: bigint;
-        credit: bigint;
-        description: string;
-      }> = [];
+      const lines: Array<typeof journalEntryLines.$inferInsert> = [];
 
       if (isAccountToGl) {
         // debit deposit control gl...
