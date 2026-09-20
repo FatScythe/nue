@@ -2,7 +2,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { Expose } from 'class-transformer';
 
-import { LoanRepaymentFrequency, LoanStatus, MoratoriumType } from '@database';
+import {
+  ChargeCalculationType,
+  ChargeTime,
+  LoanRepaymentFrequency,
+  LoanStatus,
+  MoratoriumType,
+} from '@database';
 
 export class LoanDetailsRespDto {
   @ApiProperty()
@@ -31,7 +37,15 @@ export class LoanDetailsRespDto {
 
   @ApiProperty()
   @Expose()
-  processingFee: number;
+  chargeValue: number;
+
+  @ApiProperty()
+  @Expose()
+  chargeCalculationType: ChargeCalculationType;
+
+  @ApiProperty()
+  @Expose()
+  chargeTime: ChargeTime;
 
   @ApiProperty({ enum: MoratoriumType })
   @Expose()

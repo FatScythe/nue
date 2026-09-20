@@ -186,6 +186,37 @@ export class AccountService {
   }
 
   async createLoanAccount(dto: CreateLoanAccountDto, user: CoreReqUser) {
+    if (dto.processingFee && dto.principalAmount) {
+      // ensure fee is strictly less than principal...
+      if (
+        this.calculator.isGreaterThanOrEqual(
+          dto.processingFee,
+          dto.principalAmount,
+        )
+      ) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          'processing fee cannot be equal to or exceed the loan principal amount',
+          { error_code: 'CLA001' },
+        );
+      }
+
+      // cap fee at a maximum percentage (e.g., 10% of principal)...
+      const MAX_FEE_PERCENTAGE = 0.1; // 10%
+      const maxAllowedFee = this.calculator.multiply(
+        dto.principalAmount,
+        MAX_FEE_PERCENTAGE,
+      );
+
+      if (this.calculator.isGreaterThan(dto.processingFee, maxAllowedFee)) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `processing fee cannot exceed 10% of the loan principal amount`,
+          { error_code: 'CLA002' },
+        );
+      }
+    }
+
     const customer = await this.customerRepo.findOne({
       where: and(
         eq(customers.id, dto.customerId),
@@ -204,7 +235,7 @@ export class AccountService {
 
     if (!customer) {
       throw new ApiException(ApiErrorCode.BadRequest, 'customer not found', {
-        error_code: 'CLA001',
+        error_code: 'CLA003',
       });
     }
 
@@ -294,7 +325,7 @@ export class AccountService {
       throw new ApiException(
         ApiErrorCode.InternalServerError,
         'failed to create loan account record',
-        { error_code: 'CLA003' },
+        { error_code: 'CLA004' },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -417,7 +448,9 @@ export class AccountService {
           tenor,
           principalAmount: this.calculator.round(rawLoan.principalAmount),
           outstandingBalance: this.calculator.round(rawLoan.outstandingBalance),
-          processingFee: this.calculator.toNumber(rawLoan.chargeValue),
+          chargeValue: this.calculator.toNumber(rawLoan.chargeValue),
+          chargeCalculationType: rawLoan.chargeCalculationType,
+          chargeTime: rawLoan.chargeTime,
           interestRate: Number(rawLoan.interestRate),
           closedAt: closedAt || undefined,
           disbursedAt: disbursedAt || undefined,
