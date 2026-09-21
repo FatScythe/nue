@@ -14,6 +14,7 @@ import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { ParseUUID, type CoreReqUser } from '@common';
 import { Resources } from '@database';
 
+import { CreateLoanAccountDto, CreateLoanAcctRespDto } from '../account/dto';
 import {
   ApiSuccessResponseData,
   GetUser,
@@ -36,6 +37,21 @@ import { LoanService } from './loan.service';
 @Controller('loans')
 export class LoanController {
   constructor(private readonly loanService: LoanService) {}
+
+  @Permissions('account:create')
+  @Post('')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new loan account for a customer' })
+  @ApiSuccessResponseData(CreateLoanAcctRespDto, {
+    status: HttpStatus.CREATED,
+    description: 'Loan account created successfully',
+  })
+  createLoanAccount(
+    @Body() dto: CreateLoanAccountDto,
+    @GetUser() user: CoreReqUser,
+  ): Promise<CreateLoanAcctRespDto> {
+    return this.loanService.createLoanAccount(dto, user);
+  }
 
   @Permissions('loan:read')
   @Post('schedule')

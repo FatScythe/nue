@@ -31,6 +31,7 @@ import {
 import * as schema from '@database/drizzle/schemas';
 
 import { AccountService } from '../account/account.service';
+import { CreateLoanAccountDto } from '../account/dto';
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
 import {
@@ -53,6 +54,30 @@ export class LoanService {
     private readonly calculator: Calculator,
   ) {}
 
+  async createLoanAccount(dto: CreateLoanAccountDto, user: CoreReqUser) {
+    return await this.accountService.createLoanAccount(dto, user);
+  }
+
+  async getLoanAccountDetails(accountId: string, tenantId: number) {
+    const data = await this.accountRepo.findOne({
+      selectFn: (accountTable) => {
+        return {
+          account: accountTable.$inferSelect,
+          loanDetails: loanDetails.$inferSelect,
+        };
+      },
+      where: and(
+        eq(accounts.id, accountId),
+        eq(accounts.tenantId, tenantId),
+        isNull(accounts.deletedAt),
+      ),
+      joinFn: (query) =>
+        query.leftJoin(loanDetails, eq(loanDetails.accountId, accounts.id)),
+    });
+
+    return data;
+  }
+
   /**
    * fetch a single loan account with its associated loan details and dynamic repayment schedule...
    */
@@ -60,21 +85,19 @@ export class LoanService {
     accountId: string,
     user: CoreReqUser,
   ): Promise<SingleLoanRespDto> {
-    const accountData = await this.accountService.getSingleAccount(
-      accountId,
-      user,
-    );
+    const result = await this.getLoanAccountDetails(accountId, user.tenantId!);
 
-    if (!accountData.loanDetails) {
+    const accountData = result?.account;
+    const loanDetails = result?.loanDetails;
+
+    if (!accountData || !loanDetails) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
-        'loan details not found for this account',
+        'invalid loan account',
         { error_code: 'GSL001' },
         HttpStatus.NOT_FOUND,
       );
     }
-
-    const loanDetails = accountData.loanDetails;
 
     // check if loan is active or disbursed (persisted DB schedule exists)...
     if (
@@ -139,8 +162,8 @@ export class LoanService {
 
     // fallback to calculated preview schedule for pending/un-disbursed loans...
     const repaymentCalculation = this.calculateLoanRepayment({
-      principalAmount: loanDetails.principalAmount,
-      interestRate: loanDetails.interestRate,
+      principalAmount: this.calculator.round(loanDetails.principalAmount),
+      interestRate: Number(loanDetails.interestRate),
       tenor: loanDetails.tenor,
       repaymentFrequency: loanDetails.repaymentFrequency,
       repaymentStartDate: loanDetails.repaymentStartDate
@@ -280,10 +303,19 @@ export class LoanService {
    * approve a pending loan application
    */
   async approveLoan(accountId: string, dto: ApproveLoanDto, user: CoreReqUser) {
-    const accountData = await this.accountService.getSingleAccount(
-      accountId,
-      user,
-    );
+    const result = await this.getLoanAccountDetails(accountId, user.tenantId!);
+
+    const accountData = result?.account;
+    const loanDetails = result?.loanDetails;
+
+    if (!accountData || !loanDetails) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'invalid loan account',
+        { error_code: 'APL001' },
+        HttpStatus.NOT_FOUND,
+      );
+    }
 
     if (
       ![AccountStatus.Active, AccountStatus.Pending].includes(
@@ -293,22 +325,13 @@ export class LoanService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         `invalid loan account status ${accountData.status}`,
-        { error_code: 'APL001' },
-      );
-
-    if (!accountData.loanDetails) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        'loan details not found for this account',
         { error_code: 'APL002' },
-        HttpStatus.NOT_FOUND,
       );
-    }
 
-    if (accountData.loanDetails.status !== LoanStatus.Pending) {
+    if (loanDetails.status !== LoanStatus.Pending) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
-        `cannot approve loan in status: ${accountData.loanDetails?.status}`,
+        `cannot approve loan in status: ${loanDetails?.status}`,
         { error_code: 'APL003' },
       );
     }
@@ -329,12 +352,12 @@ export class LoanService {
       }
 
       await tx
-        .update(loanDetails)
+        .update(schema.loanDetails)
         .set({
           approvalNote: dto.note,
           status: LoanStatus.Approved,
         })
-        .where(eq(loanDetails.accountId, accountId));
+        .where(eq(schema.loanDetails.accountId, accountId));
     });
 
     return { message: 'loan application approved successfully', accountId };
@@ -344,24 +367,24 @@ export class LoanService {
    * decline a pending loan application
    */
   async declineLoan(accountId: string, dto: DeclineLoanDto, user: CoreReqUser) {
-    const accountData = await this.accountService.getSingleAccount(
-      accountId,
-      user,
-    );
+    const result = await this.getLoanAccountDetails(accountId, user.tenantId!);
 
-    if (!accountData.loanDetails) {
+    const accountData = result?.account;
+    const loanDetails = result?.loanDetails;
+
+    if (!accountData || !loanDetails) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
-        'loan details not found for this account',
+        'invalid loan account',
         { error_code: 'DCL001' },
         HttpStatus.NOT_FOUND,
       );
     }
 
-    if (accountData.loanDetails?.status !== LoanStatus.Pending) {
+    if (loanDetails?.status !== LoanStatus.Pending) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
-        `cannot decline loan in status: ${accountData.loanDetails?.status}`,
+        `cannot decline loan in status: ${loanDetails?.status}`,
         { error_code: 'DCL002' },
       );
     }
@@ -376,30 +399,28 @@ export class LoanService {
         .where(eq(accounts.id, accountId));
 
       await tx
-        .update(loanDetails)
+        .update(schema.loanDetails)
         .set({
           declineReason: dto.reason,
           status: LoanStatus.Declined,
           closedAt: new Date(),
         })
-        .where(eq(loanDetails.accountId, accountId));
+        .where(eq(schema.loanDetails.accountId, accountId));
     });
 
     return { message: 'loan application declined successfully', accountId };
   }
 
   async undoApproval(accountId: string, user: CoreReqUser) {
-    const accountData = await this.accountService.getSingleAccount(
-      accountId,
-      user,
-    );
+    const result = await this.getLoanAccountDetails(accountId, user.tenantId!);
 
-    const loanDetails = accountData.loanDetails;
+    const accountData = result?.account;
+    const loanDetails = result?.loanDetails;
 
-    if (!loanDetails) {
+    if (!accountData || !loanDetails) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
-        'loan details not found for this account',
+        'invalid loan account',
         { error_code: 'UAL001' },
         HttpStatus.NOT_FOUND,
       );
@@ -476,23 +497,29 @@ export class LoanService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'disbursement and repayment account cannot be the same as loan account id',
-        { error_code: 'DSL001' },
+        { error_code: 'DBL001' },
       );
     }
 
-    // fetch loan account...
-    const loanAccount = await this.accountService.getSingleAccount(
-      accountId,
-      user,
-    );
+    const result = await this.getLoanAccountDetails(accountId, user.tenantId!);
 
-    const accLoanDetails = loanAccount.loanDetails;
+    const accountData = result?.account;
+    const loanDetails = result?.loanDetails;
 
-    if (!accLoanDetails || accLoanDetails.status !== LoanStatus.Approved) {
+    if (!accountData || !loanDetails) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'invalid loan account',
+        { error_code: 'DBL002' },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (loanDetails.status !== LoanStatus.Approved) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'only approved loans can be disbursed',
-        { error_code: 'DSL002' },
+        { error_code: 'DBL003' },
       );
     }
 
@@ -520,17 +547,17 @@ export class LoanService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'one or more linked accounts were not found',
-          { error_code: 'DSL003' },
+          { error_code: 'DBL004' },
         );
       }
 
       // validate ownership and account type...
       for (const targetAcc of targetAccounts) {
-        if (targetAcc.customerId !== loanAccount.customerId) {
+        if (targetAcc.customerId !== accountData.customerId) {
           throw new ApiException(
             ApiErrorCode.BadRequest,
             `account ${targetAcc.id} does not belong to the loan customer`,
-            { error_code: 'DSL004' },
+            { error_code: 'DBL005' },
           );
         }
 
@@ -538,7 +565,7 @@ export class LoanService {
           throw new ApiException(
             ApiErrorCode.BadRequest,
             `account ${targetAcc.id} is a loan account and cannot be used for disbursement or repayment`,
-            { error_code: 'DSL005' },
+            { error_code: 'DBL006' },
           );
         }
 
@@ -553,7 +580,7 @@ export class LoanService {
         ApiErrorCode.BadRequest,
         `invalid linked accounts provided`,
         {
-          error_code: 'DSL007',
+          error_code: 'DBL007',
         },
       );
     }
@@ -566,15 +593,15 @@ export class LoanService {
 
     // calculate amortization schedule...
     const repaymentCalculation = this.calculateLoanRepayment({
-      principalAmount: accLoanDetails.principalAmount,
-      interestRate: Number(accLoanDetails.interestRate),
-      tenor: accLoanDetails.tenor,
-      repaymentFrequency: accLoanDetails.repaymentFrequency,
-      repaymentStartDate: moment(accLoanDetails.repaymentStartDate).format(
+      principalAmount: this.calculator.round(loanDetails.principalAmount),
+      interestRate: Number(loanDetails.interestRate),
+      tenor: loanDetails.tenor,
+      repaymentFrequency: loanDetails.repaymentFrequency,
+      repaymentStartDate: moment(loanDetails.repaymentStartDate).format(
         DATE_FORMAT,
       ),
-      moratoriumType: accLoanDetails.moratoriumType,
-      moratoriumPeriod: accLoanDetails.moratoriumPeriod,
+      moratoriumType: loanDetails.moratoriumType,
+      moratoriumPeriod: loanDetails.moratoriumPeriod,
     });
 
     // construct schedule records with minor unit conversions...
@@ -626,7 +653,7 @@ export class LoanService {
           throw new ApiException(
             ApiErrorCode.BadRequest,
             `invalid loan, deposit, or fee gl codes provided`,
-            { error_code: 'DSL008' },
+            { error_code: 'DBL008' },
           );
 
         transactionGlCodes.forEach((glCode) => {
@@ -634,7 +661,7 @@ export class LoanService {
             throw new ApiException(
               ApiErrorCode.BadRequest,
               `invalid gl code ${glCode}`,
-              { error_code: 'DSL009' },
+              { error_code: 'DBL009' },
             );
         });
       }
@@ -645,16 +672,16 @@ export class LoanService {
         .where(eq(accounts.id, disbursementAccountId))
         .for('update');
 
-      const loanFeeAmount = accLoanDetails.chargeValue;
-      const loanPrincipalAmount = accLoanDetails.principalAmount;
+      const loanFeeAmount = loanDetails.chargeValue;
+      const loanPrincipalAmount = loanDetails.principalAmount;
       const principalMinor = BigInt(
         this.calculator.toMinor(loanPrincipalAmount),
       );
       const feeMinor = BigInt(this.calculator.toMinor(loanFeeAmount || '0'));
 
       const chargeIsUpfrontAndFixed =
-        accLoanDetails.chargeTime === ChargeTime.Upfront &&
-        accLoanDetails.chargeCalculationType === ChargeCalculationType.Fixed;
+        loanDetails.chargeTime === ChargeTime.Upfront &&
+        loanDetails.chargeCalculationType === ChargeCalculationType.Fixed;
 
       const isUpfrontFeeApplied =
         chargeIsUpfrontAndFixed && feeMinor > BigInt(0);
@@ -663,7 +690,7 @@ export class LoanService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `fee gl code is required for upfront fee disbursement`,
-          { error_code: 'DSL010' },
+          { error_code: 'DBL010' },
         );
       }
 
@@ -683,9 +710,9 @@ export class LoanService {
           fee: feeMinor,
           category: TransactionCategory.Deposit,
           status: TransactionStatus.Successful,
-          reference: `LOAN-${loanAccount.id}`,
+          reference: `LOAN-${accountData.id}`,
           narration: 'loan disbursed',
-          officeId: loanAccount.officeId,
+          officeId: accountData.officeId,
           createdBy: userId,
         })
         .returning();
@@ -700,7 +727,7 @@ export class LoanService {
           entryDate: transactionAt,
           description: `disburse loan to disbursement account number ${disburseAccount.accountNumber}`,
           status: JournalEntryStatus.Posted,
-          officeId: loanAccount.officeId,
+          officeId: accountData.officeId,
           createdBy: userId,
           approvedBy: userId,
         })
@@ -714,7 +741,7 @@ export class LoanService {
           glAccountId: loanGlId!,
           debit: principalMinor,
           credit: BigInt(0),
-          description: `Debit Loan Gl: For loan account number ${loanAccount.accountNumber} (Principal)`,
+          description: `Debit Loan Gl: For loan account number ${accountData.accountNumber} (Principal)`,
         },
         {
           id: uuidv7(),
@@ -723,7 +750,7 @@ export class LoanService {
           glAccountId: depositGlId!,
           credit: netDisbursementMinor,
           debit: BigInt(0),
-          description: `Credit Deposit Gl: For loan account number ${loanAccount.accountNumber} (Principal)`,
+          description: `Credit Deposit Gl: For loan account number ${accountData.accountNumber} (Principal)`,
         },
         ...(isUpfrontFeeApplied && feeGlId
           ? [
@@ -734,7 +761,7 @@ export class LoanService {
                 glAccountId: feeGlId,
                 credit: feeMinor,
                 debit: BigInt(0),
-                description: `Credit Fee Gl: For loan account number ${loanAccount.accountNumber} (Fee)`,
+                description: `Credit Fee Gl: For loan account number ${accountData.accountNumber} (Fee)`,
               },
             ]
           : []),
@@ -761,14 +788,14 @@ export class LoanService {
 
       // mark loan as active and set disbursement date...
       await tx
-        .update(loanDetails)
+        .update(schema.loanDetails)
         .set({
           status: LoanStatus.Disbursed,
           disbursementAccountId,
           repaymentAccountId,
           disbursedAt,
         })
-        .where(eq(loanDetails.accountId, accountId));
+        .where(eq(schema.loanDetails.accountId, accountId));
 
       // activate main loan account & update balance...
       await tx
