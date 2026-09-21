@@ -34,14 +34,14 @@ export abstract class BaseRepository<TTable extends PgTable> {
     return result[0] || null;
   }
 
-  async findOne<T extends Record<string, any> = TTable['_']['inferSelect']>(
+  async findOne<T = TTable['_']['inferSelect']>(
     {
       where,
       selectFn,
       joinFn,
     }: {
-      where: SQL | undefined;
-      selectFn?: (table: TTable) => Record<string, any>;
+      where?: SQL;
+      selectFn?: (table: TTable) => T;
       joinFn?: (query: any) => any;
     },
     tx?: DBTransaction,
@@ -49,7 +49,7 @@ export abstract class BaseRepository<TTable extends PgTable> {
     const client = this.getClient(tx);
 
     let query = selectFn
-      ? client.select(selectFn(this.table)).from(this.table as any)
+      ? client.select(selectFn(this.table) as any).from(this.table as any)
       : client.select().from(this.table as any);
 
     if (joinFn) {
@@ -64,7 +64,7 @@ export abstract class BaseRepository<TTable extends PgTable> {
     return results[0] as unknown as T;
   }
 
-  async findAll<T extends Record<string, any> = TTable['_']['inferSelect']>(
+  async findAll<T = TTable['_']['inferSelect']>(
     {
       where,
       selectFn,
@@ -73,7 +73,7 @@ export abstract class BaseRepository<TTable extends PgTable> {
       offset,
     }: {
       where?: SQL;
-      selectFn?: (table: TTable) => Record<string, any>;
+      selectFn?: (table: TTable) => T;
       joinFn?: (query: any) => any;
       limit?: number;
       offset?: number;
@@ -83,7 +83,7 @@ export abstract class BaseRepository<TTable extends PgTable> {
     const client = this.getClient(tx);
 
     let query: any = selectFn
-      ? client.select(selectFn(this.table)).from(this.table as any)
+      ? client.select(selectFn(this.table) as any).from(this.table as any)
       : client.select().from(this.table as any);
 
     if (joinFn) query = joinFn(query);
