@@ -8,6 +8,26 @@ import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import * as schema from '@database/drizzle/schemas';
 import { DatabaseClient, DBTransaction } from '@database/drizzle/types';
 
+// checks if it is drizzle col. extract the primitive type else return what was passed...
+type UnwrapColumn<T> = T extends { _: { data: infer D } } ? D : T;
+
+export type InferSelect<T> = T extends PgTable
+  ? // if T is an entire table schema object (e.g. `selectFn: () => Users` | `selectFn: undefined`), return its full inferred row type...
+    T['_']['inferSelect']
+  : T extends Record<string, any>
+    ? // if T is is a custom object ...
+      {
+        // we loop 2ru each key and check if it is drizzle column...
+        [K in keyof T]: T[K] extends { _: { data: any } }
+          ? UnwrapColumn<T[K]> // it is drizzle col. extract the primitive type...
+          : T[K] extends PgTable // is it a entire table??...
+            ? T[K]['_']['inferSelect'] // we can just $inferSelect...
+            : T[K] extends Record<string, any>
+              ? InferSelect<T[K]> // rerun the loop...
+              : T[K]; // leave plain types...
+      }
+    : T;
+
 export abstract class BaseRepository<TTable extends PgTable> {
   constructor(
     @Inject(DATABASE_CONNECTION)
@@ -34,53 +54,48 @@ export abstract class BaseRepository<TTable extends PgTable> {
     return result[0] || null;
   }
 
-  async findOne<T = TTable['_']['inferSelect']>(
-    {
-      where,
-      selectFn,
-      joinFn,
-    }: {
-      where?: SQL;
-      selectFn?: (table: TTable) => T;
-      joinFn?: (query: any) => any;
-    },
+  async findOne<S extends Record<string, any> = never>(
+    options: { where?: SQL } & (
+      | { selectFn: (table: TTable) => S; joinFn: (query: any) => any }
+      | { selectFn?: (table: TTable) => S }
+    ),
     tx?: DBTransaction,
-  ): Promise<T | null> {
+  ): Promise<
+    ([S] extends [never] ? TTable['_']['inferSelect'] : InferSelect<S>) | null
+  > {
     const client = this.getClient(tx);
+    const { where, selectFn } = options;
 
     let query = selectFn
       ? client.select(selectFn(this.table) as any).from(this.table as any)
       : client.select().from(this.table as any);
 
-    if (joinFn) {
-      query = joinFn(query);
+    if ('joinFn' in options) {
+      query = options.joinFn(query);
     }
 
     const results = await query.where(where).limit(1);
 
-    if (!results || (Array.isArray(results) && results.length === 0))
+    if (!results || (Array.isArray(results) && results.length === 0)) {
       return null;
+    }
 
-    return results[0] as unknown as T;
+    return results[0] as any;
   }
 
-  async findAll<T = TTable['_']['inferSelect']>(
-    {
-      where,
-      selectFn,
-      joinFn,
-      limit,
-      offset,
-    }: {
+  async findAll<S extends Record<string, any> = never>(
+    options: {
       where?: SQL;
-      selectFn?: (table: TTable) => T;
-      joinFn?: (query: any) => any;
       limit?: number;
       offset?: number;
-    },
+      joinFn?: (query: any) => any;
+    } & ({ selectFn: (table: TTable) => S } | { selectFn?: undefined }),
     tx?: DBTransaction,
-  ): Promise<T[]> {
+  ): Promise<
+    ([S] extends [never] ? TTable['_']['inferSelect'] : InferSelect<S>)[]
+  > {
     const client = this.getClient(tx);
+    const { where, selectFn, limit, offset, joinFn } = options;
 
     let query: any = selectFn
       ? client.select(selectFn(this.table) as any).from(this.table as any)
@@ -90,16 +105,12 @@ export abstract class BaseRepository<TTable extends PgTable> {
 
     if (where) query = query.where(where);
 
-    if (typeof limit === 'number') {
-      query = query.limit(limit);
-    }
+    if (typeof limit === 'number') query = query.limit(limit);
 
-    if (typeof offset === 'number') {
-      query = query.offset(offset);
-    }
+    if (typeof offset === 'number') query = query.offset(offset);
 
     const results = await query;
-    return results as unknown as T[];
+    return results as any;
   }
 
   async update<T extends Record<string, any> = TTable['_']['inferSelect']>(
