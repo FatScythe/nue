@@ -1,7 +1,7 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { plainToInstance } from 'class-transformer';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import moment from 'moment';
 import { uuidv7 } from 'uuidv7';
@@ -9,23 +9,23 @@ import { uuidv7 } from 'uuidv7';
 import { Calculator, CoreReqUser, DATE_FORMAT } from '@common';
 import {
   AccountRepository,
-  accounts,
+  Accounts,
   AccountStatus,
   AccountType,
   ChargeCalculationType,
   ChargeTime,
   DATABASE_CONNECTION,
-  generalLedgers,
-  journalEntries,
-  journalEntryLines,
+  GeneralLedgers,
+  JournalEntries,
+  JournalEntryLines,
   JournalEntryStatus,
-  loanDetails,
+  LoanDetails,
   LoanRepaymentFrequency,
-  loanSchedules,
+  LoanSchedules,
   LoanScheduleStatus,
   LoanStatus,
   TransactionCategory,
-  transactions,
+  Transactions,
   TransactionStatus,
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
@@ -60,19 +60,17 @@ export class LoanService {
 
   async getLoanAccountDetails(accountId: string, tenantId: number) {
     const data = await this.accountRepo.findOne({
-      selectFn: (accountTable) => {
-        return {
-          account: accountTable.$inferSelect,
-          loanDetails: loanDetails.$inferSelect,
-        };
-      },
+      selectFn: (accountTable) => ({
+        account: accountTable,
+        loanDetails: LoanDetails,
+      }),
       where: and(
-        eq(accounts.id, accountId),
-        eq(accounts.tenantId, tenantId),
-        isNull(accounts.deletedAt),
+        eq(Accounts.id, accountId),
+        eq(Accounts.tenantId, tenantId),
+        isNull(Accounts.deletedAt),
       ),
       joinFn: (query) =>
-        query.leftJoin(loanDetails, eq(loanDetails.accountId, accounts.id)),
+        query.leftJoin(LoanDetails, eq(LoanDetails.accountId, Accounts.id)),
     });
 
     return data;
@@ -105,15 +103,15 @@ export class LoanService {
     ) {
       const schedules = await this.db
         .select()
-        .from(loanSchedules)
+        .from(LoanSchedules)
         .where(
           and(
-            eq(loanSchedules.accountId, accountId),
-            eq(loanSchedules.tenantId, user.tenantId!),
-            isNull(loanSchedules.deletedAt),
+            eq(LoanSchedules.accountId, accountId),
+            eq(LoanSchedules.tenantId, user.tenantId!),
+            isNull(LoanSchedules.deletedAt),
           ),
         )
-        .orderBy(asc(loanSchedules.installmentNumber));
+        .orderBy(asc(LoanSchedules.installmentNumber));
 
       let runningBalance = this.calculator.round(loanDetails.principalAmount);
 
@@ -339,25 +337,25 @@ export class LoanService {
     await this.db.transaction(async (tx) => {
       if (accountData.status === AccountStatus.Pending) {
         await tx
-          .update(accounts)
+          .update(Accounts)
           .set({
             status: AccountStatus.Active,
           })
           .where(
             and(
-              eq(accounts.id, accountId),
-              eq(accounts.tenantId, user.tenantId!),
+              eq(Accounts.id, accountId),
+              eq(Accounts.tenantId, user.tenantId!),
             ),
           );
       }
 
       await tx
-        .update(schema.loanDetails)
+        .update(LoanDetails)
         .set({
           approvalNote: dto.note,
           status: LoanStatus.Approved,
         })
-        .where(eq(schema.loanDetails.accountId, accountId));
+        .where(eq(LoanDetails.accountId, accountId));
     });
 
     return { message: 'loan application approved successfully', accountId };
@@ -391,21 +389,21 @@ export class LoanService {
 
     await this.db.transaction(async (tx) => {
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           status: AccountStatus.Rejected,
           updatedAt: new Date(),
         })
-        .where(eq(accounts.id, accountId));
+        .where(eq(Accounts.id, accountId));
 
       await tx
-        .update(schema.loanDetails)
+        .update(LoanDetails)
         .set({
           declineReason: dto.reason,
           status: LoanStatus.Declined,
           closedAt: new Date(),
         })
-        .where(eq(schema.loanDetails.accountId, accountId));
+        .where(eq(LoanDetails.accountId, accountId));
     });
 
     return { message: 'loan application declined successfully', accountId };
@@ -438,7 +436,7 @@ export class LoanService {
 
     await this.db.transaction(async (tx) => {
       await tx
-        .update(schema.loanDetails)
+        .update(LoanDetails)
         .set({
           status: LoanStatus.Pending,
           approvalNote: null,
@@ -446,22 +444,22 @@ export class LoanService {
         })
         .where(
           and(
-            eq(schema.loanDetails.accountId, accountId),
-            eq(schema.loanDetails.status, loanDetails.status),
-            eq(schema.loanDetails.tenantId, user.tenantId!),
+            eq(LoanDetails.accountId, accountId),
+            eq(LoanDetails.status, loanDetails.status),
+            eq(LoanDetails.tenantId, user.tenantId!),
           ),
         );
 
       await tx
-        .update(schema.accounts)
+        .update(Accounts)
         .set({
           status: AccountStatus.Pending,
           updatedAt: new Date(),
         })
         .where(
           and(
-            eq(schema.accounts.id, accountId),
-            eq(schema.accounts.tenantId, user.tenantId!),
+            eq(Accounts.id, accountId),
+            eq(Accounts.tenantId, user.tenantId!),
           ),
         );
     });
@@ -483,23 +481,9 @@ export class LoanService {
     const {
       disbursementAccountId,
       repaymentAccountId,
-      depositGlCode,
-      loanGlCode,
       feeGlCode,
       disbursementDate,
     } = dto;
-
-    // prevent direct self-linking...
-    if (
-      accountId === disbursementAccountId ||
-      accountId === repaymentAccountId
-    ) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        'disbursement and repayment account cannot be the same as loan account id',
-        { error_code: 'DBL001' },
-      );
-    }
 
     const result = await this.getLoanAccountDetails(accountId, user.tenantId!);
 
@@ -523,66 +507,119 @@ export class LoanService {
       );
     }
 
+    // resolve target accounts from DTO or fallback to loan details...
+    const effectiveDisbursementAccountId =
+      disbursementAccountId ?? loanDetails.disbursementAccountId;
+    const effectiveRepaymentAccountId =
+      repaymentAccountId ?? loanDetails.repaymentAccountId;
+
+    if (!effectiveDisbursementAccountId || !effectiveRepaymentAccountId) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'disbursement and repayment account must be provided or linked to the loan',
+        { error_code: 'DBL007' },
+      );
+    }
+
+    // prevent direct self-linking...
+    if (
+      accountId === effectiveDisbursementAccountId ||
+      accountId === effectiveRepaymentAccountId
+    ) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'disbursement and repayment account cannot be the same as loan account',
+        { error_code: 'DBL001' },
+      );
+    }
+
     // extract unique linked accounts to validate...
     const linkedAccountIds = Array.from(
       new Set(
-        [disbursementAccountId, repaymentAccountId].filter(Boolean) as string[],
+        [effectiveDisbursementAccountId, effectiveRepaymentAccountId].filter(
+          Boolean,
+        ) as string[],
       ),
     );
 
-    let disbursementAccount: typeof accounts.$inferSelect | null = null;
-    let repaymentAccount: typeof accounts.$inferSelect | null = null;
+    let disbursementAccount: typeof Accounts.$inferSelect | null = null;
+    let repaymentAccount: typeof Accounts.$inferSelect | null = null;
 
-    if (linkedAccountIds.length > 0) {
-      const targetAccounts = await this.accountRepo.findAll({
-        where: and(
-          inArray(accounts.id, linkedAccountIds),
-          eq(accounts.tenantId, tenantId!),
-          isNull(accounts.deletedAt),
-        ),
-      });
+    const targetAccounts = await this.accountRepo.findAll({
+      where: and(
+        inArray(Accounts.id, linkedAccountIds),
+        eq(Accounts.tenantId, tenantId!),
+        isNull(Accounts.deletedAt),
+      ),
+    });
 
-      // ensure all requested accounts exist within the tenant...
-      if (targetAccounts.length !== linkedAccountIds.length) {
+    // ensure all requested accounts exist within the tenant...
+    if (targetAccounts.length !== linkedAccountIds.length) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'one or more linked accounts were not found',
+        { error_code: 'DBL004' },
+      );
+    }
+
+    // validate ownership and account type...
+    for (const targetAcc of targetAccounts) {
+      if (targetAcc.customerId !== accountData.customerId) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
-          'one or more linked accounts were not found',
-          { error_code: 'DBL004' },
+          `account ${targetAcc.id} does not belong to the loan customer`,
+          { error_code: 'DBL005' },
         );
       }
 
-      // validate ownership and account type...
-      for (const targetAcc of targetAccounts) {
-        if (targetAcc.customerId !== accountData.customerId) {
-          throw new ApiException(
-            ApiErrorCode.BadRequest,
-            `account ${targetAcc.id} does not belong to the loan customer`,
-            { error_code: 'DBL005' },
-          );
-        }
-
-        if (targetAcc.type === AccountType.Loan) {
-          throw new ApiException(
-            ApiErrorCode.BadRequest,
-            `account ${targetAcc.id} is a loan account and cannot be used for disbursement or repayment`,
-            { error_code: 'DBL006' },
-          );
-        }
-
-        if (targetAcc.id === disbursementAccountId)
-          disbursementAccount = targetAcc;
-        if (targetAcc.id === repaymentAccountId) repaymentAccount = targetAcc;
+      if (targetAcc.type === AccountType.Loan) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `account ${targetAcc.id} is a loan account and cannot be used for disbursement or repayment`,
+          { error_code: 'DBL006' },
+        );
       }
+
+      if (targetAcc.id === effectiveDisbursementAccountId)
+        disbursementAccount = targetAcc;
+      if (targetAcc.id === effectiveRepaymentAccountId)
+        repaymentAccount = targetAcc;
     }
 
     if (!disbursementAccount || !repaymentAccount) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         `invalid linked accounts provided`,
-        {
-          error_code: 'DBL007',
-        },
+        { error_code: 'DBL007' },
       );
+    }
+
+    // resolve fee gl account ID (from dto code/id override or loan details)...
+    let feeGlId = loanDetails.feeIncomeGlAccountId;
+
+    if (feeGlCode) {
+      const [foundFeeGl] = await this.db
+        .select()
+        .from(GeneralLedgers)
+        .where(
+          and(
+            eq(GeneralLedgers.tenantId, tenantId!),
+            or(
+              eq(GeneralLedgers.code, feeGlCode),
+              eq(GeneralLedgers.id, feeGlCode),
+            ),
+          ),
+        );
+
+      if (!foundFeeGl) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `invalid fee gl code ${feeGlCode}`,
+          { error_code: 'DBL009' },
+        );
+      }
+
+      feeGlId = foundFeeGl.id;
     }
 
     const transactionAt = new Date();
@@ -625,52 +662,14 @@ export class LoanService {
     }));
 
     await this.db.transaction(async (tx) => {
-      // from debit loanGl ---> credit depositGl ---> debit depositGl ---> credit disbursementAccount --> mark loan account balance as negative balance...
-      const transactionGlCodes = Array.from(
-        new Set(
-          [depositGlCode, loanGlCode, feeGlCode].filter(Boolean) as string[],
-        ),
-      );
-
-      const glCodes = await tx
-        .select()
-        .from(generalLedgers)
-        .where(
-          and(
-            eq(generalLedgers.tenantId, tenantId!),
-            inArray(generalLedgers.code, transactionGlCodes),
-          ),
-        );
-
-      const depositGlId = glCodes.find((i) => i.code === depositGlCode)?.id;
-      const loanGlId = glCodes.find((i) => i.code === loanGlCode)?.id;
-      const feeGlId = feeGlCode
-        ? glCodes.find((i) => i.code === feeGlCode)?.id
-        : null;
-
-      if (glCodes.length !== transactionGlCodes.length) {
-        if (glCodes.length === 0)
-          throw new ApiException(
-            ApiErrorCode.BadRequest,
-            `invalid loan, deposit, or fee gl codes provided`,
-            { error_code: 'DBL008' },
-          );
-
-        transactionGlCodes.forEach((glCode) => {
-          if (!glCodes.find((i) => i.code === glCode))
-            throw new ApiException(
-              ApiErrorCode.BadRequest,
-              `invalid gl code ${glCode}`,
-              { error_code: 'DBL009' },
-            );
-        });
-      }
-
       const [disburseAccount] = await tx
         .select()
-        .from(accounts)
-        .where(eq(accounts.id, disbursementAccountId))
+        .from(Accounts)
+        .where(eq(Accounts.id, effectiveDisbursementAccountId))
         .for('update');
+
+      const loanGlId = accountData.controlGlAccountId;
+      const depositGlId = disburseAccount.controlGlAccountId;
 
       const loanFeeAmount = loanDetails.chargeValue;
       const loanPrincipalAmount = loanDetails.principalAmount;
@@ -698,14 +697,16 @@ export class LoanService {
         ? principalMinor - feeMinor
         : principalMinor;
 
+      // debit loanGl ---> credit disbursementGl ? credit disbursementAccount feeGl --> mark loan account balance as negative balance...
+      const transactionGlCodes = Array.from;
       // audit disbursement account transaction record...
       const [txn] = await tx
-        .insert(transactions)
+        .insert(Transactions)
         .values({
           id: uuidv7(),
           tenantId: tenantId!,
           senderAccountId: null,
-          receiverAccountId: disbursementAccountId,
+          receiverAccountId: effectiveDisbursementAccountId,
           amount: netDisbursementMinor,
           fee: feeMinor,
           category: TransactionCategory.Deposit,
@@ -719,7 +720,7 @@ export class LoanService {
 
       // post double-entry journal header...
       const [journal] = await tx
-        .insert(journalEntries)
+        .insert(JournalEntries)
         .values({
           id: uuidv7(),
           tenantId: tenantId!,
@@ -733,12 +734,12 @@ export class LoanService {
         })
         .returning();
 
-      const lines: Array<typeof journalEntryLines.$inferInsert> = [
+      const lines: Array<typeof JournalEntryLines.$inferInsert> = [
         {
           id: uuidv7(),
           tenantId: tenantId!,
           journalEntryId: journal.id,
-          glAccountId: loanGlId!,
+          glAccountId: loanGlId,
           debit: principalMinor,
           credit: BigInt(0),
           description: `Debit Loan Gl: For loan account number ${accountData.accountNumber} (Principal)`,
@@ -747,7 +748,7 @@ export class LoanService {
           id: uuidv7(),
           tenantId: tenantId!,
           journalEntryId: journal.id,
-          glAccountId: depositGlId!,
+          glAccountId: depositGlId,
           credit: netDisbursementMinor,
           debit: BigInt(0),
           description: `Credit Deposit Gl: For loan account number ${accountData.accountNumber} (Principal)`,
@@ -767,11 +768,11 @@ export class LoanService {
           : []),
       ];
 
-      await tx.insert(journalEntryLines).values(lines);
+      await tx.insert(JournalEntryLines).values(lines);
 
-      // update disbursement account balance
+      // update disbursement account balance...
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           bookBalance: BigInt(
             this.calculator.add(
@@ -784,32 +785,33 @@ export class LoanService {
           ),
           updatedAt: transactionAt,
         })
-        .where(eq(accounts.id, disburseAccount.id));
+        .where(eq(Accounts.id, disburseAccount.id));
 
-      // mark loan as active and set disbursement date...
+      // mark loan as disbused, update linked accounts if changed, and set disbursement date...
       await tx
-        .update(schema.loanDetails)
+        .update(LoanDetails)
         .set({
           status: LoanStatus.Disbursed,
-          disbursementAccountId,
-          repaymentAccountId,
+          disbursementAccountId: effectiveDisbursementAccountId,
+          repaymentAccountId: effectiveRepaymentAccountId,
+          feeIncomeGlAccountId: feeGlId,
           disbursedAt,
         })
-        .where(eq(schema.loanDetails.accountId, accountId));
+        .where(eq(LoanDetails.accountId, accountId));
 
       // activate main loan account & update balance...
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           status: AccountStatus.Active,
           balance: -principalMinor,
           bookBalance: -principalMinor,
           updatedAt: transactionAt,
         })
-        .where(eq(accounts.id, accountId));
+        .where(eq(Accounts.id, accountId));
 
       // store repayment schedules into loan_schedules...
-      await tx.insert(loanSchedules).values(scheduleRecords);
+      await tx.insert(LoanSchedules).values(scheduleRecords);
     });
 
     return {
@@ -818,7 +820,6 @@ export class LoanService {
   }
 
   // private helper methods for date & frequency calculations...
-
   private getPeriodsPerYear(frequency: LoanRepaymentFrequency): number {
     switch (frequency) {
       case LoanRepaymentFrequency.Weekly:
