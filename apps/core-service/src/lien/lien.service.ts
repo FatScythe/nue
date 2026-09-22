@@ -10,11 +10,11 @@ import { BackgroundProcess, LienWorkerEnum } from '@background-process';
 import { Calculator, CoreReqUser, LIEN_EXPIRATION_SWEEP_HOURS } from '@common';
 //libs...
 import {
-  accounts,
+  Accounts,
   AccountStatus,
   DATABASE_CONNECTION,
   LienRepository,
-  liens,
+  Liens,
   LienStatus,
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
@@ -54,7 +54,7 @@ export class LienService {
     }
 
     const refExist = await this.lienRepo.exists(
-      and(eq(liens.reference, dto.reference), eq(liens.tenantId, tenantId!)),
+      and(eq(Liens.reference, dto.reference), eq(Liens.tenantId, tenantId!)),
     );
 
     if (refExist) {
@@ -70,9 +70,9 @@ export class LienService {
     const lien = await this.db.transaction(async (tx) => {
       const [account] = await tx
         .select()
-        .from(accounts)
+        .from(Accounts)
         .where(
-          and(eq(accounts.id, dto.accountId), eq(accounts.tenantId, tenantId!)),
+          and(eq(Accounts.id, dto.accountId), eq(Accounts.tenantId, tenantId!)),
         )
         .for('update');
 
@@ -116,13 +116,13 @@ export class LienService {
       );
 
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           balance: BigInt(newAvailableBalance),
           updatedAt: new Date(),
         })
         .where(
-          and(eq(accounts.id, account.id), eq(accounts.tenantId, tenantId!)),
+          and(eq(Accounts.id, account.id), eq(Accounts.tenantId, tenantId!)),
         );
 
       const createdLien = await this.lienRepo.create(
@@ -193,8 +193,8 @@ export class LienService {
       // lock and fetch lien record within transaction...
       const [lien] = await tx
         .select()
-        .from(liens)
-        .where(and(eq(liens.id, lienId), eq(liens.tenantId, tenantId!)))
+        .from(Liens)
+        .where(and(eq(Liens.id, lienId), eq(Liens.tenantId, tenantId!)))
         .for('update');
 
       if (!lien) {
@@ -225,11 +225,11 @@ export class LienService {
       // lock and fetch associated customer account...
       const [account] = await tx
         .select()
-        .from(accounts)
+        .from(Accounts)
         .where(
           and(
-            eq(accounts.id, lien.accountId),
-            eq(accounts.tenantId, tenantId!),
+            eq(Accounts.id, lien.accountId),
+            eq(Accounts.tenantId, tenantId!),
           ),
         )
         .for('update');
@@ -259,27 +259,27 @@ export class LienService {
       }
 
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           balance: BigInt(restoredBalance),
           updatedAt: new Date(),
         })
         .where(
-          and(eq(accounts.id, account.id), eq(accounts.tenantId, tenantId!)),
+          and(eq(Accounts.id, account.id), eq(Accounts.tenantId, tenantId!)),
         );
 
       // update lien status...
       const [updatedLien] = await tx
-        .update(liens)
+        .update(Liens)
         .set({
           status: targetStatus,
           updatedAt: new Date(),
         })
         .where(
           and(
-            eq(liens.id, lien.id),
-            eq(liens.tenantId, tenantId!),
-            eq(liens.accountId, account.id),
+            eq(Liens.id, lien.id),
+            eq(Liens.tenantId, tenantId!),
+            eq(Liens.accountId, account.id),
           ),
         )
         .returning();
