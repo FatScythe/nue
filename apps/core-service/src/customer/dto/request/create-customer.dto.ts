@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsPhoneNumber,
   IsString,
+  Length,
   ValidateIf,
 } from 'class-validator';
 import moment from 'moment';
@@ -69,6 +70,26 @@ export class CreateCustomerDto {
   @IsBoolean()
   @IsOptional()
   createSavingsAccount: boolean = false;
+
+  @ValidateIf((dto) => dto.createSavingsAccount)
+  @ApiProperty({
+    example: '1010',
+    description: 'Savings account control gl code',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsNotEmpty()
+  depositGlCode?: string;
+
+  @ValidateIf((dto) => dto.createSavingsAccount)
+  @ApiProperty({
+    example: '3310',
+    description: 'Savings account fee gl code',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsOptional()
+  feeGlCode?: string;
 
   // @ValidateIf((dto) => dto.createSavingsAccount)
   // @IsInt()

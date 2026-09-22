@@ -1,7 +1,7 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { plainToInstance } from 'class-transformer';
-import { and, eq, ilike, isNull, or, SQL } from 'drizzle-orm';
+import { and, eq, ilike, inArray, isNull, or, SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import moment from 'moment';
 
@@ -20,10 +20,18 @@ import {
   CustomerRepository,
   CustomerStatus,
   CustomerType,
+  GeneralLedgerRepository,
+  GeneralLedgers,
 } from '@database';
 import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import * as schema from '@database/drizzle/schemas';
-import { accounts, customers, offices, users } from '@database/drizzle/schemas';
+import {
+  Accounts,
+  Customers,
+  Offices,
+  SavingsDetails,
+  Users,
+} from '@database/drizzle/schemas';
 
 import { AccountService } from '../account/account.service';
 import { ApiErrorCode } from '../common/enums';
@@ -37,7 +45,6 @@ import {
   GetSingleCustomerResponseDto,
   PaginatedCustomersResponseDto,
 } from './dto';
-import { CustomerWithAccountRow } from './interface';
 
 @Injectable()
 export class CustomerService {
@@ -45,6 +52,7 @@ export class CustomerService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly customerRepo: CustomerRepository,
+    private readonly generalLedgerRepo: GeneralLedgerRepository,
     private readonly accountService: AccountService,
     private readonly calculator: Calculator,
   ) {}
@@ -55,10 +63,10 @@ export class CustomerService {
   ): Promise<CreateCustomerRespDto> {
     const dbClient = this.db;
 
-    const officeCheck = dbClient.query.offices.findFirst({
+    const officeCheck = dbClient.query.Offices.findFirst({
       where: and(
-        eq(offices.id, dto.officeId),
-        eq(offices.tenantId, user.tenantId!),
+        eq(Offices.id, dto.officeId),
+        eq(Offices.tenantId, user.tenantId!),
       ),
       columns: { id: true },
     });
@@ -110,8 +118,8 @@ export class CustomerService {
 
     const customerExist = await this.customerRepo.exists(
       and(
-        eq(customers.emailAddress, dto.emailAddress),
-        eq(customers.tenantId, user.tenantId!),
+        eq(Customers.emailAddress, dto.emailAddress),
+        eq(Customers.tenantId, user.tenantId!),
       ),
     );
 
@@ -178,6 +186,58 @@ export class CustomerService {
       customerId = customer.id;
 
       if (dto.createSavingsAccount) {
+        const feeGlCode = dto.feeGlCode;
+        const depositGlCode = dto.depositGlCode;
+
+        if (!depositGlCode)
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            'please provide deposit gl code',
+            {
+              error_code: 'CC0006',
+            },
+          );
+
+        const glCodes = Array.from(
+          new Set([depositGlCode, feeGlCode].filter(Boolean) as string[]),
+        );
+
+        const glAccounts = await this.generalLedgerRepo.findAll({
+          where: and(
+            inArray(GeneralLedgers.code, glCodes),
+            eq(GeneralLedgers.tenantId, user.tenantId!),
+            isNull(GeneralLedgers.deletedAt),
+          ),
+          selectFn: (glTable) => ({
+            id: glTable.id,
+            code: glTable.code,
+          }),
+        });
+
+        const depositGlId =
+          glAccounts.find((acc) => acc.code === depositGlCode)?.id ?? null;
+        const feeGlId = feeGlCode
+          ? (glAccounts.find((acc) => acc.code === feeGlCode)?.id ?? null)
+          : null;
+
+        if (!depositGlId)
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            'invalid deposit gl code',
+            {
+              error_code: 'CC0007',
+            },
+          );
+
+        if (feeGlCode && !feeGlId)
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            'invalid fee gl code',
+            {
+              error_code: 'CC0008',
+            },
+          );
+
         const effectiveAccountName =
           customer.type === CustomerType.Individual
             ? `${customer.firstName} ${customer.lastName}`.trim()
@@ -189,9 +249,9 @@ export class CustomerService {
             customerId: customer.id,
             // productId: dto.productId, // Product feature temporarily bypassed
             type: AccountType.Savings,
-
+            controlGlAccountId: depositGlId,
             accountName: effectiveAccountName,
-            openingBalance: '0',
+            openingBalance: '0', // TODO: Opening balance gl transaction...
             officeId: dto.officeId,
             userId: user.id,
             tenantId: user.tenantId!,
@@ -203,10 +263,11 @@ export class CustomerService {
           tx, // pass db transaction...
         );
 
-        await tx.insert(schema.savingsDetails).values({
+        await tx.insert(SavingsDetails).values({
           accountId: accountResult.accountId,
           tenantId: user.tenantId!,
           withdrawalCountThisMonth: 0,
+          ...(feeGlId && { feeIncomeGlAccountId: feeGlId }),
           targetAmount: null,
           targetDate: null,
           lockPeriodEnd: null,
@@ -220,7 +281,7 @@ export class CustomerService {
       throw new ApiException(
         ApiErrorCode.InternalServerError,
         'unable to create customer',
-        { error_code: 'CC0006' },
+        { error_code: 'CC0009' },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
 
@@ -236,27 +297,27 @@ export class CustomerService {
     const offset = (page - 1) * limit;
 
     const conditions: (SQL | undefined)[] = [
-      eq(customers.tenantId, user.tenantId!),
-      isNull(customers.deletedAt),
+      eq(Customers.tenantId, user.tenantId!),
+      isNull(Customers.deletedAt),
     ];
 
     if (dto.type) {
-      conditions.push(eq(customers.type, dto.type));
+      conditions.push(eq(Customers.type, dto.type));
     }
 
     if (dto.status) {
-      conditions.push(eq(customers.status, dto.status));
+      conditions.push(eq(Customers.status, dto.status));
     }
 
     if (dto.search) {
       const searchPattern = `%${dto.search}%`;
       conditions.push(
         or(
-          ilike(customers.emailAddress, searchPattern),
-          ilike(customers.firstName, searchPattern),
-          ilike(customers.lastName, searchPattern),
-          ilike(customers.businessName, searchPattern),
-          ilike(customers.phoneNumber, searchPattern),
+          ilike(Customers.emailAddress, searchPattern),
+          ilike(Customers.firstName, searchPattern),
+          ilike(Customers.lastName, searchPattern),
+          ilike(Customers.businessName, searchPattern),
+          ilike(Customers.phoneNumber, searchPattern),
         ),
       );
     }
@@ -293,11 +354,11 @@ export class CustomerService {
   }
 
   async getCustomerWithAccounts(customerId: string, user: CoreReqUser) {
-    const rows = await this.customerRepo.findAll<CustomerWithAccountRow>({
+    const rows = await this.customerRepo.findAll({
       where: and(
-        eq(customers.id, customerId),
-        eq(customers.tenantId, user.tenantId!),
-        isNull(customers.deletedAt),
+        eq(Customers.id, customerId),
+        eq(Customers.tenantId, user.tenantId!),
+        isNull(Customers.deletedAt),
       ),
       selectFn: (table) => ({
         customer: {
@@ -318,21 +379,21 @@ export class CustomerService {
           country: table.country,
         },
         account: {
-          id: accounts.id,
-          accountNumber: accounts.accountNumber,
-          accountName: accounts.accountName,
-          status: accounts.status,
-          type: accounts.type,
-          bookBalance: accounts.bookBalance,
-          balance: accounts.balance,
+          id: Accounts.id,
+          accountNumber: Accounts.accountNumber,
+          accountName: Accounts.accountName,
+          status: Accounts.status,
+          type: Accounts.type,
+          bookBalance: Accounts.bookBalance,
+          balance: Accounts.balance,
         },
       }),
       joinFn: (query) =>
         query.leftJoin(
-          accounts,
+          Accounts,
           and(
-            eq(customers.id, accounts.customerId),
-            isNull(accounts.deletedAt),
+            eq(Customers.id, Accounts.customerId),
+            isNull(Accounts.deletedAt),
           ),
         ),
     });
@@ -391,9 +452,9 @@ export class CustomerService {
   async getSingleCustomer(customerId: string, user: CoreReqUser) {
     const customer = await this.customerRepo.findOne({
       where: and(
-        eq(customers.id, customerId),
-        eq(customers.tenantId, user.tenantId!),
-        isNull(customers.deletedAt),
+        eq(Customers.id, customerId),
+        eq(Customers.tenantId, user.tenantId!),
+        isNull(Customers.deletedAt),
       ),
       selectFn: (table) => ({
         id: table.id,
@@ -411,14 +472,14 @@ export class CustomerService {
         city: table.city,
         country: table.country,
         createdBy: {
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          emailAddress: users.emailAddress,
+          id: Users.id,
+          firstName: Users.firstName,
+          lastName: Users.lastName,
+          emailAddress: Users.emailAddress,
         },
       }),
       joinFn: (query) =>
-        query.leftJoin(users, eq(customers.createdBy, users.id)),
+        query.leftJoin(Users, eq(Customers.createdBy, Users.id)),
     });
 
     if (!customer)
