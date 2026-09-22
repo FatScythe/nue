@@ -125,6 +125,7 @@ CREATE TABLE "accounts" (
 	"account_name" text NOT NULL,
 	"reference" text,
 	"currency" "currency_type" DEFAULT 'ngn' NOT NULL,
+	"control_gl_account_id" varchar(36) NOT NULL,
 	"balance" bigint DEFAULT 0 NOT NULL,
 	"book_balance" bigint DEFAULT 0 NOT NULL,
 	"created_by" varchar(36),
@@ -144,7 +145,8 @@ CREATE TABLE "savings_details" (
 	"target_amount" bigint,
 	"target_date" timestamp with time zone,
 	"withdrawal_count_this_month" integer DEFAULT 0 NOT NULL,
-	"lock_period_end" timestamp with time zone
+	"lock_period_end" timestamp with time zone,
+	"fee_income_gl_account_id" varchar(36)
 );
 --> statement-breakpoint
 CREATE TABLE "loan_details" (
@@ -158,8 +160,8 @@ CREATE TABLE "loan_details" (
 	"repayment_frequency" "repayment_frequency" DEFAULT 'monthly' NOT NULL,
 	"interest_rate" numeric(5, 2) DEFAULT '0.00' NOT NULL,
 	"status" "loan_status" DEFAULT 'active' NOT NULL,
-	"charge_calculation_type" charge_type DEFAULT 'fixed',
-	"charge_time" charge_time DEFAULT 'upfront',
+	"charge_calculation_type" charge_type DEFAULT 'fixed' NOT NULL,
+	"charge_time" charge_time DEFAULT 'upfront' NOT NULL,
 	"charge_value" bigint,
 	"moratorium_type" "moratorium_type" DEFAULT 'none' NOT NULL,
 	"moratorium_period" integer DEFAULT 0 NOT NULL,
@@ -167,7 +169,11 @@ CREATE TABLE "loan_details" (
 	"disbursed_at" timestamp with time zone,
 	"closed_at" timestamp with time zone,
 	"approval_note" text,
-	"decline_reason" text
+	"decline_reason" text,
+	"income_gl_account_id" varchar(36) NOT NULL,
+	"fee_income_gl_account_id" varchar(36),
+	"expense_gl_account_id" varchar(36),
+	"charity_gl_account_id" varchar(36)
 );
 --> statement-breakpoint
 CREATE TABLE "loan_schedules" (
@@ -288,15 +294,21 @@ ALTER TABLE "customers" ADD CONSTRAINT "customers_office_id_offices_id_fk" FOREI
 ALTER TABLE "customers" ADD CONSTRAINT "customers_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_control_gl_account_id_general_ledgers_id_fk" FOREIGN KEY ("control_gl_account_id") REFERENCES "public"."general_ledgers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_approved_by_users_id_fk" FOREIGN KEY ("approved_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accounts" ADD CONSTRAINT "accounts_office_id_offices_id_fk" FOREIGN KEY ("office_id") REFERENCES "public"."offices"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "savings_details" ADD CONSTRAINT "savings_details_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "savings_details" ADD CONSTRAINT "savings_details_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "savings_details" ADD CONSTRAINT "savings_details_fee_income_gl_account_id_general_ledgers_id_fk" FOREIGN KEY ("fee_income_gl_account_id") REFERENCES "public"."general_ledgers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_disbursement_account_id_accounts_id_fk" FOREIGN KEY ("disbursement_account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_repayment_account_id_accounts_id_fk" FOREIGN KEY ("repayment_account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_income_gl_account_id_general_ledgers_id_fk" FOREIGN KEY ("income_gl_account_id") REFERENCES "public"."general_ledgers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_fee_income_gl_account_id_general_ledgers_id_fk" FOREIGN KEY ("fee_income_gl_account_id") REFERENCES "public"."general_ledgers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_expense_gl_account_id_general_ledgers_id_fk" FOREIGN KEY ("expense_gl_account_id") REFERENCES "public"."general_ledgers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "loan_details" ADD CONSTRAINT "loan_details_charity_gl_account_id_general_ledgers_id_fk" FOREIGN KEY ("charity_gl_account_id") REFERENCES "public"."general_ledgers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_schedules" ADD CONSTRAINT "loan_schedules_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_schedules" ADD CONSTRAINT "loan_schedules_tenant_id_businesses_id_fk" FOREIGN KEY ("tenant_id") REFERENCES "public"."businesses"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "loan_schedules" ADD CONSTRAINT "loan_schedules_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint

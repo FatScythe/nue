@@ -1,6 +1,6 @@
 {
-  "id": "69883433-c586-49ec-909c-7486807b622a",
-  "prevId": "b0b8b10e-5682-4336-9720-9a092233e74f",
+  "id": "bf9ed0eb-885e-42ab-bc27-d7593451dc5d",
+  "prevId": "5b14ffb3-9a7f-4f05-bcbb-1d74b702a221",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1099,6 +1099,12 @@
           "notNull": true,
           "default": "'ngn'"
         },
+        "control_gl_account_id": {
+          "name": "control_gl_account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "balance": {
           "name": "balance",
           "type": "bigint",
@@ -1257,6 +1263,19 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
+        "accounts_control_gl_account_id_general_ledgers_id_fk": {
+          "name": "accounts_control_gl_account_id_general_ledgers_id_fk",
+          "tableFrom": "accounts",
+          "tableTo": "general_ledgers",
+          "columnsFrom": [
+            "control_gl_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
         "accounts_created_by_users_id_fk": {
           "name": "accounts_created_by_users_id_fk",
           "tableFrom": "accounts",
@@ -1351,6 +1370,12 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "fee_income_gl_account_id": {
+          "name": "fee_income_gl_account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -1390,6 +1415,19 @@
           "tableTo": "businesses",
           "columnsFrom": [
             "tenant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "savings_details_fee_income_gl_account_id_general_ledgers_id_fk": {
+          "name": "savings_details_fee_income_gl_account_id_general_ledgers_id_fk",
+          "tableFrom": "savings_details",
+          "tableTo": "general_ledgers",
+          "columnsFrom": [
+            "fee_income_gl_account_id"
           ],
           "columnsTo": [
             "id"
@@ -1478,7 +1516,7 @@
           "type": "charge_type",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'fixed'"
         },
         "charge_time": {
@@ -1486,7 +1524,7 @@
           "type": "charge_time",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "'upfront'"
         },
         "charge_value": {
@@ -1537,6 +1575,30 @@
         "decline_reason": {
           "name": "decline_reason",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "income_gl_account_id": {
+          "name": "income_gl_account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee_income_gl_account_id": {
+          "name": "fee_income_gl_account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expense_gl_account_id": {
+          "name": "expense_gl_account_id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "charity_gl_account_id": {
+          "name": "charity_gl_account_id",
+          "type": "varchar(36)",
           "primaryKey": false,
           "notNull": false
         }
@@ -1604,6 +1666,58 @@
           "tableTo": "accounts",
           "columnsFrom": [
             "repayment_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_details_income_gl_account_id_general_ledgers_id_fk": {
+          "name": "loan_details_income_gl_account_id_general_ledgers_id_fk",
+          "tableFrom": "loan_details",
+          "tableTo": "general_ledgers",
+          "columnsFrom": [
+            "income_gl_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_details_fee_income_gl_account_id_general_ledgers_id_fk": {
+          "name": "loan_details_fee_income_gl_account_id_general_ledgers_id_fk",
+          "tableFrom": "loan_details",
+          "tableTo": "general_ledgers",
+          "columnsFrom": [
+            "fee_income_gl_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_details_expense_gl_account_id_general_ledgers_id_fk": {
+          "name": "loan_details_expense_gl_account_id_general_ledgers_id_fk",
+          "tableFrom": "loan_details",
+          "tableTo": "general_ledgers",
+          "columnsFrom": [
+            "expense_gl_account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "loan_details_charity_gl_account_id_general_ledgers_id_fk": {
+          "name": "loan_details_charity_gl_account_id_general_ledgers_id_fk",
+          "tableFrom": "loan_details",
+          "tableTo": "general_ledgers",
+          "columnsFrom": [
+            "charity_gl_account_id"
           ],
           "columnsTo": [
             "id"
