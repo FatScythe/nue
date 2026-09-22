@@ -1,36 +1,38 @@
-import { sql } from 'drizzle-orm';
 import {
   bigint,
   index,
   integer,
-  numeric,
   pgTable,
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
 
-import { accounts } from './account';
-import { businesses } from './business';
+import { Accounts } from './account';
+import { Businesses } from './business';
+import { GeneralLedgers } from './general_ledger';
 
-export const savingsDetails = pgTable(
+export const SavingsDetails = pgTable(
   'savings_details',
   {
     accountId: varchar('account_id', { length: 36 })
       .primaryKey()
-      .references(() => accounts.id, { onDelete: 'restrict' }),
+      .references(() => Accounts.id, { onDelete: 'restrict' }),
 
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
 
-    targetAmount: bigint('target_amount', { mode: 'bigint' }), // nullable for basic deposit accounts...
-    targetDate: timestamp('target_date', { withTimezone: true }), // nullable for basic deposit accounts...
+    targetAmount: bigint('target_amount', { mode: 'bigint' }), // nullable for basic deposit Accounts...
+    targetDate: timestamp('target_date', { withTimezone: true }), // nullable for basic deposit Accounts...
 
     withdrawalCountThisMonth: integer('withdrawal_count_this_month')
       .default(0)
       .notNull(),
 
-    lockPeriodEnd: timestamp('lock_period_end', { withTimezone: true }), // nullable for basic deposit accounts...
+    lockPeriodEnd: timestamp('lock_period_end', { withTimezone: true }), // nullable for basic deposit Accounts...
+    feeIncomeGlAccountId: varchar('fee_income_gl_account_id', {
+      length: 36,
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }),
   },
   (table) => ({
     tenantIdx: index('idx_savings_details_tenant').on(table.tenantId),

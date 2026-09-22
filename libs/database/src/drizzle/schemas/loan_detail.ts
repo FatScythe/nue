@@ -19,8 +19,9 @@ import {
   MoratoriumType,
 } from '@database/drizzle/enums';
 
-import { accounts } from './account';
-import { businesses } from './business';
+import { Accounts } from './account';
+import { Businesses } from './business';
+import { GeneralLedgers } from './general_ledger';
 
 export const repaymentFrequencyEnum = pgEnum(
   'repayment_frequency',
@@ -47,21 +48,21 @@ export const chargeTimeEnum = pgEnum(
   Object.values(ChargeTime) as [string, ...string[]],
 );
 
-export const loanDetails = pgTable(
+export const LoanDetails = pgTable(
   'loan_details',
   {
     accountId: varchar('account_id', { length: 36 })
       .primaryKey()
-      .references(() => accounts.id, { onDelete: 'restrict' }),
+      .references(() => Accounts.id, { onDelete: 'restrict' }),
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     disbursementAccountId: varchar('disbursement_account_id', {
       length: 36,
-    }).references(() => accounts.id, { onDelete: 'restrict' }),
+    }).references(() => Accounts.id, { onDelete: 'restrict' }),
     repaymentAccountId: varchar('repayment_account_id', {
       length: 36,
-    }).references(() => accounts.id, { onDelete: 'restrict' }),
+    }).references(() => Accounts.id, { onDelete: 'restrict' }),
     principalAmount: bigint('principal_amount', { mode: 'bigint' }).notNull(),
     outstandingBalance: bigint('outstanding_balance', {
       mode: 'bigint',
@@ -99,6 +100,18 @@ export const loanDetails = pgTable(
     closedAt: timestamp('closed_at', { withTimezone: true }),
     approvalNote: text('approval_note'),
     declineReason: text('decline_reason'),
+    incomeGlAccountId: varchar('income_gl_account_id', { length: 36 })
+      .notNull()
+      .references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // interest / profit income GL...
+    feeIncomeGlAccountId: varchar('fee_income_gl_account_id', {
+      length: 36,
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // processing / admin fee GL...
+    expenseGlAccountId: varchar('expense_gl_account_id', {
+      length: 36,
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // provisioning / write-off GL...
+    charityGlAccountId: varchar('charity_gl_account_id', {
+      length: 36,
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // late fee donation destination for Sharia compliant account...
   },
   (table) => ({
     tenantIdx: index('idx_loan_details_tenant').on(table.tenantId),

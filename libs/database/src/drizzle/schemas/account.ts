@@ -14,10 +14,11 @@ import {
 import { AccountStatus, AccountType } from '@database/drizzle/enums';
 import { AccountLoopEntries } from '@database/drizzle/types';
 
-import { businesses } from './business';
-import { customers } from './customer';
-import { offices } from './office';
-import { users } from './user';
+import { Businesses } from './business';
+import { Customers } from './customer';
+import { GeneralLedgers } from './general_ledger';
+import { Offices } from './office';
+import { Users } from './user';
 import { Currency, dbCurrencyEnum } from './utils';
 
 export const accountStatusEnum = pgEnum(
@@ -30,16 +31,16 @@ export const accountTypeEnum = pgEnum(
   Object.values(AccountType) as [string, ...string[]],
 );
 
-export const accounts = pgTable(
+export const Accounts = pgTable(
   'accounts',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
     customerId: varchar('customer_id', { length: 36 })
       .notNull()
-      .references(() => customers.id, { onDelete: 'restrict' }),
+      .references(() => Customers.id, { onDelete: 'restrict' }),
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     type: accountTypeEnum('type')
       .$type<AccountType>()
       .notNull()
@@ -57,6 +58,9 @@ export const accounts = pgTable(
       .$type<Currency>()
       .notNull()
       .default(Currency.Ngn),
+    controlGlAccountId: varchar('control_gl_account_id', { length: 36 })
+      .notNull()
+      .references(() => GeneralLedgers.id, { onDelete: 'restrict' }),
     balance: bigint('balance', { mode: 'bigint' })
       .default(sql`0`)
       .notNull(),
@@ -64,19 +68,19 @@ export const accounts = pgTable(
       .default(sql`0`)
       .notNull(), // balance including pending transactions...
     createdBy: varchar('created_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       {
         onDelete: 'restrict',
       },
     ), // id of the user or api
     approvedBy: varchar('approved_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       {
         onDelete: 'restrict',
       },
     ), // id of the user or api
     officeId: integer('office_id')
-      .references(() => offices.id, {
+      .references(() => Offices.id, {
         onDelete: 'restrict',
       })
       .notNull(),
