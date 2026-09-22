@@ -7,12 +7,19 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
+  Length,
   Max,
   Min,
 } from 'class-validator';
 import moment from 'moment';
 
-import { DATE_FORMAT, IsNumericString, IsValidDate } from '@common';
+import {
+  DATE_FORMAT,
+  IsNumericString,
+  IsValidDate,
+  IsValidReference,
+} from '@common';
 import { LoanRepaymentFrequency, MoratoriumType } from '@database';
 
 export class CreateLoanAccountDto {
@@ -94,19 +101,48 @@ export class CreateLoanAccountDto {
   @IsOptional()
   createdDate?: string;
 
-  // @ApiPropertyOptional({
-  //   description: 'Savings/Deposit Account ID to disburse loan funds into',
-  //   example: '019ff6e3-14bd-7da7-bc81-f83e8d48a883',
-  // })
-  // @IsUUID(7)
-  // @IsOptional()
-  // disbursementAccountId?: string;
+  @ApiPropertyOptional({
+    description: 'Savings/Deposit Account ID to disburse loan funds into',
+    example: '019ff6e3-14bd-7da7-bc81-f83e8d48a883',
+  })
+  @IsUUID(7)
+  @IsOptional()
+  disbursementAccountId?: string;
 
-  // @ApiPropertyOptional({
-  //   description: 'Savings/Deposit Account ID to auto-debit for loan repayments',
-  //   example: '019ff6e3-14bd-7da7-bc81-f83e8d48a883',
-  // })
-  // @IsUUID(7)
-  // @IsOptional()
-  // repaymentAccountId?: string;
+  @ApiPropertyOptional({
+    description: 'Savings/Deposit Account ID to auto-debit for loan repayments',
+    example: '019ff6e3-14bd-7da7-bc81-f83e8d48a883',
+  })
+  @IsUUID(7)
+  @IsOptional()
+  repaymentAccountId?: string;
+
+  @ApiProperty({
+    example: '9041',
+    description:
+      'Loan account control gl code where loan amount is disbursed from',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsNotEmpty()
+  loanGlCode: string;
+
+  @ApiProperty({
+    example: '9071',
+    description: 'Loan account income gl code',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsNotEmpty()
+  incomeGlCode: string;
+
+  @ApiProperty({
+    example: '3310',
+    description:
+      'Loan fees income gl account code where loan fee is disbursed to',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsOptional()
+  feeGlCode?: string;
 }

@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Length,
   Min,
 } from 'class-validator';
 import moment from 'moment';
@@ -117,4 +118,22 @@ export class CreateSavingsAccountDto {
   @IsString()
   @IsOptional()
   lockPeriodEnd?: string;
+
+  @ApiProperty({
+    example: '1010',
+    description: 'Savings account control gl code',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsNotEmpty()
+  depositGlCode: string;
+
+  @ApiProperty({
+    example: '3310',
+    description: 'Savings account fee gl code',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsOptional()
+  feeGlCode?: string;
 }

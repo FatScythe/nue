@@ -3,7 +3,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import type { CoreReqUser } from '@lib/common/src/types';
 // ext-libs...
 import { plainToInstance } from 'class-transformer';
-import { and, count, desc, eq, isNull, like } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, like } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import moment from 'moment';
 
@@ -26,15 +26,17 @@ import {
   CustomerStatus,
   DATABASE_CONNECTION,
   DBTransaction,
+  GeneralLedgerRepository,
   LoanStatus,
   MoratoriumType,
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
 import {
-  accounts,
-  customers,
-  loanDetails,
-  savingsDetails,
+  Accounts,
+  Customers,
+  GeneralLedgers,
+  LoanDetails,
+  SavingsDetails,
 } from '@database/drizzle/schemas';
 
 import { ApiErrorCode } from '../common/enums';
@@ -58,18 +60,20 @@ export class AccountService {
   constructor(
     private readonly accountRepo: AccountRepository,
     private readonly customerRepo: CustomerRepository,
+    private readonly generalLedgerRepo: GeneralLedgerRepository,
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly calculator: Calculator,
   ) {}
 
   async createSavingsAccount(dto: CreateSavingsAccountDto, user: CoreReqUser) {
+    const { tenantId } = user;
     const customer = await this.customerRepo.findOne({
       where: and(
-        eq(customers.id, dto.customerId),
-        eq(customers.tenantId, user.tenantId!),
-        eq(customers.status, CustomerStatus.Active),
-        isNull(customers.deletedAt),
+        eq(Customers.id, dto.customerId),
+        eq(Customers.tenantId, tenantId!),
+        eq(Customers.status, CustomerStatus.Active),
+        isNull(Customers.deletedAt),
       ),
       selectFn: (customer) => ({
         id: customer.id,
@@ -86,6 +90,44 @@ export class AccountService {
       });
     }
 
+    const glCodes = [dto.depositGlCode, dto.feeGlCode].filter(
+      Boolean,
+    ) as string[];
+
+    const glAccounts = await this.generalLedgerRepo.findAll({
+      where: and(
+        inArray(GeneralLedgers.code, glCodes),
+        eq(GeneralLedgers.tenantId, tenantId!),
+        isNull(GeneralLedgers.deletedAt),
+      ),
+      selectFn: (glTable) => ({
+        id: glTable.id,
+        code: glTable.code,
+      }),
+    });
+
+    const feeGlCode = dto.feeGlCode;
+
+    const depositGlId =
+      glAccounts.find((acc) => acc.code === dto.depositGlCode)?.id ?? null;
+    const feeGlId = feeGlCode
+      ? (glAccounts.find((acc) => acc.code === feeGlCode)?.id ?? null)
+      : null;
+
+    if (!depositGlId)
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'invalid deposit gl code',
+        {
+          error_code: 'CSA002',
+        },
+      );
+
+    if (feeGlCode && !feeGlId)
+      throw new ApiException(ApiErrorCode.BadRequest, 'invalid fee gl code', {
+        error_code: 'CSA003',
+      });
+
     return await this.db.transaction(async (tx) => {
       const createdAccount = await this.createAccountRecord(
         {
@@ -95,6 +137,7 @@ export class AccountService {
           customerId: String(customer.id),
           officeId: Number(customer.officeId),
           tenantId: user.tenantId!,
+          controlGlAccountId: depositGlId,
           userId: user.id,
           type: AccountType.Savings,
           openingBalance: dto.openingBalance,
@@ -123,6 +166,7 @@ export class AccountService {
             ? moment(dto.lockPeriodEnd, DATE_FORMAT).endOf('day').toDate()
             : null,
           withdrawalCountThisMonth: 0,
+          ...(feeGlId && { feeIncomeGlAccountId: feeGlId }),
         },
         tx,
       );
@@ -141,8 +185,8 @@ export class AccountService {
   ) {
     const account = await this.accountRepo.findOne({
       where: and(
-        eq(schema.accounts.id, accountId),
-        eq(schema.accounts.tenantId, user.tenantId!),
+        eq(Accounts.id, accountId),
+        eq(Accounts.tenantId, user.tenantId!),
       ),
     });
 
@@ -163,7 +207,7 @@ export class AccountService {
       );
     }
 
-    const updated = await this.accountRepo.update(eq(accounts.id, accountId), {
+    const updated = await this.accountRepo.update(eq(Accounts.id, accountId), {
       status: AccountStatus.Active,
       approvedBy: user.id,
       activationDate: dto.activationDate
@@ -186,6 +230,8 @@ export class AccountService {
   }
 
   async createLoanAccount(dto: CreateLoanAccountDto, user: CoreReqUser) {
+    const { tenantId } = user;
+
     if (dto.processingFee && dto.principalAmount) {
       // ensure fee is strictly less than principal...
       if (
@@ -219,10 +265,10 @@ export class AccountService {
 
     const customer = await this.customerRepo.findOne({
       where: and(
-        eq(customers.id, dto.customerId),
-        eq(customers.tenantId, user.tenantId!),
-        eq(customers.status, CustomerStatus.Active),
-        isNull(customers.deletedAt),
+        eq(Customers.id, dto.customerId),
+        eq(Customers.tenantId, tenantId!),
+        eq(Customers.status, CustomerStatus.Active),
+        isNull(Customers.deletedAt),
       ),
       selectFn: (customer) => ({
         id: customer.id,
@@ -240,31 +286,80 @@ export class AccountService {
     }
 
     // validate linked accounts if provided...
-    // if (dto.repaymentAccountId || dto.disbursementAccountId) {
-    //   const linkedAccountIds = Array.from(
-    //     new Set(
-    //       [dto.repaymentAccountId, dto.disbursementAccountId].filter(
-    //         Boolean,
-    //       ) as string[],
-    //     ),
-    //   );
+    if (dto.repaymentAccountId || dto.disbursementAccountId) {
+      const linkedAccountIds = Array.from(
+        new Set(
+          [dto.repaymentAccountId, dto.disbursementAccountId].filter(
+            Boolean,
+          ) as string[],
+        ),
+      );
 
-    //   const linkedAccounts = await this.accountRepo.findAll({
-    //     where: and(
-    //       inArray(schema.accounts.id, linkedAccountIds),
-    //       eq(schema.accounts.tenantId, user.tenantId!),
-    //       eq(schema.accounts.customerId, String(customer.id)),
-    //     ),
-    //   });
+      const linkedAccounts = await this.accountRepo.findAll({
+        where: and(
+          inArray(schema.Accounts.id, linkedAccountIds),
+          eq(schema.Accounts.tenantId, user.tenantId!),
+          eq(schema.Accounts.customerId, String(customer.id)),
+        ),
+      });
 
-    //   if (linkedAccounts.length !== linkedAccountIds.length) {
-    //     throw new ApiException(
-    //       ApiErrorCode.BadRequest,
-    //       'one or more linked accounts were not found or do not belong to this customer',
-    //       { error_code: 'CLA002' },
-    //     );
-    //   }
-    // }
+      if (linkedAccounts.length !== linkedAccountIds.length) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          'one or more linked accounts were not found or do not belong to this customer',
+          { error_code: 'CLA004' },
+        );
+      }
+    }
+
+    const glCodes = Array.from(
+      new Set(
+        [dto.loanGlCode, dto.incomeGlCode, dto.feeGlCode].filter(
+          Boolean,
+        ) as string[],
+      ),
+    );
+
+    const glAccounts = await this.generalLedgerRepo.findAll({
+      where: and(
+        inArray(GeneralLedgers.code, glCodes),
+        eq(GeneralLedgers.tenantId, tenantId!),
+        isNull(GeneralLedgers.deletedAt),
+      ),
+      selectFn: (glTable) => ({
+        id: glTable.id,
+        code: glTable.code,
+      }),
+    });
+
+    const feeGlCode = dto.feeGlCode;
+
+    const loanGlId =
+      glAccounts.find((acc) => acc.code === dto.loanGlCode)?.id ?? null;
+    const incomeGlId =
+      glAccounts.find((acc) => acc.code === dto.incomeGlCode)?.id ?? null;
+    const feeGlId = feeGlCode
+      ? (glAccounts.find((acc) => acc.code === feeGlCode)?.id ?? null)
+      : null;
+
+    if (!loanGlId)
+      throw new ApiException(ApiErrorCode.BadRequest, 'invalid loan gl code', {
+        error_code: 'CLA005',
+      });
+
+    if (!incomeGlId)
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'invalid income gl code',
+        {
+          error_code: 'CLA006',
+        },
+      );
+
+    if (feeGlCode && !feeGlId)
+      throw new ApiException(ApiErrorCode.BadRequest, 'invalid fee gl code', {
+        error_code: 'CLA007',
+      });
 
     let accountId: string | null = null,
       accountNumber: string | null = null;
@@ -278,6 +373,7 @@ export class AccountService {
         {
           tenantId: user.tenantId!,
           customerId: String(customer.id),
+          controlGlAccountId: loanGlId,
           type: AccountType.Loan,
           accountName,
           officeId: Number(customer.officeId),
@@ -299,8 +395,8 @@ export class AccountService {
         {
           accountId: createdAccount.accountId,
           tenantId: user.tenantId!,
-          disbursementAccountId: null,
-          repaymentAccountId: null,
+          disbursementAccountId: dto.disbursementAccountId || null,
+          repaymentAccountId: dto.repaymentAccountId || null,
           principalAmount: principalMinor,
           outstandingBalance: principalMinor,
           tenor: dto.tenor,
@@ -312,6 +408,8 @@ export class AccountService {
           chargeValue: processingFeeMinor,
           moratoriumType: dto.moratoriumType || MoratoriumType.None,
           moratoriumPeriod: dto.moratoriumPeriod || 0,
+          incomeGlAccountId: incomeGlId,
+          ...(feeGlCode && { feeIncomeGlAccountId: feeGlId }),
           repaymentStartDate: moment().endOf('month').toDate(), // TODO: this will depend on tenor and repayment freq...
         },
         tx,
@@ -342,30 +440,30 @@ export class AccountService {
     const offset = (page - 1) * limit;
 
     const conditions = [
-      eq(accounts.tenantId, user.tenantId!),
-      isNull(accounts.deletedAt),
+      eq(Accounts.tenantId, user.tenantId!),
+      isNull(Accounts.deletedAt),
     ];
 
     if (query.customerId) {
-      conditions.push(eq(accounts.customerId, query.customerId));
+      conditions.push(eq(Accounts.customerId, query.customerId));
     }
     if (query.type) {
-      conditions.push(eq(accounts.type, query.type));
+      conditions.push(eq(Accounts.type, query.type));
     }
     if (query.status) {
-      conditions.push(eq(accounts.status, query.status));
+      conditions.push(eq(Accounts.status, query.status));
     }
     if (query.search) {
       if (isNumber(query.search)) {
-        conditions.push(like(accounts.accountNumber, `%${query.search}%`));
+        conditions.push(like(Accounts.accountNumber, `%${query.search}%`));
       } else {
-        conditions.push(like(accounts.accountName, `%${query.search}%`));
+        conditions.push(like(Accounts.accountName, `%${query.search}%`));
       }
 
       // conditions.push(
       //   or(
-      //     like(accounts.accountNumber, `%${query.search}%`),
-      //     like(accounts.accountName, `%${query.search}%`),
+      //     like(Accounts.accountNumber, `%${query.search}%`),
+      //     like(Accounts.accountName, `%${query.search}%`),
       //   )!,
       // );
     }
@@ -378,11 +476,11 @@ export class AccountService {
     // fetch paginated account records...
     const accountsList = await this.db
       .select()
-      .from(accounts)
+      .from(Accounts)
       .where(whereClause)
       .limit(limit)
       .offset(offset)
-      .orderBy(desc(accounts.createdAt));
+      .orderBy(desc(Accounts.createdAt));
 
     // convert balance to number for presentation...
     const formattedData = accountsList.map((acc) => ({
@@ -400,9 +498,9 @@ export class AccountService {
   async getSingleAccount(accountId: string, user: CoreReqUser) {
     const account = await this.accountRepo.findOne({
       where: and(
-        eq(accounts.id, accountId),
-        eq(accounts.tenantId, user.tenantId!),
-        isNull(accounts.deletedAt),
+        eq(Accounts.id, accountId),
+        eq(Accounts.tenantId, user.tenantId!),
+        isNull(Accounts.deletedAt),
       ),
     });
 
@@ -420,10 +518,10 @@ export class AccountService {
 
     // Conditionally fetch loan details if account is of type 'Loan'
     if (account.type === AccountType.Loan) {
-      const rawLoan = await this.db.query.loanDetails.findFirst({
+      const rawLoan = await this.db.query.LoanDetails.findFirst({
         where: and(
-          eq(loanDetails.accountId, account.id),
-          eq(loanDetails.tenantId, user.tenantId!),
+          eq(LoanDetails.accountId, account.id),
+          eq(LoanDetails.tenantId, user.tenantId!),
         ),
       });
 
@@ -460,10 +558,10 @@ export class AccountService {
 
     // Conditionally fetch savings details if account is of type 'Savings'
     if (account.type === AccountType.Savings) {
-      const rawSavings = await this.db.query.savingsDetails.findFirst({
+      const rawSavings = await this.db.query.SavingsDetails.findFirst({
         where: and(
-          eq(savingsDetails.accountId, account.id),
-          eq(savingsDetails.tenantId, user.tenantId!),
+          eq(SavingsDetails.accountId, account.id),
+          eq(SavingsDetails.tenantId, user.tenantId!),
         ),
       });
 
@@ -499,6 +597,7 @@ export class AccountService {
     data: {
       tenantId: number;
       customerId: string;
+      controlGlAccountId: string;
       type?: AccountType;
       accountName: string;
       officeId: number;
@@ -529,6 +628,7 @@ export class AccountService {
       {
         tenantId: data.tenantId,
         // productId: data.productId,
+        controlGlAccountId: data.controlGlAccountId,
         type: data.type || AccountType.Savings,
         customerId: data.customerId,
         accountName: data.accountName,
@@ -570,12 +670,9 @@ export class AccountService {
       // get count (current count + attempts to offset if a collision is found)...
       const result = await tx
         .select({ count: count() })
-        .from(schema.accounts)
+        .from(Accounts)
         .where(
-          and(
-            eq(schema.accounts.tenantId, tenantId),
-            eq(schema.accounts.officeId, officeId),
-          ),
+          and(eq(Accounts.tenantId, tenantId), eq(Accounts.officeId, officeId)),
         );
 
       const nextSequence = Number(result[0].count) + 1 + attempts;
@@ -586,8 +683,8 @@ export class AccountService {
       accountNumber = `${branchPrefix}${sequence}`;
 
       //  check if this specific account number exists...
-      const existing = await tx.query.accounts.findFirst({
-        where: and(eq(schema.accounts.accountNumber, accountNumber)),
+      const existing = await tx.query.Accounts.findFirst({
+        where: and(eq(Accounts.accountNumber, accountNumber)),
         columns: { id: true },
       });
 
@@ -614,10 +711,10 @@ export class AccountService {
   //   const dbClient = this.db;
 
   //   // fetch and verify customer...
-  //   const customer = await dbClient.query.customers.findFirst({
+  //   const customer = await dbClient.query.Customers.findFirst({
   //     where: and(
-  //       eq(schema.customers.id, dto.customerId),
-  //       eq(schema.customers.tenantId, user.tenantId!),
+  //       eq(Customers.id, dto.customerId),
+  //       eq(Customers.tenantId, user.tenantId!),
   //     ),
   //     columns: {
   //       status: true,
