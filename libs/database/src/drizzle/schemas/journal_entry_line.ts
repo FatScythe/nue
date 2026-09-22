@@ -10,23 +10,23 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-import { businesses } from './business';
-import { generalLedgers } from './general_ledger';
-import { journalEntries } from './journal_entry';
+import { Businesses } from './business';
+import { GeneralLedgers } from './general_ledger';
+import { JournalEntries } from './journal_entry';
 
-export const journalEntryLines = pgTable(
+export const JournalEntryLines = pgTable(
   'journal_entry_lines',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     journalEntryId: varchar('journal_entry_id', { length: 36 })
       .notNull()
-      .references(() => journalEntries.id, { onDelete: 'cascade' }),
+      .references(() => JournalEntries.id, { onDelete: 'cascade' }),
     glAccountId: varchar('gl_account_id', { length: 36 })
       .notNull()
-      .references(() => generalLedgers.id, { onDelete: 'restrict' }),
+      .references(() => GeneralLedgers.id, { onDelete: 'restrict' }),
     debit: bigint('debit', { mode: 'bigint' })
       .default(sql`0`)
       .notNull(),

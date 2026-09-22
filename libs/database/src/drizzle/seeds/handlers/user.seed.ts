@@ -14,7 +14,7 @@ export interface SeedUsersPayload {
 export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
   // human user...
   const [humanUser] = await tx
-    .insert(schema.users)
+    .insert(schema.Users)
     .values({
       id: uuidv7(),
       tenantId: payload.businessId,
@@ -30,7 +30,7 @@ export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
       approvedBy: payload.sysAdminId,
     })
     .onConflictDoUpdate({
-      target: [schema.users.tenantId, schema.users.emailAddress], // composite target...
+      target: [schema.Users.tenantId, schema.Users.emailAddress], // composite target...
       set: {
         tenantId: payload.businessId,
         roleId: payload.roleId,
@@ -44,7 +44,7 @@ export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
 
   // api user...
   const [apiUser] = await tx
-    .insert(schema.users)
+    .insert(schema.Users)
     .values({
       id: uuidv7(),
       tenantId: payload.businessId,
@@ -61,7 +61,7 @@ export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
       approvedBy: humanUser.id,
     })
     .onConflictDoUpdate({
-      target: [schema.users.tenantId, schema.users.emailAddress], // composite target...
+      target: [schema.Users.tenantId, schema.Users.emailAddress], // composite target...
       set: {
         tenantId: payload.businessId,
         status: UserStatus.Active,

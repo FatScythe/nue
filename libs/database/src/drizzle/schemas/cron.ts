@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
-export const cronSchedules = pgTable(
+export const CronSchedules = pgTable(
   'cron_schedules',
   {
     id: smallserial('id').primaryKey(),

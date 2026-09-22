@@ -14,7 +14,7 @@ import {
   ProcessLienExpirationDto,
 } from '@background-process';
 import { Calculator, LIEN_EXPIRATION_SWEEP_HOURS } from '@common';
-import { accounts, DATABASE_CONNECTION, liens, LienStatus } from '@database';
+import { Accounts, DATABASE_CONNECTION, Liens, LienStatus } from '@database';
 import * as schema from '@database/drizzle/schemas';
 
 import { BaseWorkerHost } from '../abstracts/base.abstract';
@@ -70,17 +70,17 @@ export class LienProcessor extends BaseWorkerHost {
     // fetch active liens that have passed expiration OR will expire in the next 2 hours...
     const targetLiens = await this.db
       .select({
-        id: liens.id,
-        accountId: liens.accountId,
-        tenantId: liens.tenantId,
-        expiresAt: liens.expiresAt,
+        id: Liens.id,
+        accountId: Liens.accountId,
+        tenantId: Liens.tenantId,
+        expiresAt: Liens.expiresAt,
       })
-      .from(liens)
+      .from(Liens)
       .where(
         and(
-          eq(liens.status, LienStatus.Active),
-          isNotNull(liens.expiresAt),
-          lte(liens.expiresAt, lookaheadTime),
+          eq(Liens.status, LienStatus.Active),
+          isNotNull(Liens.expiresAt),
+          lte(Liens.expiresAt, lookaheadTime),
         ),
       )
       .limit(BATCH_SIZE);
@@ -138,12 +138,12 @@ export class LienProcessor extends BaseWorkerHost {
       // fetch lien with row lock to ensure concurrency safety
       const [lien] = await tx
         .select()
-        .from(liens)
+        .from(Liens)
         .where(
           and(
-            eq(liens.id, lienId),
-            eq(liens.accountId, accountId),
-            eq(liens.tenantId, tenantId),
+            eq(Liens.id, lienId),
+            eq(Liens.accountId, accountId),
+            eq(Liens.tenantId, tenantId),
           ),
         )
         .for('update');
@@ -156,8 +156,8 @@ export class LienProcessor extends BaseWorkerHost {
       // lock account row before updating balance...
       const [account] = await tx
         .select()
-        .from(accounts)
-        .where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId)))
+        .from(Accounts)
+        .where(and(eq(Accounts.id, accountId), eq(Accounts.tenantId, tenantId)))
         .for('update');
 
       if (!account) {
@@ -173,23 +173,23 @@ export class LienProcessor extends BaseWorkerHost {
       );
 
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           balance: BigInt(newAvailableBalance),
           updatedAt: new Date(),
         })
         .where(
-          and(eq(accounts.id, account.id), eq(accounts.tenantId, tenantId)),
+          and(eq(Accounts.id, account.id), eq(Accounts.tenantId, tenantId)),
         );
 
       // transition lien status to Voided...
       await tx
-        .update(liens)
+        .update(Liens)
         .set({
           status: LienStatus.Voided,
           updatedAt: new Date(),
         })
-        .where(and(eq(liens.id, lien.id), eq(liens.tenantId, tenantId)));
+        .where(and(eq(Liens.id, lien.id), eq(Liens.tenantId, tenantId)));
     });
   }
 

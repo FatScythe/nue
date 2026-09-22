@@ -14,9 +14,9 @@ import {
 import { Resources, UserStatus, UserType } from '@database/drizzle/enums';
 import { ApiScope } from '@database/drizzle/types';
 
-import { businesses } from './business';
-import { offices } from './office';
-import { roles } from './role';
+import { Businesses } from './business';
+import { Offices } from './office';
+import { Roles } from './role';
 
 export const userTypeEnum = pgEnum(
   'user_type',
@@ -33,11 +33,11 @@ export const userApiScopeEnum = pgEnum(
   Object.values(Resources) as [string, ...string[]],
 );
 
-export const users = pgTable(
+export const Users = pgTable(
   'users',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
-    tenantId: integer('tenant_id').references(() => businesses.id, {
+    tenantId: integer('tenant_id').references(() => Businesses.id, {
       onDelete: 'restrict',
     }), // nullable for sys admin...
     type: userTypeEnum('type').$type<UserType>().notNull(),
@@ -51,21 +51,21 @@ export const users = pgTable(
     ipWhitelist: text('ip_address').array(),
     otpKey: text('otp_key'),
     isOtpEnabled: boolean('is_otp_enabled').default(false),
-    roleId: varchar('role_id', { length: 36 }).references(() => roles.id, {
+    roleId: varchar('role_id', { length: 36 }).references(() => Roles.id, {
       onDelete: 'restrict',
     }),
     scopes: text('scopes').array().$type<ApiScope[]>(),
-    officeId: integer('office_id').references(() => offices.id, {
+    officeId: integer('office_id').references(() => Offices.id, {
       onDelete: 'restrict',
     }),
     createdBy: varchar('created_by', { length: 36 }).references(
-      (): AnyPgColumn => users.id,
+      (): AnyPgColumn => Users.id,
       {
         onDelete: 'restrict',
       },
     ), // nullable for default user, id of the user or api
     approvedBy: varchar('approved_by', { length: 36 }).references(
-      (): AnyPgColumn => users.id,
+      (): AnyPgColumn => Users.id,
       {
         onDelete: 'restrict',
       },

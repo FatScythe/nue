@@ -21,8 +21,8 @@ import {
   ChargeTime,
   ShariaContractType,
 } from '../enums';
-import { businesses } from './business';
-import { generalLedgers } from './general_ledger';
+import { Businesses } from './business';
+import { GeneralLedgers } from './general_ledger';
 import { Currency, dbCurrencyEnum } from './utils';
 
 export const accountTypeEnum = pgEnum(
@@ -55,13 +55,13 @@ export const chargeTimeEnum = pgEnum(
   Object.values(ChargeTime) as [string, ...string[]],
 );
 
-export const accountProducts = pgTable(
+export const AccountProducts = pgTable(
   'account_products',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     name: text('name').notNull(),
     code: text('code').notNull(),
     type: accountTypeEnum('type').notNull(),
@@ -136,19 +136,19 @@ export const accountProducts = pgTable(
     // General Ledger (GL) Accounting Mappings
     controlGlAccountId: varchar('control_gl_account_id', {
       length: 36,
-    }).references(() => generalLedgers.id, { onDelete: 'restrict' }), // asset / liability GL
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // asset / liability GL
     incomeGlAccountId: varchar('income_gl_account_id', {
       length: 36,
-    }).references(() => generalLedgers.id, { onDelete: 'restrict' }), // interest / profit income...
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // interest / profit income...
     expenseGlAccountId: varchar('expense_gl_account_id', {
       length: 36,
-    }).references(() => generalLedgers.id, { onDelete: 'restrict' }), // interest / profit expense...
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // interest / profit expense...
     feeIncomeGlAccountId: varchar('fee_income_gl_account_id', {
       length: 36,
-    }).references(() => generalLedgers.id, { onDelete: 'restrict' }),
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }),
     charityGlAccountId: varchar('charity_gl_account_id', {
       length: 36,
-    }).references(() => generalLedgers.id, { onDelete: 'restrict' }), // late fee donation destination for Sharia products...
+    }).references(() => GeneralLedgers.id, { onDelete: 'restrict' }), // late fee donation destination for Sharia products...
 
     metadata: jsonb('metadata').default({}).notNull(),
 

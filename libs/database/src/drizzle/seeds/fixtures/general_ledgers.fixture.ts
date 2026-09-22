@@ -1,8 +1,8 @@
-import { generalLedgers } from '@database/drizzle/schemas';
+import { GeneralLedgers } from '@database/drizzle/schemas';
 
 import { GlCategory, GlNormalBalance } from '../../enums';
 
-export const LEDGERS_FIXTURE: Partial<typeof generalLedgers.$inferInsert>[] = [
+export const LEDGERS_FIXTURE: Partial<typeof GeneralLedgers.$inferInsert>[] = [
   {
     allowDirectBooking: true,
     normalBalance: GlNormalBalance.Debit,

@@ -5,10 +5,10 @@ import { CRON_SCHEDULES_FIXTURE } from '../fixtures/cron.fixture';
 
 export async function seedCrons(tx: any) {
   const crons = await tx
-    .insert(schema.cronSchedules)
+    .insert(schema.CronSchedules)
     .values(CRON_SCHEDULES_FIXTURE)
     .onConflictDoUpdate({
-      target: schema.cronSchedules.jobName,
+      target: schema.CronSchedules.jobName,
       set: {
         cronExpression: sql`EXCLUDED.cron`,
         payload: sql`EXCLUDED.payload`,

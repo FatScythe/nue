@@ -7,13 +7,13 @@ export interface SeedOfficePayload {
 
 export async function seedOffices(tx: any, payload: SeedOfficePayload) {
   const [office] = await tx
-    .insert(schema.offices)
+    .insert(schema.Offices)
     .values({
       tenantId: payload.businessId,
       ...HEAD_OFFICE_FIXTURE,
     })
     .onConflictDoUpdate({
-      target: [schema.offices.tenantId, schema.offices.code],
+      target: [schema.Offices.tenantId, schema.Offices.code],
       set: {
         name: HEAD_OFFICE_FIXTURE.name,
         phoneNumber: HEAD_OFFICE_FIXTURE.phoneNumber,

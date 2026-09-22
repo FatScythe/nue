@@ -5,13 +5,13 @@ import { SYS_ADMIN_FIXTURE } from '../fixtures/system_admin.fixture';
 
 export async function seedSystemAdmin(tx: any) {
   const [sysAdmin] = await tx
-    .insert(schema.users)
+    .insert(schema.Users)
     .values({
       id: uuidv7(),
       ...SYS_ADMIN_FIXTURE,
     })
     .onConflictDoUpdate({
-      target: [schema.users.tenantId, schema.users.emailAddress], // composite target...
+      target: [schema.Users.tenantId, schema.Users.emailAddress], // composite target...
       set: {
         type: SYS_ADMIN_FIXTURE.type,
         status: SYS_ADMIN_FIXTURE.status,

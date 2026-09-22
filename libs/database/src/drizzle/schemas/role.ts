@@ -12,15 +12,15 @@ import {
 
 import { RolePermissions } from '@database/drizzle/types';
 
-import { businesses } from './business';
-import { users } from './user';
+import { Businesses } from './business';
+import { Users } from './user';
 import { DEFAULT_PERMISSION } from './utils';
 
-export const roles = pgTable(
+export const Roles = pgTable(
   'roles',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()
-    tenantId: integer('tenant_id').references(() => businesses.id, {
+    tenantId: integer('tenant_id').references(() => Businesses.id, {
       onDelete: 'restrict',
     }), // nullable for default system roles...
     name: text('name').notNull(),
@@ -29,13 +29,13 @@ export const roles = pgTable(
       .notNull()
       .default(DEFAULT_PERMISSION),
     createdBy: varchar('created_by', { length: 36 }).references(
-      (): AnyPgColumn => users.id,
+      (): AnyPgColumn => Users.id,
       {
         onDelete: 'restrict',
       },
     ),
     approvedBy: varchar('approved_by', { length: 36 }).references(
-      (): AnyPgColumn => users.id,
+      (): AnyPgColumn => Users.id,
       {
         onDelete: 'restrict',
       },

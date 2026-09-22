@@ -11,15 +11,15 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-import { businesses } from './business';
+import { Businesses } from './business';
 
-export const offices = pgTable(
+export const Offices = pgTable(
   'offices',
   {
     id: serial('id').primaryKey(),
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     name: text('name').notNull(), // e.g., "Lagos Main Branch" or "Virtual Operations"
     code: text('code').notNull(), // e.g., "HQ-01"
     isHeadOffice: boolean('is_head_office').default(false),

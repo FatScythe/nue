@@ -18,10 +18,10 @@ import {
   TransactionStatus,
 } from '@database/drizzle/enums';
 
-import { accounts } from './account';
-import { businesses } from './business';
-import { offices } from './office';
-import { users } from './user';
+import { Accounts } from './account';
+import { Businesses } from './business';
+import { Offices } from './office';
+import { Users } from './user';
 import { Currency, dbCurrencyEnum } from './utils';
 
 export const transactionCategoryEnum = pgEnum(
@@ -34,22 +34,22 @@ export const transactionStatusEnum = pgEnum(
   Object.values(TransactionStatus) as [string, ...string[]],
 );
 
-export const transactions = pgTable(
+export const Transactions = pgTable(
   'transactions',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     senderAccountId: varchar('sender_account_id', { length: 36 }).references(
-      () => accounts.id,
+      () => Accounts.id,
       {
         onDelete: 'restrict',
       },
     ),
     receiverAccountId: varchar('receiver_account_id', {
       length: 36,
-    }).references(() => accounts.id, {
+    }).references(() => Accounts.id, {
       onDelete: 'restrict',
     }),
     amount: bigint('amount', { mode: 'bigint' }).notNull(),
@@ -69,18 +69,18 @@ export const transactions = pgTable(
     narration: text('narration'),
     metadata: jsonb('metadata').default({}).notNull(),
     createdBy: varchar('created_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       {
         onDelete: 'restrict',
       },
     ), // id of the user or api...
     approvedBy: varchar('approved_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       {
         onDelete: 'restrict',
       },
     ),
-    officeId: integer('office_id').references(() => offices.id, {
+    officeId: integer('office_id').references(() => Offices.id, {
       onDelete: 'restrict',
     }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),

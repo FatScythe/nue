@@ -6,24 +6,24 @@ import { v7 as uuidv7 } from 'uuid';
 
 import { BaseRepository } from '@database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import { journalEntries } from '@database/drizzle/schemas';
+import { JournalEntries } from '@database/drizzle/schemas';
 import * as schema from '@database/drizzle/schemas';
 import { DBTransaction } from '@database/drizzle/types';
 
 @Injectable()
 export class JournalEntryRepository extends BaseRepository<
-  typeof journalEntries
+  typeof JournalEntries
 > {
   constructor(
     @Inject(DATABASE_CONNECTION)
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {
-    super(db, journalEntries);
+    super(db, JournalEntries);
   }
 
   async transformAndValidate(
-    data: typeof journalEntries.$inferInsert,
-  ): Promise<typeof journalEntries.$inferInsert> {
+    data: typeof JournalEntries.$inferInsert,
+  ): Promise<typeof JournalEntries.$inferInsert> {
     const { tenantId, description, entryDate, createdBy } = data;
 
     const errOpt = {
@@ -67,14 +67,14 @@ export class JournalEntryRepository extends BaseRepository<
     tenantId: number,
     id: string,
     tx?: DBTransaction,
-  ): Promise<typeof journalEntries.$inferSelect | null> {
+  ): Promise<typeof JournalEntries.$inferSelect | null> {
     const client = this.getClient(tx);
 
     const result = await client
       .select()
-      .from(journalEntries)
+      .from(JournalEntries)
       .where(
-        and(eq(journalEntries.tenantId, tenantId), eq(journalEntries.id, id)),
+        and(eq(JournalEntries.tenantId, tenantId), eq(JournalEntries.id, id)),
       )
       .limit(1);
 
@@ -88,16 +88,16 @@ export class JournalEntryRepository extends BaseRepository<
     tenantId: number,
     transactionId: string,
     tx?: DBTransaction,
-  ): Promise<(typeof journalEntries.$inferSelect)[]> {
+  ): Promise<(typeof JournalEntries.$inferSelect)[]> {
     const client = this.getClient(tx);
 
     return await client
       .select()
-      .from(journalEntries)
+      .from(JournalEntries)
       .where(
         and(
-          eq(journalEntries.tenantId, tenantId),
-          eq(journalEntries.transactionId, transactionId),
+          eq(JournalEntries.tenantId, tenantId),
+          eq(JournalEntries.transactionId, transactionId),
         ),
       );
   }

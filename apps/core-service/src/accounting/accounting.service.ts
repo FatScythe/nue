@@ -9,7 +9,7 @@ import { CoreReqUser, getDefaultNormalBalance } from '@common';
 import {
   DATABASE_CONNECTION,
   GeneralLedgerRepository,
-  generalLedgers,
+  GeneralLedgers,
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
 
@@ -30,8 +30,8 @@ export class AccountingService {
 
     const existingGl = await this.generalLedgerRepo.findOne({
       where: and(
-        eq(generalLedgers.tenantId, tenantId!),
-        eq(generalLedgers.code, dto.code),
+        eq(GeneralLedgers.tenantId, tenantId!),
+        eq(GeneralLedgers.code, dto.code),
       ),
     });
 
@@ -46,14 +46,11 @@ export class AccountingService {
     let parentGlId;
 
     if (dto.parentGlCode) {
-      const parent = await this.generalLedgerRepo.findOne<{
-        id: string;
-        parentId: string;
-      }>({
+      const parent = await this.generalLedgerRepo.findOne({
         selectFn: (gl) => ({ id: gl.id, parentId: gl.parentId }),
         where: and(
-          eq(generalLedgers.code, dto.parentGlCode),
-          eq(generalLedgers.tenantId, tenantId!),
+          eq(GeneralLedgers.code, dto.parentGlCode),
+          eq(GeneralLedgers.tenantId, tenantId!),
         ),
       });
 

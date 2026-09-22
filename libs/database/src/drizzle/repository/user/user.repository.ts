@@ -6,21 +6,21 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { BaseRepository } from '@database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import * as schema from '@database/drizzle/schemas';
-import { roles, users } from '@database/drizzle/schemas';
+import { Roles, Users } from '@database/drizzle/schemas';
 import { DBTransaction } from '@database/drizzle/types';
 
 @Injectable()
-export class UserRepository extends BaseRepository<typeof users> {
+export class UserRepository extends BaseRepository<typeof Users> {
   constructor(
     @Inject(DATABASE_CONNECTION)
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {
-    super(db, users);
+    super(db, Users);
   }
 
   async transformAndValidate(
-    data: typeof users.$inferInsert,
-  ): Promise<typeof users.$inferInsert> {
+    data: typeof Users.$inferInsert,
+  ): Promise<typeof Users.$inferInsert> {
     return data;
   }
 
@@ -29,18 +29,18 @@ export class UserRepository extends BaseRepository<typeof users> {
 
     const result = await client
       .select({
-        id: users.id,
-        emailAddress: users.emailAddress,
-        type: users.type,
+        id: Users.id,
+        emailAddress: Users.emailAddress,
+        type: Users.type,
         role: {
-          id: roles.id,
-          name: roles.name,
-          permissions: roles.permissions,
+          id: Roles.id,
+          name: Roles.name,
+          permissions: Roles.permissions,
         },
-        tenantId: users.tenantId,
+        tenantId: Users.tenantId,
       })
-      .from(users)
-      .innerJoin(roles, eq(users.roleId, roles.id))
+      .from(Users)
+      .innerJoin(Roles, eq(Users.roleId, Roles.id))
       .where(where)
       .limit(1);
 
@@ -56,14 +56,14 @@ export class UserRepository extends BaseRepository<typeof users> {
 
     const result = await client
       .select({
-        id: users.id,
-        secretKey: users.secretKey,
-        whitelistedIps: users.ipWhitelist,
-        type: users.type,
-        scopes: users.scopes,
-        tenantId: users.tenantId,
+        id: Users.id,
+        secretKey: Users.secretKey,
+        whitelistedIps: Users.ipWhitelist,
+        type: Users.type,
+        scopes: Users.scopes,
+        tenantId: Users.tenantId,
       })
-      .from(users)
+      .from(Users)
       .where(where)
       .limit(1);
 
@@ -73,9 +73,9 @@ export class UserRepository extends BaseRepository<typeof users> {
   /**
    * create a new user
    */
-  async create(data: typeof users.$inferInsert, tx?: DBTransaction) {
+  async create(data: typeof Users.$inferInsert, tx?: DBTransaction) {
     const result = await this.getClient(tx)
-      .insert(users)
+      .insert(Users)
       .values(data)
       .returning();
     return result[0];

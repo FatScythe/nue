@@ -1,10 +1,8 @@
 import { LIEN_EXPIRATION_CRON_EXPRESSION } from '@common';
 import { CronJobName } from '@database/drizzle/enums';
-import { cronSchedules } from '@database/drizzle/schemas';
+import { CronSchedules } from '@database/drizzle/schemas';
 
-console.log(process.env.NODE_ENV, 'NIBI BAYIII');
-
-export const CRON_SCHEDULES_FIXTURE: Array<typeof cronSchedules.$inferInsert> =
+export const CRON_SCHEDULES_FIXTURE: Array<typeof CronSchedules.$inferInsert> =
   [
     {
       jobName: CronJobName.HandleLienExpiration,

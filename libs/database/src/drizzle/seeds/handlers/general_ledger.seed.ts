@@ -13,7 +13,7 @@ export async function seedGeneralLedgers(tx: any, payload: SeedLedgersPayload) {
 
   for (const ledgerFixture of LEDGERS_FIXTURE) {
     const [ledger] = await tx
-      .insert(schema.generalLedgers)
+      .insert(schema.GeneralLedgers)
       .values({
         id: uuidv7(),
         tenantId: payload.businessId,
@@ -21,7 +21,7 @@ export async function seedGeneralLedgers(tx: any, payload: SeedLedgersPayload) {
         ...ledgerFixture,
       })
       .onConflictDoUpdate({
-        target: [schema.generalLedgers.tenantId, schema.generalLedgers.code],
+        target: [schema.GeneralLedgers.tenantId, schema.GeneralLedgers.code],
         set: {
           name: ledgerFixture.name,
           category: ledgerFixture.category,

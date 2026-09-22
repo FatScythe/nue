@@ -6,24 +6,24 @@ import { v7 as uuidv7 } from 'uuid';
 
 import { BaseRepository } from '@database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import { generalLedgers } from '@database/drizzle/schemas';
+import { GeneralLedgers } from '@database/drizzle/schemas';
 import * as schema from '@database/drizzle/schemas';
 import { DBTransaction } from '@database/drizzle/types';
 
 @Injectable()
 export class GeneralLedgerRepository extends BaseRepository<
-  typeof generalLedgers
+  typeof GeneralLedgers
 > {
   constructor(
     @Inject(DATABASE_CONNECTION)
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {
-    super(db, generalLedgers);
+    super(db, GeneralLedgers);
   }
 
   async transformAndValidate(
-    data: typeof generalLedgers.$inferInsert,
-  ): Promise<typeof generalLedgers.$inferInsert> {
+    data: typeof GeneralLedgers.$inferInsert,
+  ): Promise<typeof GeneralLedgers.$inferInsert> {
     const { tenantId, name, code, category, normalBalance, createdBy } = data;
 
     const errOpt = {
@@ -76,16 +76,16 @@ export class GeneralLedgerRepository extends BaseRepository<
     tenantId: number,
     code: string,
     tx?: DBTransaction,
-  ): Promise<typeof generalLedgers.$inferSelect | null> {
+  ): Promise<typeof GeneralLedgers.$inferSelect | null> {
     const client = this.getClient(tx);
 
     const result = await client
       .select()
-      .from(generalLedgers)
+      .from(GeneralLedgers)
       .where(
         and(
-          eq(generalLedgers.tenantId, tenantId),
-          eq(generalLedgers.code, code.trim()),
+          eq(GeneralLedgers.tenantId, tenantId),
+          eq(GeneralLedgers.code, code.trim()),
         ),
       )
       .limit(1);
@@ -100,16 +100,16 @@ export class GeneralLedgerRepository extends BaseRepository<
     tenantId: number,
     parentId: string,
     tx?: DBTransaction,
-  ): Promise<(typeof generalLedgers.$inferSelect)[]> {
+  ): Promise<(typeof GeneralLedgers.$inferSelect)[]> {
     const client = this.getClient(tx);
 
     return await client
       .select()
-      .from(generalLedgers)
+      .from(GeneralLedgers)
       .where(
         and(
-          eq(generalLedgers.tenantId, tenantId),
-          eq(generalLedgers.parentId, parentId),
+          eq(GeneralLedgers.tenantId, tenantId),
+          eq(GeneralLedgers.parentId, parentId),
         ),
       );
   }

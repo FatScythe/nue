@@ -14,7 +14,7 @@ import { CoreRequest } from '@common';
 import {
   ApiScope,
   UserRepository,
-  users,
+  Users,
   UserStatus,
   UserType,
 } from '@database';
@@ -78,9 +78,9 @@ export class AuthGuard implements CanActivate {
     }
 
     const queryCondition = and(
-      eq(users.secretKey, key),
-      eq(users.status, UserStatus.Active),
-      eq(users.type, UserType.Api),
+      eq(Users.secretKey, key),
+      eq(Users.status, UserStatus.Active),
+      eq(Users.type, UserType.Api),
     ) as SQL;
 
     return this.validateRequest({ request, queryCondition });
@@ -112,9 +112,9 @@ export class AuthGuard implements CanActivate {
       );
 
     const queryCondition = and(
-      eq(users.status, UserStatus.Active),
-      eq(users.id, decoded.sub),
-      eq(users.type, UserType.Api),
+      eq(Users.status, UserStatus.Active),
+      eq(Users.id, decoded.sub),
+      eq(Users.type, UserType.Api),
     ) as SQL;
 
     return this.validateRequest({ request, queryCondition });

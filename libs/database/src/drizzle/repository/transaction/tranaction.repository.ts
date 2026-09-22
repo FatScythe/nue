@@ -7,20 +7,20 @@ import { BaseRepository } from '@database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import { TransactionStatus } from '@database/drizzle/enums';
 import * as schema from '@database/drizzle/schemas';
-import { transactions } from '@database/drizzle/schemas';
+import { Transactions } from '@database/drizzle/schemas';
 
 @Injectable()
-export class TransactionRepository extends BaseRepository<typeof transactions> {
+export class TransactionRepository extends BaseRepository<typeof Transactions> {
   constructor(
     @Inject(DATABASE_CONNECTION)
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {
-    super(db, transactions);
+    super(db, Transactions);
   }
 
   async transformAndValidate(
-    data: typeof transactions.$inferInsert,
-  ): Promise<typeof transactions.$inferInsert> {
+    data: typeof Transactions.$inferInsert,
+  ): Promise<typeof Transactions.$inferInsert> {
     const { tenantId, createdBy } = data;
 
     const errOpt = {

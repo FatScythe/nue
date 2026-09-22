@@ -3,10 +3,10 @@ import { CORE_BUSINESS_FIXTURE } from '../fixtures/business.fixture';
 
 export async function seedBusinessTenant(tx: any) {
   const [business] = await tx
-    .insert(schema.businesses)
+    .insert(schema.Businesses)
     .values(CORE_BUSINESS_FIXTURE)
     .onConflictDoUpdate({
-      target: schema.businesses.reference,
+      target: schema.Businesses.reference,
       set: {
         name: CORE_BUSINESS_FIXTURE.name,
         emailAddress: CORE_BUSINESS_FIXTURE.emailAddress,

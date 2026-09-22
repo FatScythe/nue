@@ -6,24 +6,24 @@ import { v7 as uuidv7 } from 'uuid';
 
 import { BaseRepository } from '@database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import { journalEntryLines } from '@database/drizzle/schemas';
+import { JournalEntryLines } from '@database/drizzle/schemas';
 import * as schema from '@database/drizzle/schemas';
 import { DBTransaction } from '@database/drizzle/types';
 
 @Injectable()
 export class JournalEntryLineRepository extends BaseRepository<
-  typeof journalEntryLines
+  typeof JournalEntryLines
 > {
   constructor(
     @Inject(DATABASE_CONNECTION)
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {
-    super(db, journalEntryLines);
+    super(db, JournalEntryLines);
   }
 
   async transformAndValidate(
-    data: typeof journalEntryLines.$inferInsert,
-  ): Promise<typeof journalEntryLines.$inferInsert> {
+    data: typeof JournalEntryLines.$inferInsert,
+  ): Promise<typeof JournalEntryLines.$inferInsert> {
     const { journalEntryId, glAccountId, debit, credit, description } = data;
 
     const errOpt = {
@@ -69,9 +69,9 @@ export class JournalEntryLineRepository extends BaseRepository<
    * Bulk insert multiple journal entry lines within a transaction.
    */
   async createMany(
-    lines: (typeof journalEntryLines.$inferInsert)[],
+    lines: (typeof JournalEntryLines.$inferInsert)[],
     tx?: DBTransaction,
-  ): Promise<(typeof journalEntryLines.$inferSelect)[]> {
+  ): Promise<(typeof JournalEntryLines.$inferSelect)[]> {
     const client = this.getClient(tx);
 
     const validatedLines = await Promise.all(
@@ -79,7 +79,7 @@ export class JournalEntryLineRepository extends BaseRepository<
     );
 
     return await client
-      .insert(journalEntryLines)
+      .insert(JournalEntryLines)
       .values(validatedLines)
       .returning();
   }
@@ -90,12 +90,12 @@ export class JournalEntryLineRepository extends BaseRepository<
   async findByJournalEntryId(
     journalEntryId: string,
     tx?: DBTransaction,
-  ): Promise<(typeof journalEntryLines.$inferSelect)[]> {
+  ): Promise<(typeof JournalEntryLines.$inferSelect)[]> {
     const client = this.getClient(tx);
 
     return await client
       .select()
-      .from(journalEntryLines)
-      .where(eq(journalEntryLines.journalEntryId, journalEntryId));
+      .from(JournalEntryLines)
+      .where(eq(JournalEntryLines.journalEntryId, journalEntryId));
   }
 }

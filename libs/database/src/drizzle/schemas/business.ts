@@ -1,6 +1,6 @@
 import { pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 
-export const businesses = pgTable('businesses', {
+export const Businesses = pgTable('businesses', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   emailAddress: text('email_address').unique().notNull(),

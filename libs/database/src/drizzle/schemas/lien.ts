@@ -12,23 +12,23 @@ import {
 
 import { LienStatus } from '@database/drizzle/enums';
 
-import { accounts, businesses, users } from '.';
+import { Accounts, Businesses, Users } from '.';
 
 export const lienStatusEnum = pgEnum(
   'lien_status',
   Object.values(LienStatus) as [string, ...string[]],
 );
 
-export const liens = pgTable(
+export const Liens = pgTable(
   'liens',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
     accountId: varchar('account_id', { length: 36 })
       .notNull()
-      .references(() => accounts.id, { onDelete: 'restrict' }),
+      .references(() => Accounts.id, { onDelete: 'restrict' }),
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
 
     amount: bigint('amount', { mode: 'bigint' }).notNull(),
     reason: text('reason'),
@@ -41,7 +41,7 @@ export const liens = pgTable(
     expiresAt: timestamp('expires_at', { withTimezone: true }), // optional hold release date...
 
     createdBy: varchar('created_by', { length: 36 })
-      .references(() => users.id, { onDelete: 'restrict' })
+      .references(() => Users.id, { onDelete: 'restrict' })
       .notNull(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })

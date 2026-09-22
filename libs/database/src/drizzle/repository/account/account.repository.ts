@@ -9,26 +9,26 @@ import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import { AccountStatus } from '@database/drizzle/enums';
 import * as schema from '@database/drizzle/schemas';
 import {
-  accounts,
-  loanDetails,
-  savingsDetails,
-  // fixedDepositDetails,
+  Accounts,
+  LoanDetails,
+  SavingsDetails,
+  // FixedDepositDetails,
 } from '@database/drizzle/schemas';
 import { DBTransaction } from '@database/drizzle/types';
 
 @Injectable()
-export class AccountRepository extends BaseRepository<typeof accounts> {
+export class AccountRepository extends BaseRepository<typeof Accounts> {
   constructor(
     @Inject(DATABASE_CONNECTION)
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {
-    super(db, accounts);
+    super(db, Accounts);
   }
 
   async createSavingDetails(
-    data: typeof savingsDetails.$inferInsert,
+    data: typeof SavingsDetails.$inferInsert,
     tx?: DBTransaction,
-  ): Promise<typeof savingsDetails.$inferSelect | null> {
+  ): Promise<typeof SavingsDetails.$inferSelect | null> {
     const db = tx || this.db;
     const { accountId, tenantId } = data;
 
@@ -48,15 +48,15 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
 
     if (!accountId) throw new Error('parent account id is required', errOpt);
 
-    const result = await db.insert(savingsDetails).values(data);
+    const result = await db.insert(SavingsDetails).values(data);
 
     return result[0] || null;
   }
 
   async createLoanDetails(
-    data: typeof loanDetails.$inferInsert,
+    data: typeof LoanDetails.$inferInsert,
     tx?: DBTransaction,
-  ): Promise<typeof loanDetails.$inferSelect | null> {
+  ): Promise<typeof LoanDetails.$inferSelect | null> {
     const db = tx || this.db;
     const { accountId, tenantId } = data;
 
@@ -76,7 +76,7 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
 
     if (!accountId) throw new Error('parent account id is required', errOpt);
 
-    const result = await db.insert(loanDetails).values(data);
+    const result = await db.insert(LoanDetails).values(data);
 
     return result[0] || null;
   }
@@ -108,8 +108,8 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
   // }
 
   async transformAndValidate(
-    data: typeof accounts.$inferInsert,
-  ): Promise<typeof accounts.$inferInsert> {
+    data: typeof Accounts.$inferInsert,
+  ): Promise<typeof Accounts.$inferInsert> {
     const {
       tenantId,
       // productId,
@@ -160,9 +160,9 @@ export class AccountRepository extends BaseRepository<typeof accounts> {
     tx?: DBTransaction,
   ) {
     const result = await this.getClient(tx)
-      .select({ balance: accounts.balance, bookBalance: accounts.bookBalance })
-      .from(accounts)
-      .where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId)))
+      .select({ balance: Accounts.balance, bookBalance: Accounts.bookBalance })
+      .from(Accounts)
+      .where(and(eq(Accounts.id, accountId), eq(Accounts.tenantId, tenantId)))
       .limit(1);
 
     return {

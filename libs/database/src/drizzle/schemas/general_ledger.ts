@@ -13,8 +13,8 @@ import {
 
 import { GlCategory, GlNormalBalance } from '@database/drizzle/enums';
 
-import { businesses } from './business';
-import { users } from './user';
+import { Businesses } from './business';
+import { Users } from './user';
 
 export const glCategoryEnum = pgEnum(
   'gl_category',
@@ -26,13 +26,13 @@ export const normalBalanceEnum = pgEnum(
   Object.values(GlNormalBalance) as [string, ...string[]],
 );
 
-export const generalLedgers = pgTable(
+export const GeneralLedgers = pgTable(
   'general_ledgers',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
 
     code: text('code').notNull(), // e.g., "1010" for "Cash"
     name: text('name').notNull(),
@@ -41,18 +41,18 @@ export const generalLedgers = pgTable(
 
     // self-referencing FK for account hierarchy (e.g., Sub-GL -> Parent GL)
     parentId: varchar('parent_id', { length: 36 }).references(
-      (): AnyPgColumn => generalLedgers.id,
+      (): AnyPgColumn => GeneralLedgers.id,
       { onDelete: 'restrict' },
     ),
 
     allowDirectBooking: boolean('allow_direct_booking').default(true).notNull(),
 
     createdBy: varchar('created_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       { onDelete: 'restrict' },
     ), // id of the user or api...
     approvedBy: varchar('approved_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       { onDelete: 'restrict' },
     ), // id of the user or api...
 

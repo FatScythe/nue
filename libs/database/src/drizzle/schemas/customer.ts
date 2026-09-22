@@ -19,9 +19,9 @@ import {
 } from '@database/drizzle/enums';
 import { CustomerLoopEntries } from '@database/drizzle/types';
 
-import { businesses } from './business';
-import { offices } from './office';
-import { users } from './user';
+import { Businesses } from './business';
+import { Offices } from './office';
+import { Users } from './user';
 
 export const customerTypeEnum = pgEnum(
   'customer_type',
@@ -43,15 +43,15 @@ export const customerTierEnum = pgEnum(
   Object.values(CustomerTier) as [string, ...string[]],
 );
 
-export const customers = pgTable(
+export const Customers = pgTable(
   'customers',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     officeId: integer('office_id')
-      .references(() => offices.id, { onDelete: 'restrict' })
+      .references(() => Offices.id, { onDelete: 'restrict' })
       .notNull(),
     externalId: varchar('external_id', { length: 255 }), // Handled via tenant-scoped unique index
     status: customerStatusEnum('status')
@@ -89,7 +89,7 @@ export const customers = pgTable(
       >()
       .default([]),
     createdBy: varchar('created_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       { onDelete: 'restrict' },
     ), // id of the user or api
     metadata: jsonb('metadata')

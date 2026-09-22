@@ -1,6 +1,6 @@
-import { offices } from '@database/drizzle/schemas';
+import { Offices } from '@database/drizzle/schemas';
 
-export const HEAD_OFFICE_FIXTURE: Partial<typeof offices.$inferInsert> = {
+export const HEAD_OFFICE_FIXTURE: Partial<typeof Offices.$inferInsert> = {
   name: 'Head Office',
   code: 'MB-01',
   dateOfIncorporation: '2002-11-12',

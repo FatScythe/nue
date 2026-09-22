@@ -10,7 +10,7 @@ export interface SeedRolePayload {
 
 export async function seedCoreRoles(tx: any, payload: SeedRolePayload) {
   const [role] = await tx
-    .insert(schema.roles)
+    .insert(schema.Roles)
     .values({
       id: uuidv7(),
       tenantId: null,
@@ -20,7 +20,7 @@ export async function seedCoreRoles(tx: any, payload: SeedRolePayload) {
       approvedBy: payload.sysAdminId,
     })
     .onConflictDoUpdate({
-      target: [schema.roles.name, schema.roles.tenantId],
+      target: [schema.Roles.name, schema.Roles.tenantId],
       set: {
         permissions: rebuildPermission({}, true),
         updatedAt: new Date(),

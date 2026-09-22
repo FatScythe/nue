@@ -8,12 +8,12 @@ import { uuidv7 } from 'uuidv7';
 import { Calculator, type CoreReqUser } from '@common';
 //libs...
 import {
-  accounts,
+  Accounts,
   DATABASE_CONNECTION,
   GeneralLedgerRepository,
-  generalLedgers,
-  journalEntries,
-  journalEntryLines,
+  GeneralLedgers,
+  JournalEntries,
+  JournalEntryLines,
   JournalEntryStatus,
   TransactionCategory,
   TransactionRepository,
@@ -60,8 +60,8 @@ export class TransactionService {
 
     const genLedgers = await this.generalLedgerRepo.findAll({
       where: and(
-        inArray(generalLedgers.code, glCodes),
-        eq(generalLedgers.tenantId, tenantId!),
+        inArray(GeneralLedgers.code, glCodes),
+        eq(GeneralLedgers.tenantId, tenantId!),
       ),
       selectFn: (generalLedger) => ({
         id: generalLedger.id,
@@ -109,11 +109,11 @@ export class TransactionService {
 
       const lockedAccounts = await tx
         .select()
-        .from(accounts)
+        .from(Accounts)
         .where(
           and(
-            inArray(accounts.id, accountIds),
-            eq(accounts.tenantId, tenantId!),
+            inArray(Accounts.id, accountIds),
+            eq(Accounts.tenantId, tenantId!),
           ),
         )
         .for('update');
@@ -166,13 +166,13 @@ export class TransactionService {
       );
 
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           balance: BigInt(senderBalance),
           bookBalance: BigInt(senderBookBalance),
           updatedAt: new Date(),
         })
-        .where(eq(accounts.id, sender.id));
+        .where(eq(Accounts.id, sender.id));
 
       // calculate and update receiver balances...
       const receiverBalance = this.calculator.add(
@@ -185,13 +185,13 @@ export class TransactionService {
       );
 
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           balance: BigInt(receiverBalance),
           bookBalance: BigInt(receiverBookBalance),
           updatedAt: new Date(),
         })
-        .where(eq(accounts.id, receiver.id));
+        .where(eq(Accounts.id, receiver.id));
 
       // audit transaction record...
       const txn = await this.transactionRepo.create({
@@ -221,7 +221,7 @@ export class TransactionService {
 
       // post double-entry journal header...
       const [journal] = await tx
-        .insert(journalEntries)
+        .insert(JournalEntries)
         .values({
           id: uuidv7(),
           tenantId: tenantId!,
@@ -238,7 +238,7 @@ export class TransactionService {
         .returning();
 
       // build balanced double-entry gl lines...
-      const lines: Array<typeof journalEntryLines.$inferInsert> = [
+      const lines: Array<typeof JournalEntryLines.$inferInsert> = [
         {
           id: uuidv7(),
           tenantId: tenantId!,
@@ -285,7 +285,7 @@ export class TransactionService {
         });
       }
 
-      await tx.insert(journalEntryLines).values(lines);
+      await tx.insert(JournalEntryLines).values(lines);
 
       transactionId = txn.id;
 
@@ -316,8 +316,8 @@ export class TransactionService {
 
     const genLedgers = await this.generalLedgerRepo.findAll({
       where: and(
-        inArray(generalLedgers.code, glCodes),
-        eq(generalLedgers.tenantId, tenantId!),
+        inArray(GeneralLedgers.code, glCodes),
+        eq(GeneralLedgers.tenantId, tenantId!),
       ),
       selectFn: (gl) => ({
         id: gl.id,
@@ -371,9 +371,9 @@ export class TransactionService {
       // lock account to prevent race conditions...
       const [account] = await tx
         .select()
-        .from(accounts)
+        .from(Accounts)
         .where(
-          and(eq(accounts.id, dto.accountId), eq(accounts.tenantId, tenantId!)),
+          and(eq(Accounts.id, dto.accountId), eq(Accounts.tenantId, tenantId!)),
         )
         .for('update');
 
@@ -408,13 +408,13 @@ export class TransactionService {
         : this.calculator.add(account.bookBalance, transferAmount);
 
       await tx
-        .update(accounts)
+        .update(Accounts)
         .set({
           balance: BigInt(newBalance),
           bookBalance: BigInt(newBookBalance),
           updatedAt: new Date(),
         })
-        .where(eq(accounts.id, account.id));
+        .where(eq(Accounts.id, account.id));
 
       // audit transaction record...
       const txn = await this.transactionRepo.create({
@@ -455,7 +455,7 @@ export class TransactionService {
 
       // post double-entry journal header...
       const [journal] = await tx
-        .insert(journalEntries)
+        .insert(JournalEntries)
         .values({
           id: uuidv7(),
           tenantId: tenantId!,
@@ -471,7 +471,7 @@ export class TransactionService {
         .returning();
 
       // build balanced double-entry gl lines...
-      const lines: Array<typeof journalEntryLines.$inferInsert> = [];
+      const lines: Array<typeof JournalEntryLines.$inferInsert> = [];
 
       if (isAccountToGl) {
         // debit deposit control gl...
@@ -519,7 +519,7 @@ export class TransactionService {
         });
       }
 
-      await tx.insert(journalEntryLines).values(lines);
+      await tx.insert(JournalEntryLines).values(lines);
     });
 
     return {

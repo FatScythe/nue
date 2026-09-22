@@ -11,25 +11,25 @@ import {
 
 import { LoanScheduleStatus } from '@database/drizzle/enums';
 
-import { accounts } from './account';
-import { businesses } from './business';
-import { users } from './user';
+import { Accounts } from './account';
+import { Businesses } from './business';
+import { Users } from './user';
 
 export const loanScheduleStatusEnum = pgEnum(
   'loan_schedule_status',
   Object.values(LoanScheduleStatus) as [string, ...string[]],
 );
 
-export const loanSchedules = pgTable(
+export const LoanSchedules = pgTable(
   'loan_schedules',
   {
     id: varchar('id', { length: 36 }).primaryKey(), // uuidv7()...
     accountId: varchar('account_id', { length: 36 })
-      .references(() => accounts.id, { onDelete: 'restrict' })
+      .references(() => Accounts.id, { onDelete: 'restrict' })
       .notNull(),
     tenantId: integer('tenant_id')
       .notNull()
-      .references(() => businesses.id, { onDelete: 'restrict' }),
+      .references(() => Businesses.id, { onDelete: 'restrict' }),
     installmentNumber: integer('installment_number').notNull(), // e.g., 1 of 12
     dueDate: timestamp('due_date', { withTimezone: true }).notNull(),
     principalAmount: bigint('principal_amount', { mode: 'bigint' }).notNull(),
@@ -61,7 +61,7 @@ export const loanSchedules = pgTable(
       .default(sql`0`)
       .notNull(),
     createdBy: varchar('created_by', { length: 36 }).references(
-      () => users.id,
+      () => Users.id,
       {
         onDelete: 'restrict',
       },

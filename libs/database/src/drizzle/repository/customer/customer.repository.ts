@@ -7,20 +7,20 @@ import { BaseRepository } from '@database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
 import { CustomerStatus, CustomerType } from '@database/drizzle/enums';
 import * as schema from '@database/drizzle/schemas';
-import { customers } from '@database/drizzle/schemas';
+import { Customers } from '@database/drizzle/schemas';
 
 @Injectable()
-export class CustomerRepository extends BaseRepository<typeof customers> {
+export class CustomerRepository extends BaseRepository<typeof Customers> {
   constructor(
     @Inject(DATABASE_CONNECTION)
     protected readonly db: NodePgDatabase<typeof schema>,
   ) {
-    super(db, customers);
+    super(db, Customers);
   }
 
   async transformAndValidate(
-    data: typeof customers.$inferInsert,
-  ): Promise<typeof customers.$inferInsert> {
+    data: typeof Customers.$inferInsert,
+  ): Promise<typeof Customers.$inferInsert> {
     const {
       type,
       firstName,
