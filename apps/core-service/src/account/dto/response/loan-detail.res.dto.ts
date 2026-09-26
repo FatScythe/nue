@@ -37,7 +37,7 @@ export class LoanDetailsRespDto {
 
   @ApiProperty()
   @Expose()
-  chargeValue: number;
+  chargeValue: string;
 
   @ApiProperty()
   @Expose()

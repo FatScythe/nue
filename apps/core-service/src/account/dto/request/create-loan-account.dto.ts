@@ -43,8 +43,7 @@ export class CreateLoanAccountDto {
     description: 'Principal amount in major currency (e.g. 50000.00)',
     example: '50000.00',
   })
-  @IsNumericString({ maxDecimalPlaces: 2 })
-  @Min(0)
+  @IsNumericString({ min: 0, maxDecimalPlaces: 2 })
   principalAmount: string;
 
   @ApiProperty({ description: 'Loan tenor in months or periods', example: 12 })
@@ -69,7 +68,7 @@ export class CreateLoanAccountDto {
     description: 'Processing fee in major currency',
     example: '500.0',
   })
-  @IsNumericString({ maxDecimalPlaces: 2 })
+  @IsNumericString({ min: 0, maxDecimalPlaces: 2 })
   @IsOptional()
   processingFee?: string;
 

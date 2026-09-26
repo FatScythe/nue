@@ -57,6 +57,8 @@ import { SavingsDetailsRespDto } from './dto/response/saving-detail.res.dto';
 
 @Injectable()
 export class AccountService {
+  private readonly DP = 2;
+
   constructor(
     private readonly accountRepo: AccountRepository,
     private readonly customerRepo: CustomerRepository,
@@ -213,7 +215,6 @@ export class AccountService {
       activationDate: dto.activationDate
         ? moment(dto.activationDate, DATE_FORMAT).toDate()
         : new Date(),
-      updatedAt: new Date(),
     });
 
     if (!updated) {
@@ -402,7 +403,7 @@ export class AccountService {
           tenor: dto.tenor,
           repaymentFrequency: dto.repaymentFrequency,
           interestRate: this.calculator.round(dto.interestRate),
-          status: LoanStatus.Active,
+          status: LoanStatus.Pending,
           chargeCalculationType: ChargeCalculationType.Fixed,
           chargeTime: ChargeTime.Upfront,
           chargeValue: processingFeeMinor,
@@ -485,8 +486,8 @@ export class AccountService {
     // convert balance to number for presentation...
     const formattedData = accountsList.map((acc) => ({
       ...acc,
-      balance: this.calculator.round(acc.balance),
-      bookBalance: this.calculator.round(acc.bookBalance),
+      balance: this.calculator.round(acc.balance, this.DP),
+      bookBalance: this.calculator.round(acc.bookBalance, this.DP),
     }));
 
     return plainToInstance(PaginatedAccountsRespDto, {
@@ -544,12 +545,18 @@ export class AccountService {
           repaymentStartDate,
           status,
           tenor,
-          principalAmount: this.calculator.round(rawLoan.principalAmount),
-          outstandingBalance: this.calculator.round(rawLoan.outstandingBalance),
-          chargeValue: this.calculator.toNumber(rawLoan.chargeValue),
+          principalAmount: this.calculator.round(
+            rawLoan.principalAmount,
+            this.DP,
+          ),
+          outstandingBalance: this.calculator.round(
+            rawLoan.outstandingBalance,
+            2,
+          ),
+          chargeValue: this.calculator.round(rawLoan.chargeValue, this.DP),
           chargeCalculationType: rawLoan.chargeCalculationType,
           chargeTime: rawLoan.chargeTime,
-          interestRate: Number(rawLoan.interestRate),
+          interestRate: this.calculator.toMajor(rawLoan.interestRate, this.DP),
           closedAt: closedAt || undefined,
           disbursedAt: disbursedAt || undefined,
         };
@@ -569,7 +576,7 @@ export class AccountService {
         accSavingsDetails = {
           ...rawSavings,
           targetAmount: rawSavings.targetAmount
-            ? this.calculator.round(rawSavings.targetAmount)
+            ? this.calculator.round(rawSavings.targetAmount, this.DP)
             : null,
           // interestRate: rawSavings.interestRate // TODO: Add this maybe?
           //   ? Number(rawSavings.interestRate)
@@ -580,8 +587,8 @@ export class AccountService {
 
     const result = {
       ...account,
-      balance: this.calculator.round(account.balance),
-      bookBalance: this.calculator.round(account.bookBalance),
+      balance: this.calculator.round(account.balance, this.DP),
+      bookBalance: this.calculator.round(account.bookBalance, this.DP),
       savingsDetails: accSavingsDetails,
       loanDetails: accLoanDetails,
     };
