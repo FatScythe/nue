@@ -46,6 +46,8 @@ import {
 
 @Injectable()
 export class LoanService {
+  private readonly DP = 2;
+
   constructor(
     private readonly accountService: AccountService,
     @Inject(DATABASE_CONNECTION)
@@ -97,6 +99,15 @@ export class LoanService {
       );
     }
 
+    const { principalAmount, outstandingBalance, chargeValue } = loanDetails;
+
+    const formattedLoanDetails = {
+      ...loanDetails,
+      principalAmount: this.calculator.round(principalAmount, this.DP),
+      outstandingBalance: this.calculator.round(outstandingBalance, this.DP),
+      chargeValue: this.calculator.round(chargeValue, this.DP),
+    };
+
     // check if loan is active or disbursed (persisted DB schedule exists)...
     if (
       [LoanStatus.Active, LoanStatus.Disbursed].includes(loanDetails.status)
@@ -115,6 +126,8 @@ export class LoanService {
 
       let runningBalance = this.calculator.round(loanDetails.principalAmount);
 
+      let totalInterest = '0';
+
       const formattedSchedules: RepaymentScheduleItemDto[] = schedules.map(
         (scheduleItem) => {
           // calculate remaining principal balance step-by-step...
@@ -127,22 +140,44 @@ export class LoanService {
             ? '0'
             : updatedBalance;
 
+          totalInterest = this.calculator.add(
+            totalInterest,
+            scheduleItem.interestAmount,
+          );
+
           return {
             id: scheduleItem.id,
             installmentNumber: scheduleItem.installmentNumber,
             dueDate: scheduleItem.dueDate,
             principalAmount: this.calculator.round(
               scheduleItem.principalAmount,
+              2,
             ),
-            interestAmount: this.calculator.round(scheduleItem.interestAmount),
+            interestAmount: this.calculator.round(
+              scheduleItem.interestAmount,
+              2,
+            ),
             totalInstallment: this.calculator.round(
               scheduleItem.totalInstallment,
+              2,
             ),
-            remainingBalance: runningBalance,
-            chargeAmount: this.calculator.round(scheduleItem.chargeAmount),
-            chargePaid: this.calculator.round(scheduleItem.chargePaid),
+            remainingBalance: this.calculator.round(runningBalance, this.DP),
+            chargeAmount: this.calculator.round(
+              scheduleItem.chargeAmount,
+              this.DP,
+            ),
+            chargePaid: this.calculator.round(scheduleItem.chargePaid, this.DP),
           };
         },
+      );
+
+      const totalRepayment = this.calculator.round(
+        this.calculator.add(principalAmount, totalInterest),
+        2,
+      );
+      const totalPrincipal = this.calculator.round(
+        loanDetails.principalAmount,
+        2,
       );
 
       return plainToInstance(SingleLoanRespDto, {
@@ -151,24 +186,52 @@ export class LoanService {
         accountName: accountData.accountName,
         customerId: accountData.customerId,
         status: accountData.status,
-        balance: this.calculator.round(accountData.balance),
-        bookBalance: this.calculator.round(accountData.bookBalance),
-        loanDetails,
+        balance: this.calculator.round(accountData.balance, this.DP),
+        bookBalance: this.calculator.round(accountData.bookBalance, this.DP),
+        loanDetails: formattedLoanDetails,
+        totalPrincipal,
+        totalInterest: this.calculator.round(totalInterest, this.DP),
+        totalRepayment,
         repaymentSchedule: formattedSchedules,
       });
     }
 
     // fallback to calculated preview schedule for pending/un-disbursed loans...
-    const repaymentCalculation = this.calculateLoanRepayment({
-      principalAmount: this.calculator.round(loanDetails.principalAmount),
-      interestRate: Number(loanDetails.interestRate),
-      tenor: loanDetails.tenor,
-      repaymentFrequency: loanDetails.repaymentFrequency,
-      repaymentStartDate: loanDetails.repaymentStartDate
-        ? moment(loanDetails.repaymentStartDate).format(DATE_FORMAT)
-        : undefined,
-      moratoriumType: loanDetails.moratoriumType,
-      moratoriumPeriod: loanDetails.moratoriumPeriod,
+    const { schedules, totalInterest, totalPrincipal, totalRepayment } =
+      this.calculateLoanRepayment({
+        principalAmount: this.calculator.round(loanDetails.principalAmount),
+        interestRate: Number(loanDetails.interestRate),
+        tenor: loanDetails.tenor,
+        repaymentFrequency: loanDetails.repaymentFrequency,
+        repaymentStartDate: loanDetails.repaymentStartDate
+          ? moment(loanDetails.repaymentStartDate).format(DATE_FORMAT)
+          : undefined,
+        moratoriumType: loanDetails.moratoriumType,
+        moratoriumPeriod: loanDetails.moratoriumPeriod,
+      });
+
+    const formattedSchedule = schedules.map((schedule) => {
+      const {
+        chargeAmount,
+        chargePaid,
+        dueDate,
+        installmentNumber,
+        interestAmount,
+        principalAmount,
+        remainingBalance,
+        totalInstallment,
+      } = schedule;
+
+      return {
+        installmentNumber,
+        dueDate,
+        principalAmount: this.calculator.round(principalAmount, this.DP),
+        interestAmount: this.calculator.round(interestAmount, this.DP),
+        totalInstallment: this.calculator.round(totalInstallment, this.DP),
+        remainingBalance: this.calculator.round(remainingBalance, this.DP),
+        chargeAmount: this.calculator.round(chargeAmount, this.DP),
+        chargePaid: this.calculator.round(chargePaid, this.DP),
+      };
     });
 
     return plainToInstance(SingleLoanRespDto, {
@@ -177,19 +240,58 @@ export class LoanService {
       accountName: accountData.accountName,
       customerId: accountData.customerId,
       status: accountData.status,
-      balance: this.calculator.round(accountData.balance),
-      bookBalance: this.calculator.round(accountData.bookBalance),
-      loanDetails,
-      repaymentSchedule: repaymentCalculation.schedule,
+      balance: this.calculator.round(accountData.balance, this.DP),
+      bookBalance: this.calculator.round(accountData.bookBalance, this.DP),
+      loanDetails: formattedLoanDetails,
+      totalPrincipal: this.calculator.round(totalPrincipal, this.DP),
+      totalInterest: this.calculator.round(totalInterest, this.DP),
+      totalRepayment: this.calculator.round(totalRepayment, this.DP),
+      repaymentSchedule: formattedSchedule,
+    });
+  }
+
+  getLoanSchedule(
+    dto: CalculateLoanRepaymentDto,
+  ): CalculateLoanRepaymentRespDto {
+    const { totalPrincipal, totalInterest, totalRepayment, schedules } =
+      this.calculateLoanRepayment(dto);
+
+    const formattedSchedule = schedules.map((schedule) => {
+      const {
+        chargeAmount,
+        chargePaid,
+        dueDate,
+        installmentNumber,
+        interestAmount,
+        principalAmount,
+        remainingBalance,
+        totalInstallment,
+      } = schedule;
+
+      return {
+        installmentNumber,
+        dueDate,
+        principalAmount: this.calculator.round(principalAmount, this.DP),
+        interestAmount: this.calculator.round(interestAmount, this.DP),
+        totalInstallment: this.calculator.round(totalInstallment, this.DP),
+        remainingBalance: this.calculator.round(remainingBalance, this.DP),
+        chargeAmount: this.calculator.round(chargeAmount, this.DP),
+        chargePaid: this.calculator.round(chargePaid, this.DP),
+      };
+    });
+
+    return plainToInstance(CalculateLoanRepaymentRespDto, {
+      totalPrincipal: this.calculator.round(totalPrincipal, this.DP),
+      totalInterest: this.calculator.round(totalInterest, this.DP),
+      totalRepayment: this.calculator.round(totalRepayment, this.DP),
+      schedules: formattedSchedule,
     });
   }
 
   /**
    * calculate loan amortization schedule (Reducing Balance / EMI method)...
    */
-  calculateLoanRepayment(
-    dto: CalculateLoanRepaymentDto,
-  ): CalculateLoanRepaymentRespDto {
+  calculateLoanRepayment(dto: CalculateLoanRepaymentDto) {
     const {
       principalAmount,
       interestRate,
@@ -237,7 +339,7 @@ export class LoanService {
 
     let balance = principalAmount;
     let totalInterest = '0';
-    const schedule: RepaymentScheduleItemDto[] = [];
+    const schedules: RepaymentScheduleItemDto[] = [];
     let currentDate = repaymentStartDate
       ? moment(repaymentStartDate, DATE_FORMAT)
       : moment();
@@ -266,7 +368,7 @@ export class LoanService {
 
       totalInterest = this.calculator.add(totalInterest, interestComponent);
 
-      schedule.push({
+      schedules.push({
         installmentNumber: i,
         dueDate: currentDate.toDate(),
         principalAmount: principalComponent,
@@ -285,16 +387,12 @@ export class LoanService {
 
     const totalRepayment = this.calculator.add(principalAmount, totalInterest);
 
-    return plainToInstance(
-      CalculateLoanRepaymentRespDto,
-      {
-        totalPrincipal: principalAmount,
-        totalInterest,
-        totalRepayment,
-        schedule,
-      },
-      { excludeExtraneousValues: true },
-    );
+    return {
+      totalPrincipal: principalAmount,
+      totalInterest,
+      totalRepayment,
+      schedules,
+    };
   }
 
   /**
@@ -336,17 +434,16 @@ export class LoanService {
 
     await this.db.transaction(async (tx) => {
       if (accountData.status === AccountStatus.Pending) {
-        await tx
-          .update(Accounts)
-          .set({
+        await this.accountRepo.update(
+          and(
+            eq(Accounts.id, accountId),
+            eq(Accounts.tenantId, user.tenantId!),
+          )!,
+          {
             status: AccountStatus.Active,
-          })
-          .where(
-            and(
-              eq(Accounts.id, accountId),
-              eq(Accounts.tenantId, user.tenantId!),
-            ),
-          );
+          },
+          tx,
+        );
       }
 
       await tx
@@ -358,7 +455,7 @@ export class LoanService {
         .where(eq(LoanDetails.accountId, accountId));
     });
 
-    return { message: 'loan application approved successfully', accountId };
+    return { message: 'loan application approved successfully' };
   }
 
   /**
@@ -406,7 +503,7 @@ export class LoanService {
         .where(eq(LoanDetails.accountId, accountId));
     });
 
-    return { message: 'loan application declined successfully', accountId };
+    return { message: 'loan application declined successfully' };
   }
 
   async undoApproval(accountId: string, user: CoreReqUser) {
@@ -642,7 +739,7 @@ export class LoanService {
     });
 
     // construct schedule records with minor unit conversions...
-    const scheduleRecords = repaymentCalculation.schedule.map((item) => ({
+    const scheduleRecords = repaymentCalculation.schedules.map((item) => ({
       id: uuidv7(),
       accountId,
       tenantId: tenantId!,
@@ -673,10 +770,8 @@ export class LoanService {
 
       const loanFeeAmount = loanDetails.chargeValue;
       const loanPrincipalAmount = loanDetails.principalAmount;
-      const principalMinor = BigInt(
-        this.calculator.toMinor(loanPrincipalAmount),
-      );
-      const feeMinor = BigInt(this.calculator.toMinor(loanFeeAmount || '0'));
+      const principalMinor = this.calculator.toMinor(loanPrincipalAmount);
+      const feeMinor = this.calculator.toMinor(loanFeeAmount || '0');
 
       const chargeIsUpfrontAndFixed =
         loanDetails.chargeTime === ChargeTime.Upfront &&
@@ -694,7 +789,9 @@ export class LoanService {
       }
 
       const netDisbursementMinor = isUpfrontFeeApplied
-        ? principalMinor - feeMinor
+        ? this.calculator.toMinor(
+            this.calculator.subtract(principalMinor, feeMinor),
+          )
         : principalMinor;
 
       // debit loanGl ---> credit disbursementGl ? credit disbursementAccount feeGl --> mark loan account balance as negative balance...
@@ -774,13 +871,14 @@ export class LoanService {
       await tx
         .update(Accounts)
         .set({
-          bookBalance: BigInt(
+          bookBalance: this.calculator.toMinor(
             this.calculator.add(
               disburseAccount.bookBalance,
               netDisbursementMinor,
             ),
           ),
-          balance: BigInt(
+
+          balance: this.calculator.toMinor(
             this.calculator.add(disburseAccount.balance, netDisbursementMinor),
           ),
           updatedAt: transactionAt,

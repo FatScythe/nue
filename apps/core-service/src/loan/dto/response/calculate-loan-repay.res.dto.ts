@@ -7,27 +7,27 @@ import { RepaymentScheduleItemDto } from './single-loan.res.dto';
 export class CalculateLoanRepaymentRespDto {
   @ApiProperty({
     description: 'Total principal amount borrowed',
-    example: 100000,
+    example: '100000',
   })
   @Expose()
-  totalPrincipal: number;
+  totalPrincipal: string;
 
   @ApiProperty({
     description: 'Total interest accrued over the tenor',
-    example: 12500,
+    example: '12500',
   })
   @Expose()
-  totalInterest: number;
+  totalInterest: string;
 
   @ApiProperty({
     description: 'Sum of principal and total interest',
-    example: 112500,
+    example: '112500',
   })
   @Expose()
-  totalRepayment: number;
+  totalRepayment: string;
 
   @ApiProperty({ type: [RepaymentScheduleItemDto] })
   @Expose()
   @Type(() => RepaymentScheduleItemDto)
-  schedule: RepaymentScheduleItemDto[];
+  schedules: RepaymentScheduleItemDto[];
 }

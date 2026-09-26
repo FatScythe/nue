@@ -63,7 +63,7 @@ export class LoanController {
   calculateLoanRepaymentSchedule(
     @Body() dto: CalculateLoanRepaymentDto,
   ): CalculateLoanRepaymentRespDto {
-    return this.loanService.calculateLoanRepayment(dto);
+    return this.loanService.getLoanSchedule(dto);
   }
 
   @Permissions('loan:read')
