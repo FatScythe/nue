@@ -58,24 +58,18 @@ export class AccountingService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'parent GL account not found',
+          { error_code: 'CGA002' },
         );
 
-      if (!parent.parentId)
+      if (parent.parentId)
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'parent GL account is a sub ledger',
-          { error_code: 'CGA002' },
+          { error_code: 'CGA003' },
         );
 
       parentGlId = parent.id;
     }
-
-    if (!parentGlId)
-      throw new ApiException(
-        ApiErrorCode.InternalServerError,
-        'unable to create general ledger',
-        { error_code: 'CGA003' },
-      );
 
     const normalBalance =
       dto.normalBalance ?? getDefaultNormalBalance(dto.category);
