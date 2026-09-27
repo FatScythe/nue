@@ -41,6 +41,17 @@ export class Calculator {
     return new Big(minorAmount).div(scale).toNumber();
   }
 
+  /**
+   * Converts a minor unit integer (e.g., kobo/cents from DB) to its major unit decimal string (e.g., Naira/USD).
+   * Returns a formatted string to prevent JavaScript floating-point precision loss and Safe Integer overflow on large values.
+   *
+   * @param minorAmount - The raw minor amount from the database (BigInt, string, or number)
+   * @param scale - Currency scale factor (default 100 for 2 decimal places)
+   */
+  toMajorStr(minorAmount: BigSource, dp = 2, scale = 100): string {
+    return new Big(minorAmount).div(scale).toFixed(dp || this.DEFAULT_DP);
+  }
+
   /** Adds two numbers. */
   add(num1: BigSource, num2: BigSource): string {
     const bigNum1 = new Big(num1);
