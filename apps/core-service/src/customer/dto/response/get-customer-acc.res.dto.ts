@@ -50,17 +50,17 @@ export class AccountResponseDto {
   @IsEnum(AccountType)
   type: AccountType | string;
 
-  @ApiProperty({ example: 980 })
+  @ApiProperty({ example: '980' })
   @Expose()
   @IsNotEmpty()
   @IsString()
-  bookBalance: number;
+  bookBalance: string;
 
-  @ApiProperty({ example: 790 })
+  @ApiProperty({ example: '790' })
   @Expose()
   @IsNotEmpty()
   @IsString()
-  balance: number;
+  balance: string;
 }
 
 export class GetCustomerWithAccountsResponseDto {

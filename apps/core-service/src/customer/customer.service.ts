@@ -48,13 +48,15 @@ import {
 
 @Injectable()
 export class CustomerService {
+  private readonly DP = 2;
+
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly customerRepo: CustomerRepository,
     private readonly generalLedgerRepo: GeneralLedgerRepository,
     private readonly accountService: AccountService,
-    private readonly calculator: Calculator,
+    private readonly calc: Calculator,
   ) {}
 
   async createCustomer(
@@ -420,8 +422,11 @@ export class CustomerService {
         const account = row.account?.id
           ? ({
               ...row.account,
-              balance: this.calculator.toNumber(row.account.balance),
-              bookBalance: this.calculator.toNumber(row.account.bookBalance),
+              balance: this.calc.toMajorStr(row.account.balance, this.DP),
+              bookBalance: this.calc.toMajorStr(
+                row.account.bookBalance,
+                this.DP,
+              ),
             } as AccountResponseDto)
           : null;
 
