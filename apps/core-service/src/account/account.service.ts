@@ -65,7 +65,7 @@ export class AccountService {
     private readonly generalLedgerRepo: GeneralLedgerRepository,
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
-    private readonly calculator: Calculator,
+    private readonly calc: Calculator,
   ) {}
 
   async createSavingsAccount(dto: CreateSavingsAccountDto, user: CoreReqUser) {
@@ -153,7 +153,7 @@ export class AccountService {
 
       // create savings details record...
       const targetAmountBigInt = dto.targetAmount
-        ? this.calculator.toMinor(dto.targetAmount)
+        ? this.calc.toMinor(dto.targetAmount)
         : null;
 
       await this.accountRepo.createSavingDetails(
@@ -236,10 +236,7 @@ export class AccountService {
     if (dto.processingFee && dto.principalAmount) {
       // ensure fee is strictly less than principal...
       if (
-        this.calculator.isGreaterThanOrEqual(
-          dto.processingFee,
-          dto.principalAmount,
-        )
+        this.calc.isGreaterThanOrEqual(dto.processingFee, dto.principalAmount)
       ) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
@@ -249,13 +246,13 @@ export class AccountService {
       }
 
       // cap fee at a maximum percentage (e.g., 10% of principal)...
-      const MAX_FEE_PERCENTAGE = 0.1; // 10%
-      const maxAllowedFee = this.calculator.multiply(
+      const MAX_FEE_PERCENTAGE = '0.1'; // 10%
+      const maxAllowedFee = this.calc.multiply(
         dto.principalAmount,
         MAX_FEE_PERCENTAGE,
       );
 
-      if (this.calculator.isGreaterThan(dto.processingFee, maxAllowedFee)) {
+      if (this.calc.isGreaterThan(dto.processingFee, maxAllowedFee)) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `processing fee cannot exceed 10% of the loan principal amount`,
@@ -388,10 +385,8 @@ export class AccountService {
         tx,
       );
 
-      const principalMinor = this.calculator.toMinor(dto.principalAmount);
-      const processingFeeMinor = this.calculator.toMinor(
-        dto.processingFee || 0,
-      );
+      const principalMinor = this.calc.toMinor(dto.principalAmount);
+      const processingFeeMinor = this.calc.toMinor(dto.processingFee || 0);
       await this.accountRepo.createLoanDetails(
         {
           accountId: createdAccount.accountId,
@@ -402,7 +397,7 @@ export class AccountService {
           outstandingBalance: principalMinor,
           tenor: dto.tenor,
           repaymentFrequency: dto.repaymentFrequency,
-          interestRate: this.calculator.round(dto.interestRate),
+          interestRate: this.calc.round(dto.interestRate, this.DP),
           status: LoanStatus.Pending,
           chargeCalculationType: ChargeCalculationType.Fixed,
           chargeTime: ChargeTime.Upfront,
@@ -486,8 +481,8 @@ export class AccountService {
     // convert balance to number for presentation...
     const formattedData = accountsList.map((acc) => ({
       ...acc,
-      balance: this.calculator.round(acc.balance, this.DP),
-      bookBalance: this.calculator.round(acc.bookBalance, this.DP),
+      balance: this.calc.toMajorStr(acc.balance, this.DP),
+      bookBalance: this.calc.toMajorStr(acc.bookBalance, this.DP),
     }));
 
     return plainToInstance(PaginatedAccountsRespDto, {
@@ -545,18 +540,18 @@ export class AccountService {
           repaymentStartDate,
           status,
           tenor,
-          principalAmount: this.calculator.round(
+          principalAmount: this.calc.toMajorStr(
             rawLoan.principalAmount,
             this.DP,
           ),
-          outstandingBalance: this.calculator.round(
+          outstandingBalance: this.calc.toMajorStr(
             rawLoan.outstandingBalance,
             2,
           ),
-          chargeValue: this.calculator.round(rawLoan.chargeValue, this.DP),
+          chargeValue: this.calc.toMajorStr(rawLoan.chargeValue, this.DP),
           chargeCalculationType: rawLoan.chargeCalculationType,
           chargeTime: rawLoan.chargeTime,
-          interestRate: this.calculator.toMajor(rawLoan.interestRate, this.DP),
+          interestRate: this.calc.toMajor(rawLoan.interestRate, this.DP),
           closedAt: closedAt || undefined,
           disbursedAt: disbursedAt || undefined,
         };
@@ -576,7 +571,7 @@ export class AccountService {
         accSavingsDetails = {
           ...rawSavings,
           targetAmount: rawSavings.targetAmount
-            ? this.calculator.round(rawSavings.targetAmount, this.DP)
+            ? this.calc.toMajorStr(rawSavings.targetAmount, this.DP)
             : null,
           // interestRate: rawSavings.interestRate // TODO: Add this maybe?
           //   ? Number(rawSavings.interestRate)
@@ -587,8 +582,8 @@ export class AccountService {
 
     const result = {
       ...account,
-      balance: this.calculator.round(account.balance, this.DP),
-      bookBalance: this.calculator.round(account.bookBalance, this.DP),
+      balance: this.calc.toMajorStr(account.balance, this.DP),
+      bookBalance: this.calc.toMajorStr(account.bookBalance, this.DP),
       savingsDetails: accSavingsDetails,
       loanDetails: accLoanDetails,
     };
@@ -627,7 +622,7 @@ export class AccountService {
       dbClient,
     );
 
-    const balance = this.calculator.toMinor(data.openingBalance || 0);
+    const balance = this.calc.toMinor(data.openingBalance || 0);
 
     const createdAt = data.createdAt || new Date();
     // insert into db via repository layer...
