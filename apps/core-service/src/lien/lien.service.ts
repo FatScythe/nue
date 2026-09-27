@@ -29,7 +29,7 @@ export class LienService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly lienRepo: LienRepository,
-    private readonly calculator: Calculator,
+    private readonly calc: Calculator,
     private readonly backgroundProcess: BackgroundProcess,
   ) {}
 
@@ -93,11 +93,13 @@ export class LienService {
       }
 
       // convert incoming DTO amount (major units, e.g. "100.50") to minor units (bigint)...
-      const lienAmountMinor = this.calculator.toMinor(dto.amount);
+      const lienAmount = this.calc.round(dto.amount);
 
       // check available balance...
-      const isInsufficientBalance =
-        this.calculator.compare(account.balance, lienAmountMinor) === -1;
+      const isInsufficientBalance = this.calc.isLessThan(
+        this.calc.toMajor(account.balance),
+        this.calc.toMajor(lienAmount),
+      );
 
       if (isInsufficientBalance) {
         throw new ApiException(
@@ -110,15 +112,15 @@ export class LienService {
       }
 
       // deduct lien amount ONLY from available balance (bookBalance stays untouched)...
-      const newAvailableBalance = this.calculator.subtract(
-        account.balance,
-        lienAmountMinor,
+      const newAvailableBalance = this.calc.subtract(
+        this.calc.toMajor(account.balance),
+        this.calc.toMajor(lienAmount),
       );
 
       await tx
         .update(Accounts)
         .set({
-          balance: BigInt(newAvailableBalance),
+          balance: this.calc.toMinor(newAvailableBalance),
           updatedAt: new Date(),
         })
         .where(
@@ -130,7 +132,7 @@ export class LienService {
           id: uuidv7(),
           tenantId: tenantId!,
           accountId: account.id,
-          amount: lienAmountMinor,
+          amount: this.calc.toMinor(lienAmount),
           reason: dto.reason,
           reference: dto.reference,
           status: LienStatus.Active,
@@ -189,6 +191,7 @@ export class LienService {
   async releaseLien(lienId: string, user: CoreReqUser) {
     const { tenantId } = user;
 
+    const transactionAt = new Date();
     await this.db.transaction(async (tx) => {
       // lock and fetch lien record within transaction...
       const [lien] = await tx
@@ -245,10 +248,18 @@ export class LienService {
       }
 
       // restore available balance
-      const restoredBalance = this.calculator.add(account.balance, lien.amount);
+      const restoredBalance = this.calc.add(
+        this.calc.toMajor(account.balance),
+        this.calc.toMajor(lien.amount),
+      );
 
       // invariant validation: available balance cannot exceed book balance...
-      if (this.calculator.compare(restoredBalance, account.bookBalance) === 1) {
+      if (
+        this.calc.isGreaterThan(
+          restoredBalance,
+          this.calc.toMajor(account.bookBalance),
+        )
+      ) {
         throw new ApiException(
           ApiErrorCode.InternalServerError,
           'releasing lien would cause available balance to exceed book balance',
@@ -261,8 +272,8 @@ export class LienService {
       await tx
         .update(Accounts)
         .set({
-          balance: BigInt(restoredBalance),
-          updatedAt: new Date(),
+          balance: this.calc.toMinor(restoredBalance),
+          updatedAt: transactionAt,
         })
         .where(
           and(eq(Accounts.id, account.id), eq(Accounts.tenantId, tenantId!)),
@@ -273,7 +284,7 @@ export class LienService {
         .update(Liens)
         .set({
           status: targetStatus,
-          updatedAt: new Date(),
+          updatedAt: transactionAt,
         })
         .where(
           and(
