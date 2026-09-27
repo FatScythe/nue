@@ -1,16 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import {
-  IsNotEmpty,
-  IsNumberString,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Length,
-  ValidateIf,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
-import { isNumber, IsNumericString, IsValidReference } from '@common';
+import { IsNumericString, IsValidReference } from '@common';
 
 export class AccountToAccountTransferDto {
   @ApiProperty({
@@ -30,40 +22,24 @@ export class AccountToAccountTransferDto {
   receiverAccountId: string;
 
   @ApiProperty({
-    example: '0183',
-    description: 'Customer deposit liability Gl code',
-  })
-  @IsValidReference()
-  @Length(1, 10)
-  @IsNotEmpty()
-  depositGlCode: string;
-
-  @ApiProperty({
     example: '10000.00',
     description: 'Transfer amount in minor units',
   })
   @IsNumericString({
-    min: 0,
+    min: 1,
     maxDecimalPlaces: 2,
   })
   @IsNotEmpty()
   amount: string;
 
   @ApiPropertyOptional({
-    example: '0183',
-    description: 'Deposit Fee Gl code, must be available if fee is passed',
-  })
-  @ValidateIf((dto) => dto?.fee && isNumber(dto.fee))
-  @IsValidReference()
-  @Length(1, 10)
-  @IsOptional()
-  feeGlCode?: string;
-
-  @ApiPropertyOptional({
     example: '50.00',
     description: 'Transaction fee in minor units',
   })
-  @IsNumberString()
+  @IsNumericString({
+    min: 1,
+    maxDecimalPlaces: 2,
+  })
   @IsOptional()
   fee?: string;
 

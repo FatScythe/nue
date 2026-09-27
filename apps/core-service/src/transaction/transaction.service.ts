@@ -10,6 +10,8 @@ import { Calculator, DATE_FORMAT, isNumber, type CoreReqUser } from '@common';
 //libs...
 import {
   Accounts,
+  AccountStatus,
+  AccountType,
   Currency,
   DATABASE_CONNECTION,
   DBTransaction,
@@ -18,6 +20,8 @@ import {
   JournalEntries,
   JournalEntryLines,
   JournalEntryStatus,
+  LoanDetails,
+  SavingsDetails,
   TransactionCategory,
   TransactionRepository,
   Transactions,
@@ -55,12 +59,14 @@ interface TransferPayload {
 
 @Injectable()
 export class TransactionService {
+  private readonly DP = 2;
+
   constructor(
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly transactionRepo: TransactionRepository,
     private readonly generalLedgerRepo: GeneralLedgerRepository,
-    private readonly calculator: Calculator,
+    private readonly calc: Calculator,
   ) {}
 
   async postMultiLegTransfer(
@@ -297,14 +303,14 @@ export class TransactionService {
         }
       }
 
-      const debitTotal = this.calculator.addMany(
+      const debitTotal = this.calc.addMany(
         ...effectiveExtractedPayload.debitAmounts,
       );
-      const creditTotal = this.calculator.addMany(
+      const creditTotal = this.calc.addMany(
         ...effectiveExtractedPayload.creditAmounts,
       );
 
-      if (!this.calculator.isEqual(creditTotal, debitTotal))
+      if (!this.calc.isEqual(creditTotal, debitTotal))
         throw new Error(
           `total debits (${debitTotal}) must equal total credits (${creditTotal})`,
           errOpt,
@@ -419,10 +425,7 @@ export class TransactionService {
           );
 
           // validate debit leg account balance
-          if (
-            isDebitLeg &&
-            this.calculator.isLessThan(account.balance, amount)
-          ) {
+          if (isDebitLeg && this.calc.isLessThan(account.balance, amount)) {
             throw Error(
               `insufficient balance for debit account: ${account.id}, amount to be debitted: ${amount}, account balance: ${account.balance}`,
               errOpt,
@@ -431,15 +434,15 @@ export class TransactionService {
 
           accountUpdates.push({
             ...account,
-            balance: this.calculator.toMinor(
+            balance: this.calc.toMinor(
               isDebitLeg
-                ? this.calculator.subtract(account.balance, amount)
-                : this.calculator.add(account.balance, amount),
+                ? this.calc.subtract(account.balance, amount)
+                : this.calc.add(account.balance, amount),
             ),
-            bookBalance: this.calculator.toMinor(
+            bookBalance: this.calc.toMinor(
               isDebitLeg
-                ? this.calculator.subtract(account.bookBalance, amount)
-                : this.calculator.add(account.bookBalance, amount),
+                ? this.calc.subtract(account.bookBalance, amount)
+                : this.calc.add(account.bookBalance, amount),
             ),
             updatedAt: transactionAt,
           });
@@ -449,8 +452,8 @@ export class TransactionService {
             tenantId: tenantId,
             journalEntryId: journal.id,
             glAccountId: account.controlGlAccountId,
-            debit: this.calculator.toMinor(isDebitLeg ? amount : '0'),
-            credit: this.calculator.toMinor(isDebitLeg ? '0' : amount),
+            debit: this.calc.toMinor(isDebitLeg ? amount : '0'),
+            credit: this.calc.toMinor(isDebitLeg ? '0' : amount),
             description: payload.comments,
             createdAt: transactionAt,
           });
@@ -460,8 +463,8 @@ export class TransactionService {
             tenantId,
             senderAccountId: isDebitLeg ? account.id : null,
             receiverAccountId: isDebitLeg ? null : account.id,
-            amount: this.calculator.toMinor(amount),
-            fee: this.calculator.toMinor('0'),
+            amount: this.calc.toMinor(amount),
+            fee: this.calc.toMinor('0'),
             category: TransactionCategory.Transfer,
             status: TransactionStatus.Successful,
             reference: `${payload.referenceNumber}_${isDebitLeg ? 'DR' : 'CR'}_${account.id}`,
@@ -494,8 +497,8 @@ export class TransactionService {
             tenantId: tenantId,
             journalEntryId: journal.id,
             glAccountId: gl.id,
-            debit: this.calculator.toMinor(isDebitLeg ? amount : '0'),
-            credit: this.calculator.toMinor(isDebitLeg ? '0' : amount),
+            debit: this.calc.toMinor(isDebitLeg ? amount : '0'),
+            credit: this.calc.toMinor(isDebitLeg ? '0' : amount),
             description: payload.comments,
             createdAt: transactionAt,
           });
@@ -552,53 +555,13 @@ export class TransactionService {
       );
     }
 
-    const glCodes = [dto.depositGlCode, ...(dto?.feeGlCode || [])];
-
-    const genLedgers = await this.generalLedgerRepo.findAll({
-      where: and(
-        inArray(GeneralLedgers.code, glCodes),
-        eq(GeneralLedgers.tenantId, tenantId!),
-      ),
-      selectFn: (generalLedger) => ({
-        id: generalLedger.id,
-        code: generalLedger.code,
-      }),
-    });
-
-    const depositGlId = genLedgers.find(
-      (gl) => gl.code === dto.depositGlCode,
-    )?.id;
-
-    if (!depositGlId)
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        'invalid deposit general ledger',
-        {
-          error_code: 'TAA002',
-        },
-      );
-
-    let feeGlId;
-
-    if (dto.feeGlCode) {
-      feeGlId = genLedgers.find((gl) => gl.code === dto.feeGlCode)?.id;
-
-      if (!feeGlId)
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'invalid deposit fee ledger',
-          {
-            error_code: 'TAA003',
-          },
-        );
-    }
-
     let transactionId;
 
     await this.db.transaction(async (tx) => {
-      const transferAmount = this.calculator.toMinor(dto.amount);
-      const feeAmount = this.calculator.toMinor(dto.fee || 0);
-      const totalDeduction = this.calculator.add(transferAmount, feeAmount);
+      const transferAmount = this.calc.round(dto.amount, this.DP);
+      const feeAmount = this.calc.round(dto.fee || '0', this.DP);
+
+      const totalDeduction = this.calc.add(transferAmount, feeAmount);
 
       // lock accounts in lexicographical order by id to prevent deadlocks...
       const sortedAccountIds = [
@@ -627,93 +590,193 @@ export class TransactionService {
           ApiErrorCode.BadRequest,
           'sender account not found',
           {
-            error_code: 'TAA004',
+            error_code: 'TAA002',
           },
         );
       }
+
+      const isEligibleSender =
+        sender.status === AccountStatus.Active ||
+        sender.status === AccountStatus.PendingNoCredit;
+
+      if (!isEligibleSender) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `invalid sender account status: ${sender.status}`,
+          { error_code: 'TAA003' },
+        );
+      }
+
       if (!receiver) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'receiver account not found',
+          {
+            error_code: 'TAA004',
+          },
+        );
+      }
+
+      const isEligibleReceiver =
+        receiver.status === AccountStatus.Active ||
+        receiver.status === AccountStatus.PendingNoDebit;
+
+      if (!isEligibleReceiver) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `invalid receiver account status: ${receiver.status}`,
           {
             error_code: 'TAA005',
           },
         );
       }
 
-      const isInsufficientBalance =
-        this.calculator.compare(sender.balance, totalDeduction) === -1;
-
-      if (isInsufficientBalance) {
+      if (!sender.controlGlAccountId) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
-          'insufficient balance',
+          'sender account has no valid control gl',
           {
             error_code: 'TAA006',
           },
         );
       }
 
+      if (!receiver.controlGlAccountId) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          'receiver account has no valid control gl',
+          {
+            error_code: 'TAA007',
+          },
+        );
+      }
+
+      const senderDepositGlId = sender.controlGlAccountId;
+      const receiverDepositGlId = receiver.controlGlAccountId;
+
+      const isInsufficientBalance = this.calc.isGreaterThan(
+        totalDeduction,
+        this.calc.toMajor(sender.balance),
+      );
+
+      if (isInsufficientBalance) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          'insufficient sender account balance',
+          {
+            error_code: 'TAA008',
+          },
+        );
+      }
+
+      let feeGlId: string | null = null;
+
+      let accountDetails:
+        | typeof SavingsDetails.$inferSelect
+        | typeof LoanDetails.$inferSelect
+        | undefined = undefined;
+
+      if (this.calc.isGreaterThan(feeAmount, '0')) {
+        if (sender.type === AccountType.Savings) {
+          accountDetails = await tx.query.SavingsDetails.findFirst({
+            where: and(
+              eq(SavingsDetails.accountId, sender.id),
+              eq(SavingsDetails.tenantId, tenantId!),
+            ),
+          });
+        } else if (sender.type === AccountType.Loan) {
+          accountDetails = await tx.query.LoanDetails.findFirst({
+            where: and(
+              eq(LoanDetails.accountId, sender.id),
+              eq(LoanDetails.tenantId, tenantId!),
+            ),
+          });
+        } else {
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            `invalid sender account type: ${sender.type}`,
+            {
+              error_code: 'TAA009',
+            },
+          );
+        }
+
+        if (!accountDetails || !accountDetails.feeIncomeGlAccountId)
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            `invalid sender ${sender.type} account details`,
+            {
+              error_code: 'TAA010',
+            },
+          );
+
+        feeGlId = accountDetails.feeIncomeGlAccountId;
+      }
+
       // calculate and update sender balances...
-      const senderBalance = this.calculator.subtract(
-        sender.balance,
+      const senderBalance = this.calc.subtract(
+        this.calc.toMajor(sender.balance),
         totalDeduction,
       );
-      const senderBookBalance = this.calculator.subtract(
-        sender.bookBalance,
+
+      const senderBookBalance = this.calc.subtract(
+        this.calc.toMajor(sender.bookBalance),
         totalDeduction,
       );
 
       await tx
         .update(Accounts)
         .set({
-          balance: BigInt(senderBalance),
-          bookBalance: BigInt(senderBookBalance),
+          balance: this.calc.toMinor(senderBalance),
+          bookBalance: this.calc.toMinor(senderBookBalance),
           updatedAt: new Date(),
         })
         .where(eq(Accounts.id, sender.id));
 
       // calculate and update receiver balances...
-      const receiverBalance = this.calculator.add(
-        receiver.balance,
+      const receiverBalance = this.calc.add(
+        this.calc.toMajor(receiver.balance),
         transferAmount,
       );
-      const receiverBookBalance = this.calculator.add(
-        receiver.bookBalance,
+      const receiverBookBalance = this.calc.add(
+        this.calc.toMajor(receiver.bookBalance),
         transferAmount,
       );
 
       await tx
         .update(Accounts)
         .set({
-          balance: BigInt(receiverBalance),
-          bookBalance: BigInt(receiverBookBalance),
+          balance: this.calc.toMinor(receiverBalance),
+          bookBalance: this.calc.toMinor(receiverBookBalance),
           updatedAt: new Date(),
         })
         .where(eq(Accounts.id, receiver.id));
 
       // audit transaction record...
-      const txn = await this.transactionRepo.create({
-        id: uuidv7(),
-        tenantId: tenantId!,
-        senderAccountId: sender.id,
-        receiverAccountId: receiver.id,
-        amount: transferAmount,
-        fee: feeAmount,
-        category: TransactionCategory.Transfer,
-        status: TransactionStatus.Successful,
-        reference: dto.reference,
-        narration: dto.narration,
-        officeId: sender.officeId,
-        createdBy: userId,
-      });
+      const txn = await this.transactionRepo.create(
+        {
+          id: uuidv7(),
+          tenantId: tenantId!,
+          senderAccountId: sender.id,
+          receiverAccountId: receiver.id,
+          amount: this.calc.toMinor(transferAmount),
+          fee: this.calc.toMinor(feeAmount),
+          category: TransactionCategory.Transfer,
+          status: TransactionStatus.Successful,
+          reference: dto.reference,
+          narration: dto.narration,
+          officeId: sender.officeId,
+          createdBy: userId,
+        },
+        tx,
+      );
 
       if (!txn) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'unable to complete transfer',
           {
-            error_code: 'TAA007',
+            error_code: 'TAA011',
           },
         );
       }
@@ -742,21 +805,31 @@ export class TransactionService {
           id: uuidv7(),
           tenantId: tenantId!,
           journalEntryId: journal.id,
-          glAccountId: depositGlId,
-          debit: BigInt(transferAmount),
-          credit: BigInt(0),
-          description: `Debit Sender: ${sender.accountNumber} (Principal)`,
+          glAccountId: senderDepositGlId,
+          debit: this.calc.toMinor(transferAmount),
+          credit: BigInt('0'),
+          description: `Debit Sender: ${sender.accountNumber}`,
         },
-        ...(this.calculator.isGreaterThan(feeAmount, 0)
+        // add fee income gl dr/cr line if fee applies...
+        ...(this.calc.isGreaterThan(feeAmount, '0') && feeGlId
           ? [
               {
                 id: uuidv7(),
                 tenantId: tenantId!,
                 journalEntryId: journal.id,
-                glAccountId: depositGlId,
-                debit: BigInt(feeAmount),
-                credit: BigInt(0),
-                description: `Debit Sender Fee: ${sender.accountNumber} (Fee)`,
+                glAccountId: senderDepositGlId,
+                debit: this.calc.toMinor(feeAmount),
+                credit: BigInt('0'),
+                description: `Transfer fee charged to ${sender.accountNumber}`,
+              },
+              {
+                id: uuidv7(),
+                tenantId: tenantId!,
+                journalEntryId: journal.id,
+                glAccountId: feeGlId,
+                debit: BigInt('0'),
+                credit: this.calc.toMinor(feeAmount),
+                description: `Transfer fee charged to ${sender.accountNumber}`,
               },
             ]
           : []),
@@ -764,25 +837,12 @@ export class TransactionService {
           id: uuidv7(),
           tenantId: tenantId!,
           journalEntryId: journal.id,
-          glAccountId: depositGlId,
-          debit: BigInt(0),
-          credit: BigInt(transferAmount),
+          glAccountId: receiverDepositGlId,
+          debit: BigInt('0'),
+          credit: this.calc.toMinor(transferAmount),
           description: `Credit Receiver: ${receiver.accountNumber}`,
         },
       ];
-
-      // add fee income gl line if fee applies...
-      if (this.calculator.isGreaterThan(feeAmount, 0) && feeGlId) {
-        lines.push({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: feeGlId,
-          debit: BigInt(0),
-          credit: BigInt(feeAmount),
-          description: `Transfer fee charged to ${sender.accountNumber}`,
-        });
-      }
 
       await tx.insert(JournalEntryLines).values(lines);
 
@@ -793,7 +853,7 @@ export class TransactionService {
           ApiErrorCode.InternalServerError,
           'unable to complete transfer',
           {
-            error_code: 'TAA008',
+            error_code: 'TAA012',
           },
         );
     });
@@ -864,7 +924,7 @@ export class TransactionService {
     let transactionId;
 
     await this.db.transaction(async (tx) => {
-      const transferAmount = this.calculator.toMinor(dto.amount);
+      const transferAmount = this.calc.toMinor(dto.amount);
       const isAccountToGl = dto.direction === TransferDirection.AccountToGl;
 
       // lock account to prevent race conditions...
@@ -884,7 +944,7 @@ export class TransactionService {
 
       if (isAccountToGl) {
         const isInsufficientBalance =
-          this.calculator.compare(account.balance, transferAmount) === -1;
+          this.calc.compare(account.balance, transferAmount) === -1;
 
         if (isInsufficientBalance) {
           throw new ApiException(
@@ -899,12 +959,12 @@ export class TransactionService {
 
       // update customer account balances...
       const newBalance = isAccountToGl
-        ? this.calculator.subtract(account.balance, transferAmount)
-        : this.calculator.add(account.balance, transferAmount);
+        ? this.calc.subtract(account.balance, transferAmount)
+        : this.calc.add(account.balance, transferAmount);
 
       const newBookBalance = isAccountToGl
-        ? this.calculator.subtract(account.bookBalance, transferAmount)
-        : this.calculator.add(account.bookBalance, transferAmount);
+        ? this.calc.subtract(account.bookBalance, transferAmount)
+        : this.calc.add(account.bookBalance, transferAmount);
 
       await tx
         .update(Accounts)
