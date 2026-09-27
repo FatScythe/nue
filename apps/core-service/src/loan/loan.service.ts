@@ -53,7 +53,7 @@ export class LoanService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly accountRepo: AccountRepository,
-    private readonly calculator: Calculator,
+    private readonly calc: Calculator,
   ) {}
 
   async createLoanAccount(dto: CreateLoanAccountDto, user: CoreReqUser) {
@@ -103,9 +103,9 @@ export class LoanService {
 
     const formattedLoanDetails = {
       ...loanDetails,
-      principalAmount: this.calculator.round(principalAmount, this.DP),
-      outstandingBalance: this.calculator.round(outstandingBalance, this.DP),
-      chargeValue: this.calculator.round(chargeValue, this.DP),
+      principalAmount: this.calc.toMajorStr(principalAmount, this.DP),
+      outstandingBalance: this.calc.toMajorStr(outstandingBalance, this.DP),
+      chargeValue: this.calc.toMajorStr(chargeValue, this.DP),
     };
 
     // check if loan is active or disbursed (persisted DB schedule exists)...
@@ -124,59 +124,59 @@ export class LoanService {
         )
         .orderBy(asc(LoanSchedules.installmentNumber));
 
-      let runningBalance = this.calculator.round(loanDetails.principalAmount);
+      let runningBalance = this.calc.round(principalAmount);
 
       let totalInterest = '0';
 
       const formattedSchedules: RepaymentScheduleItemDto[] = schedules.map(
         (scheduleItem) => {
           // calculate remaining principal balance step-by-step...
-          const principalVal = scheduleItem.principalAmount;
-          const updatedBalance = this.calculator.subtract(
+          const principalVal = this.calc.toMajor(scheduleItem.principalAmount);
+          const updatedBalance = this.calc.subtract(
             runningBalance,
             principalVal,
           );
-          runningBalance = this.calculator.isLessThan(updatedBalance, 0)
+          runningBalance = this.calc.isLessThan(updatedBalance, '0')
             ? '0'
             : updatedBalance;
 
-          totalInterest = this.calculator.add(
+          totalInterest = this.calc.add(
             totalInterest,
-            scheduleItem.interestAmount,
+            this.calc.toMajor(scheduleItem.interestAmount),
           );
 
           return {
             id: scheduleItem.id,
             installmentNumber: scheduleItem.installmentNumber,
             dueDate: scheduleItem.dueDate,
-            principalAmount: this.calculator.round(
+            principalAmount: this.calc.toMajorStr(
               scheduleItem.principalAmount,
               2,
             ),
-            interestAmount: this.calculator.round(
+            interestAmount: this.calc.toMajorStr(
               scheduleItem.interestAmount,
               2,
             ),
-            totalInstallment: this.calculator.round(
+            totalInstallment: this.calc.toMajorStr(
               scheduleItem.totalInstallment,
               2,
             ),
-            remainingBalance: this.calculator.round(runningBalance, this.DP),
-            chargeAmount: this.calculator.round(
+            remainingBalance: this.calc.toMajorStr(runningBalance, this.DP),
+            chargeAmount: this.calc.toMajorStr(
               scheduleItem.chargeAmount,
               this.DP,
             ),
-            chargePaid: this.calculator.round(scheduleItem.chargePaid, this.DP),
+            chargePaid: this.calc.toMajorStr(scheduleItem.chargePaid, this.DP),
           };
         },
       );
 
-      const totalRepayment = this.calculator.round(
-        this.calculator.add(principalAmount, totalInterest),
+      const totalRepayment = this.calc.toMajorStr(
+        this.calc.add(this.calc.toMajor(principalAmount), totalInterest),
         2,
       );
-      const totalPrincipal = this.calculator.round(
-        loanDetails.principalAmount,
+      const totalPrincipal = this.calc.toMajorStr(
+        this.calc.toMajor(principalAmount),
         2,
       );
 
@@ -186,11 +186,11 @@ export class LoanService {
         accountName: accountData.accountName,
         customerId: accountData.customerId,
         status: accountData.status,
-        balance: this.calculator.round(accountData.balance, this.DP),
-        bookBalance: this.calculator.round(accountData.bookBalance, this.DP),
+        balance: this.calc.toMajorStr(accountData.balance, this.DP),
+        bookBalance: this.calc.toMajorStr(accountData.bookBalance, this.DP),
         loanDetails: formattedLoanDetails,
         totalPrincipal,
-        totalInterest: this.calculator.round(totalInterest, this.DP),
+        totalInterest: this.calc.toMajorStr(totalInterest, this.DP),
         totalRepayment,
         repaymentSchedule: formattedSchedules,
       });
@@ -199,7 +199,7 @@ export class LoanService {
     // fallback to calculated preview schedule for pending/un-disbursed loans...
     const { schedules, totalInterest, totalPrincipal, totalRepayment } =
       this.calculateLoanRepayment({
-        principalAmount: this.calculator.round(loanDetails.principalAmount),
+        principalAmount: this.calc.round(principalAmount),
         interestRate: Number(loanDetails.interestRate),
         tenor: loanDetails.tenor,
         repaymentFrequency: loanDetails.repaymentFrequency,
@@ -225,12 +225,12 @@ export class LoanService {
       return {
         installmentNumber,
         dueDate,
-        principalAmount: this.calculator.round(principalAmount, this.DP),
-        interestAmount: this.calculator.round(interestAmount, this.DP),
-        totalInstallment: this.calculator.round(totalInstallment, this.DP),
-        remainingBalance: this.calculator.round(remainingBalance, this.DP),
-        chargeAmount: this.calculator.round(chargeAmount, this.DP),
-        chargePaid: this.calculator.round(chargePaid, this.DP),
+        principalAmount: this.calc.toMajorStr(principalAmount, this.DP),
+        interestAmount: this.calc.toMajorStr(interestAmount, this.DP),
+        totalInstallment: this.calc.toMajorStr(totalInstallment, this.DP),
+        remainingBalance: this.calc.toMajorStr(remainingBalance, this.DP),
+        chargeAmount: this.calc.toMajorStr(chargeAmount, this.DP),
+        chargePaid: this.calc.toMajorStr(chargePaid, this.DP),
       };
     });
 
@@ -240,12 +240,12 @@ export class LoanService {
       accountName: accountData.accountName,
       customerId: accountData.customerId,
       status: accountData.status,
-      balance: this.calculator.round(accountData.balance, this.DP),
-      bookBalance: this.calculator.round(accountData.bookBalance, this.DP),
+      balance: this.calc.toMajorStr(accountData.balance, this.DP),
+      bookBalance: this.calc.toMajorStr(accountData.bookBalance, this.DP),
       loanDetails: formattedLoanDetails,
-      totalPrincipal: this.calculator.round(totalPrincipal, this.DP),
-      totalInterest: this.calculator.round(totalInterest, this.DP),
-      totalRepayment: this.calculator.round(totalRepayment, this.DP),
+      totalPrincipal: this.calc.toMajorStr(totalPrincipal, this.DP),
+      totalInterest: this.calc.toMajorStr(totalInterest, this.DP),
+      totalRepayment: this.calc.toMajorStr(totalRepayment, this.DP),
       repaymentSchedule: formattedSchedule,
     });
   }
@@ -271,19 +271,19 @@ export class LoanService {
       return {
         installmentNumber,
         dueDate,
-        principalAmount: this.calculator.round(principalAmount, this.DP),
-        interestAmount: this.calculator.round(interestAmount, this.DP),
-        totalInstallment: this.calculator.round(totalInstallment, this.DP),
-        remainingBalance: this.calculator.round(remainingBalance, this.DP),
-        chargeAmount: this.calculator.round(chargeAmount, this.DP),
-        chargePaid: this.calculator.round(chargePaid, this.DP),
+        principalAmount: this.calc.toMajorStr(principalAmount, this.DP),
+        interestAmount: this.calc.toMajorStr(interestAmount, this.DP),
+        totalInstallment: this.calc.toMajorStr(totalInstallment, this.DP),
+        remainingBalance: this.calc.toMajorStr(remainingBalance, this.DP),
+        chargeAmount: this.calc.toMajorStr(chargeAmount, this.DP),
+        chargePaid: this.calc.toMajorStr(chargePaid, this.DP),
       };
     });
 
     return plainToInstance(CalculateLoanRepaymentRespDto, {
-      totalPrincipal: this.calculator.round(totalPrincipal, this.DP),
-      totalInterest: this.calculator.round(totalInterest, this.DP),
-      totalRepayment: this.calculator.round(totalRepayment, this.DP),
+      totalPrincipal: this.calc.toMajorStr(totalPrincipal, this.DP),
+      totalInterest: this.calc.toMajorStr(totalInterest, this.DP),
+      totalRepayment: this.calc.toMajorStr(totalRepayment, this.DP),
       schedules: formattedSchedule,
     });
   }
@@ -302,15 +302,15 @@ export class LoanService {
     } = dto;
 
     const periodsPerYear = this.getPeriodsPerYear(repaymentFrequency);
-    const periodicRate = this.calculator.divideMany(
+    const periodicRate = this.calc.divideMany(
       interestRate,
       100,
       periodsPerYear,
     );
 
-    const activeTenor = this.calculator.subtract(tenor, moratoriumPeriod);
+    const activeTenor = this.calc.subtract(tenor, moratoriumPeriod);
 
-    if (this.calculator.isLessThanOrEqual(activeTenor, 0)) {
+    if (this.calc.isLessThanOrEqual(activeTenor, 0)) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'tenor must be greater than moratorium period',
@@ -321,20 +321,20 @@ export class LoanService {
     // EMI Formula: P * r * (1 + r)^n / ((1 + r)^n - 1)
     let emi: string;
 
-    if (this.calculator.isEqual(periodicRate, 0)) {
-      emi = this.calculator.divide(principalAmount, activeTenor);
+    if (this.calc.isEqual(periodicRate, 0)) {
+      emi = this.calc.divide(principalAmount, activeTenor);
     } else {
-      const onePlusR = this.calculator.add(1, periodicRate);
-      const ratePow = this.calculator.pow(onePlusR, activeTenor);
+      const onePlusR = this.calc.add(1, periodicRate);
+      const ratePow = this.calc.pow(onePlusR, activeTenor);
 
-      const numerator = this.calculator.multiplyMany(
+      const numerator = this.calc.multiplyMany(
         principalAmount,
         periodicRate,
         ratePow,
       );
-      const denominator = this.calculator.subtract(ratePow, 1);
+      const denominator = this.calc.subtract(ratePow, 1);
 
-      emi = this.calculator.divide(numerator, denominator);
+      emi = this.calc.divide(numerator, denominator);
     }
 
     let balance = principalAmount;
@@ -346,7 +346,7 @@ export class LoanService {
 
     for (let i = 1; i <= tenor; i++) {
       const isMoratorium = i <= moratoriumPeriod;
-      const interestComponent = this.calculator.multiply(balance, periodicRate);
+      const interestComponent = this.calc.multiply(balance, periodicRate);
       let principalComponent = '0';
       let installmentAmount = '0';
 
@@ -354,19 +354,16 @@ export class LoanService {
         installmentAmount = interestComponent;
       } else {
         installmentAmount = emi;
-        principalComponent = this.calculator.subtract(
+        principalComponent = this.calc.subtract(
           installmentAmount,
           interestComponent,
         );
 
-        const newBalance = this.calculator.subtract(
-          balance,
-          principalComponent,
-        );
-        balance = this.calculator.isLessThan(newBalance, 0) ? '0' : newBalance;
+        const newBalance = this.calc.subtract(balance, principalComponent);
+        balance = this.calc.isLessThan(newBalance, 0) ? '0' : newBalance;
       }
 
-      totalInterest = this.calculator.add(totalInterest, interestComponent);
+      totalInterest = this.calc.add(totalInterest, interestComponent);
 
       schedules.push({
         installmentNumber: i,
@@ -385,7 +382,7 @@ export class LoanService {
       );
     }
 
-    const totalRepayment = this.calculator.add(principalAmount, totalInterest);
+    const totalRepayment = this.calc.add(principalAmount, totalInterest);
 
     return {
       totalPrincipal: principalAmount,
@@ -591,6 +588,15 @@ export class LoanService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'invalid loan account',
+        { error_code: 'DBL001' },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (accountData.status !== AccountStatus.Active) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        `invalid loan account status: ${accountData.status}`,
         { error_code: 'DBL002' },
         HttpStatus.NOT_FOUND,
       );
@@ -614,7 +620,7 @@ export class LoanService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'disbursement and repayment account must be provided or linked to the loan',
-        { error_code: 'DBL007' },
+        { error_code: 'DBL004' },
       );
     }
 
@@ -626,7 +632,7 @@ export class LoanService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'disbursement and repayment account cannot be the same as loan account',
-        { error_code: 'DBL001' },
+        { error_code: 'DBL005' },
       );
     }
 
@@ -655,7 +661,7 @@ export class LoanService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'one or more linked accounts were not found',
-        { error_code: 'DBL004' },
+        { error_code: 'DBL006' },
       );
     }
 
@@ -665,7 +671,7 @@ export class LoanService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `account ${targetAcc.id} does not belong to the loan customer`,
-          { error_code: 'DBL005' },
+          { error_code: 'DBL007' },
         );
       }
 
@@ -673,21 +679,46 @@ export class LoanService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `account ${targetAcc.id} is a loan account and cannot be used for disbursement or repayment`,
-          { error_code: 'DBL006' },
+          { error_code: 'DBL008' },
         );
       }
 
-      if (targetAcc.id === effectiveDisbursementAccountId)
+      if (targetAcc.id === effectiveDisbursementAccountId) {
+        const isEligbleAccount =
+          targetAcc.status === AccountStatus.Active ||
+          targetAcc.status === AccountStatus.PendingNoCredit;
+
+        if (!isEligbleAccount) {
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            `invalid disbursement account status: ${targetAcc.status}`,
+            { error_code: 'DBL009' },
+          );
+        }
         disbursementAccount = targetAcc;
-      if (targetAcc.id === effectiveRepaymentAccountId)
+      }
+
+      if (targetAcc.id === effectiveRepaymentAccountId) {
+        const isEligbleAccount =
+          targetAcc.status === AccountStatus.Active ||
+          targetAcc.status === AccountStatus.PendingNoDebit;
+
+        if (!isEligbleAccount) {
+          throw new ApiException(
+            ApiErrorCode.BadRequest,
+            `invalid repayment account status: ${targetAcc.status}`,
+            { error_code: 'DBL010' },
+          );
+        }
         repaymentAccount = targetAcc;
+      }
     }
 
     if (!disbursementAccount || !repaymentAccount) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         `invalid linked accounts provided`,
-        { error_code: 'DBL007' },
+        { error_code: 'DBL011' },
       );
     }
 
@@ -712,7 +743,7 @@ export class LoanService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `invalid fee gl code ${feeGlCode}`,
-          { error_code: 'DBL009' },
+          { error_code: 'DBL012' },
         );
       }
 
@@ -727,13 +758,11 @@ export class LoanService {
 
     // calculate amortization schedule...
     const repaymentCalculation = this.calculateLoanRepayment({
-      principalAmount: this.calculator.round(loanDetails.principalAmount),
+      principalAmount: this.calc.round(loanDetails.principalAmount),
       interestRate: Number(loanDetails.interestRate),
       tenor: loanDetails.tenor,
       repaymentFrequency: loanDetails.repaymentFrequency,
-      repaymentStartDate: moment(loanDetails.repaymentStartDate).format(
-        DATE_FORMAT,
-      ),
+      repaymentStartDate: moment(disbursedAt).format(DATE_FORMAT),
       moratoriumType: loanDetails.moratoriumType,
       moratoriumPeriod: loanDetails.moratoriumPeriod,
     });
@@ -745,13 +774,13 @@ export class LoanService {
       tenantId: tenantId!,
       installmentNumber: item.installmentNumber,
       dueDate: item.dueDate,
-      principalAmount: this.calculator.toMinor(item.principalAmount),
-      interestAmount: this.calculator.toMinor(item.interestAmount),
-      totalInstallment: this.calculator.toMinor(item.totalInstallment),
-      principalPaid: BigInt(0),
-      interestPaid: BigInt(0),
-      totalPaid: BigInt(0),
-      penaltyAccrued: BigInt(0),
+      principalAmount: this.calc.toMinor(item.principalAmount),
+      interestAmount: this.calc.toMinor(item.interestAmount),
+      totalInstallment: this.calc.toMinor(item.totalInstallment),
+      principalPaid: BigInt('0'),
+      interestPaid: BigInt('0'),
+      totalPaid: BigInt('0'),
+      penaltyAccrued: BigInt('0'),
       status: LoanScheduleStatus.Scheduled,
       createdBy: user.id,
       createdAt: transactionAt,
@@ -765,37 +794,71 @@ export class LoanService {
         .where(eq(Accounts.id, effectiveDisbursementAccountId))
         .for('update');
 
+      // lock the account loan_detail...
+      const [accountLoanDetail] = await tx
+        .select()
+        .from(LoanDetails)
+        .where(eq(LoanDetails.accountId, accountId))
+        .for('update');
+
+      if (!accountLoanDetail)
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `invalid acccount loan details`,
+          { error_code: 'DBL013' },
+        );
+
+      if (accountLoanDetail.status !== LoanStatus.Approved)
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `invalid loan status: ${accountLoanDetail.status}`,
+          { error_code: 'DBL014' },
+        );
+
       const loanGlId = accountData.controlGlAccountId;
       const depositGlId = disburseAccount.controlGlAccountId;
 
       const loanFeeAmount = loanDetails.chargeValue;
       const loanPrincipalAmount = loanDetails.principalAmount;
-      const principalMinor = this.calculator.toMinor(loanPrincipalAmount);
-      const feeMinor = this.calculator.toMinor(loanFeeAmount || '0');
+      const principal = this.calc.toMajor(loanPrincipalAmount);
+      const fee = this.calc.toMajor(loanFeeAmount || '0');
 
       const chargeIsUpfrontAndFixed =
         loanDetails.chargeTime === ChargeTime.Upfront &&
         loanDetails.chargeCalculationType === ChargeCalculationType.Fixed;
 
       const isUpfrontFeeApplied =
-        chargeIsUpfrontAndFixed && feeMinor > BigInt(0);
+        chargeIsUpfrontAndFixed && this.calc.isGreaterThan(fee, '0');
+
+      if (!loanGlId) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `invalid loan account gl`,
+          { error_code: 'DBL015' },
+        );
+      }
+
+      if (!depositGlId) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `invalid disbursement account gl`,
+          { error_code: 'DBL016' },
+        );
+      }
 
       if (isUpfrontFeeApplied && !feeGlId) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `fee gl code is required for upfront fee disbursement`,
-          { error_code: 'DBL010' },
+          { error_code: 'DBL017' },
         );
       }
 
-      const netDisbursementMinor = isUpfrontFeeApplied
-        ? this.calculator.toMinor(
-            this.calculator.subtract(principalMinor, feeMinor),
-          )
-        : principalMinor;
+      const netDisbursement = isUpfrontFeeApplied
+        ? this.calc.subtract(principal, fee)
+        : principal;
 
       // debit loanGl ---> credit disbursementGl ? credit disbursementAccount feeGl --> mark loan account balance as negative balance...
-      const transactionGlCodes = Array.from;
       // audit disbursement account transaction record...
       const [txn] = await tx
         .insert(Transactions)
@@ -804,8 +867,8 @@ export class LoanService {
           tenantId: tenantId!,
           senderAccountId: null,
           receiverAccountId: effectiveDisbursementAccountId,
-          amount: netDisbursementMinor,
-          fee: feeMinor,
+          amount: this.calc.toMinor(netDisbursement),
+          fee: this.calc.toMinor(fee),
           category: TransactionCategory.Deposit,
           status: TransactionStatus.Successful,
           reference: `LOAN-${accountData.id}`,
@@ -837,8 +900,8 @@ export class LoanService {
           tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: loanGlId,
-          debit: principalMinor,
-          credit: BigInt(0),
+          debit: this.calc.toMinor(principal),
+          credit: BigInt('0'),
           description: `Debit Loan Gl: For loan account number ${accountData.accountNumber} (Principal)`,
         },
         {
@@ -846,8 +909,8 @@ export class LoanService {
           tenantId: tenantId!,
           journalEntryId: journal.id,
           glAccountId: depositGlId,
-          credit: netDisbursementMinor,
-          debit: BigInt(0),
+          credit: this.calc.toMinor(netDisbursement),
+          debit: BigInt('0'),
           description: `Credit Deposit Gl: For loan account number ${accountData.accountNumber} (Principal)`,
         },
         ...(isUpfrontFeeApplied && feeGlId
@@ -857,8 +920,8 @@ export class LoanService {
                 tenantId: tenantId!,
                 journalEntryId: journal.id,
                 glAccountId: feeGlId,
-                credit: feeMinor,
-                debit: BigInt(0),
+                credit: this.calc.toMinor(fee),
+                debit: BigInt('0'),
                 description: `Credit Fee Gl: For loan account number ${accountData.accountNumber} (Fee)`,
               },
             ]
@@ -867,20 +930,21 @@ export class LoanService {
 
       await tx.insert(JournalEntryLines).values(lines);
 
+      const disbursementAccountBalance = this.calc.add(
+        this.calc.toMajor(disburseAccount.balance),
+        netDisbursement,
+      );
+      const disbursementAccountBookBalance = this.calc.add(
+        this.calc.toMajor(disburseAccount.bookBalance),
+        netDisbursement,
+      );
+
       // update disbursement account balance...
       await tx
         .update(Accounts)
         .set({
-          bookBalance: this.calculator.toMinor(
-            this.calculator.add(
-              disburseAccount.bookBalance,
-              netDisbursementMinor,
-            ),
-          ),
-
-          balance: this.calculator.toMinor(
-            this.calculator.add(disburseAccount.balance, netDisbursementMinor),
-          ),
+          balance: this.calc.toMinor(disbursementAccountBalance),
+          bookBalance: this.calc.toMinor(disbursementAccountBookBalance),
           updatedAt: transactionAt,
         })
         .where(eq(Accounts.id, disburseAccount.id));
@@ -902,8 +966,8 @@ export class LoanService {
         .update(Accounts)
         .set({
           status: AccountStatus.Active,
-          balance: -principalMinor,
-          bookBalance: -principalMinor,
+          balance: this.calc.toMinor(this.calc.multiply(principal, '-1')),
+          bookBalance: this.calc.toMinor(this.calc.multiply(principal, '-1')),
           updatedAt: transactionAt,
         })
         .where(eq(Accounts.id, accountId));
