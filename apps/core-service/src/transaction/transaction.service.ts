@@ -50,6 +50,7 @@ interface TransferPayload {
   customerAccounts: Extract<TransactionPayload, { accountId: string }>[];
   debits: TransactionPayload[];
   officeId: number;
+  fee?: { glId: string; amount: string };
   operationType: 'credit' | 'debit';
   referenceNumber: string; // this will append a suffix...
   uniqueReferenceKey: string;
@@ -196,7 +197,7 @@ export class TransactionService {
 
       const checkAmount = (
         amount: string,
-        payloadKey: 'credits' | 'debits' | 'customerAccounts',
+        payloadKey: 'credits' | 'debits' | 'customerAccounts' | 'fee',
       ) => {
         if (!isNumber(amount) || Number(amount) <= 0) {
           throw new Error(
@@ -319,6 +320,20 @@ export class TransactionService {
           errOpt,
         );
 
+      const feeAmount = payload.fee?.amount ? payload.fee.amount.trim() : '0';
+
+      if (payload.fee) {
+        checkAmount(feeAmount, 'fee');
+
+        const feeGlId = payload.fee.glId?.trim();
+        if (!feeGlId) {
+          throw new Error('invalid fee GL ID', errOpt);
+        }
+
+        // include fee GL so it gets locked & validated in fetchedGls...
+        effectiveExtractedPayload.creditAccountGlIds.add(feeGlId);
+      }
+
       // all acct ids sorted for db lock...
       const sortedAccountIds = [
         ...effectiveExtractedPayload.debitAccountIds,
@@ -400,12 +415,23 @@ export class TransactionService {
           );
         }
 
+        // fee adds 1 GL ID to fetchedGls, so expect 1 GL when fee is present...
+        const expectedGlCount = payload.fee ? 1 : 0;
+
         // if it is a direct account to account transfer...
         const isAcctToAcctTransfer =
-          fetchedGls.length === 0 &&
+          fetchedGls.length === expectedGlCount &&
           fetchedAccounts.length === 2 &&
           effectiveExtractedPayload.debitAccountIds.size === 1 &&
           effectiveExtractedPayload.creditAccountIds.size === 1;
+
+        // throw if a fee was supplied on a multi-leg / non-1-to-1 transfer...
+        if (payload.fee && !isAcctToAcctTransfer) {
+          throw new Error(
+            'fee payload is only allowed for direct account-to-account transfers',
+            errOpt,
+          );
+        }
 
         const transactionId = isAcctToAcctTransfer ? uuidv7() : null;
 
@@ -436,8 +462,21 @@ export class TransactionService {
             account.id,
           );
 
+          // total deduction from sender = principal + fee
+          const isFeeDebit = isDebitLeg && payload.fee;
+
+          const totalDebitAmount = isFeeDebit
+            ? this.calc.add(amount, feeAmount)
+            : amount;
+
           // validate debit leg account balance
-          if (isDebitLeg && this.calc.isLessThan(account.balance, amount)) {
+          if (
+            isDebitLeg &&
+            this.calc.isLessThan(
+              this.calc.toMajor(account.balance),
+              totalDebitAmount,
+            )
+          ) {
             throw Error(
               `insufficient balance for debit account: ${account.id}, amount to be debitted: ${amount}, account balance: ${account.balance}`,
               errOpt,
@@ -448,14 +487,17 @@ export class TransactionService {
             ...account,
             balance: this.calc.toMinor(
               isDebitLeg
-                ? this.calc.subtract(this.calc.toMajor(account.balance), amount)
+                ? this.calc.subtract(
+                    this.calc.toMajor(account.balance),
+                    totalDebitAmount,
+                  )
                 : this.calc.add(this.calc.toMajor(account.balance), amount),
             ),
             bookBalance: this.calc.toMinor(
               isDebitLeg
                 ? this.calc.subtract(
                     this.calc.toMajor(account.bookBalance),
-                    amount,
+                    totalDebitAmount,
                   )
                 : this.calc.add(this.calc.toMajor(account.bookBalance), amount),
             ),
@@ -473,6 +515,19 @@ export class TransactionService {
             createdAt: transactionAt,
           });
 
+          if (isFeeDebit) {
+            glLines.push({
+              id: uuidv7(),
+              tenantId: tenantId,
+              journalEntryId: journal.id,
+              glAccountId: account.controlGlAccountId,
+              debit: this.calc.toMinor(feeAmount),
+              credit: this.calc.toMinor('0'),
+              description: `Fee Debit: ${payload.comments}`,
+              createdAt: transactionAt,
+            });
+          }
+
           // handle 1-to-1 transfer vs multi-leg inside the loop...
           if (isAcctToAcctTransfer) {
             if (transactionItems.length === 0) {
@@ -483,7 +538,9 @@ export class TransactionService {
                 senderAccountId: isDebitLeg ? account.id : null,
                 receiverAccountId: isDebitLeg ? null : account.id,
                 amount: this.calc.toMinor(amount),
-                fee: this.calc.toMinor('0'),
+                fee: payload.fee
+                  ? this.calc.toMinor(feeAmount)
+                  : this.calc.toMinor('0'),
                 category: TransactionCategory.Transfer,
                 status: TransactionStatus.Successful,
                 reference: payload.referenceNumber,
@@ -525,11 +582,6 @@ export class TransactionService {
         }
 
         for (const gl of fetchedGls) {
-          const isDebitLeg = effectiveExtractedPayload.debitAccountGlIds.has(
-            gl.id,
-          );
-          const amount = effectiveExtractedPayload.acctAmount[gl.id];
-
           // validate directBooking check for each  gl...
           if (!gl.allowDirectBooking) {
             throw new Error(
@@ -538,16 +590,35 @@ export class TransactionService {
             );
           }
 
-          glLines.push({
-            id: uuidv7(),
-            tenantId: tenantId,
-            journalEntryId: journal.id,
-            glAccountId: gl.id,
-            debit: this.calc.toMinor(isDebitLeg ? amount : '0'),
-            credit: this.calc.toMinor(isDebitLeg ? '0' : amount),
-            description: payload.comments,
-            createdAt: transactionAt,
-          });
+          const regularAmount = effectiveExtractedPayload.acctAmount[gl.id];
+          if (regularAmount) {
+            const isDebitLeg = effectiveExtractedPayload.debitAccountGlIds.has(
+              gl.id,
+            );
+            glLines.push({
+              id: uuidv7(),
+              tenantId: tenantId,
+              journalEntryId: journal.id,
+              glAccountId: gl.id,
+              debit: this.calc.toMinor(isDebitLeg ? regularAmount : '0'),
+              credit: this.calc.toMinor(isDebitLeg ? '0' : regularAmount),
+              description: payload.comments,
+              createdAt: transactionAt,
+            });
+          }
+
+          if (payload.fee && payload.fee.glId === gl.id) {
+            glLines.push({
+              id: uuidv7(),
+              tenantId: tenantId,
+              journalEntryId: journal.id,
+              glAccountId: gl.id,
+              debit: this.calc.toMinor('0'),
+              credit: this.calc.toMinor(feeAmount),
+              description: `Transfer Fee - ${payload.comments}`,
+              createdAt: transactionAt,
+            });
+          }
 
           // TODO: PUSH TO QUEUE FOR NOTIFICATION...
         }
