@@ -38,7 +38,6 @@ import {
   TransferResp,
 } from './dto';
 
-// TODO: Unique ids???
 type TransactionPayload = { amount: string } & (
   | { glAccountId: string }
   | { accountId: string }
@@ -190,6 +189,7 @@ export class TransactionService {
         if (payload[id]) {
           throw new Error(
             `duplicate ${type} Id: ${id} in ${payloadKey} payload`,
+            errOpt,
           );
         }
       };
@@ -199,7 +199,10 @@ export class TransactionService {
         payloadKey: 'credits' | 'debits' | 'customerAccounts',
       ) => {
         if (!isNumber(amount) || Number(amount) <= 0) {
-          throw new Error(`invalid amount: ${amount} in ${payloadKey} payload`);
+          throw new Error(
+            `invalid amount: ${amount} in ${payloadKey} payload`,
+            errOpt,
+          );
         }
       };
 
@@ -397,13 +400,22 @@ export class TransactionService {
           );
         }
 
+        // if it is a direct account to account transfer...
+        const isAcctToAcctTransfer =
+          fetchedGls.length === 0 &&
+          fetchedAccounts.length === 2 &&
+          effectiveExtractedPayload.debitAccountIds.size === 1 &&
+          effectiveExtractedPayload.creditAccountIds.size === 1;
+
+        const transactionId = isAcctToAcctTransfer ? uuidv7() : null;
+
         const [journal] = await tx
           .insert(JournalEntries)
           .values({
             id: uuidv7(),
             tenantId: tenantId!,
             // TODO: add reference to table maybe??
-            transactionId: null,
+            transactionId,
             entryDate: transactionAt,
             description: payload?.comments || `bulk transfer`,
             status: JournalEntryStatus.Posted,
@@ -436,13 +448,16 @@ export class TransactionService {
             ...account,
             balance: this.calc.toMinor(
               isDebitLeg
-                ? this.calc.subtract(account.balance, amount)
-                : this.calc.add(account.balance, amount),
+                ? this.calc.subtract(this.calc.toMajor(account.balance), amount)
+                : this.calc.add(this.calc.toMajor(account.balance), amount),
             ),
             bookBalance: this.calc.toMinor(
               isDebitLeg
-                ? this.calc.subtract(account.bookBalance, amount)
-                : this.calc.add(account.bookBalance, amount),
+                ? this.calc.subtract(
+                    this.calc.toMajor(account.bookBalance),
+                    amount,
+                  )
+                : this.calc.add(this.calc.toMajor(account.bookBalance), amount),
             ),
             updatedAt: transactionAt,
           });
@@ -458,22 +473,53 @@ export class TransactionService {
             createdAt: transactionAt,
           });
 
-          transactionItems.push({
-            id: uuidv7(),
-            tenantId,
-            senderAccountId: isDebitLeg ? account.id : null,
-            receiverAccountId: isDebitLeg ? null : account.id,
-            amount: this.calc.toMinor(amount),
-            fee: this.calc.toMinor('0'),
-            category: TransactionCategory.Transfer,
-            status: TransactionStatus.Successful,
-            reference: `${payload.referenceNumber}_${isDebitLeg ? 'DR' : 'CR'}_${account.id}`,
-            narration: payload.comments,
-            officeId,
-            createdBy: userId,
-            createdAt: transactionAt,
-            updatedAt: transactionAt,
-          });
+          // handle 1-to-1 transfer vs multi-leg inside the loop...
+          if (isAcctToAcctTransfer) {
+            if (transactionItems.length === 0) {
+              // first account iteration: create the single transaction row...
+              transactionItems.push({
+                id: transactionId!,
+                tenantId,
+                senderAccountId: isDebitLeg ? account.id : null,
+                receiverAccountId: isDebitLeg ? null : account.id,
+                amount: this.calc.toMinor(amount),
+                fee: this.calc.toMinor('0'),
+                category: TransactionCategory.Transfer,
+                status: TransactionStatus.Successful,
+                reference: payload.referenceNumber,
+                narration: payload.comments,
+                officeId,
+                createdBy: userId,
+                createdAt: transactionAt,
+                updatedAt: transactionAt,
+              });
+            } else {
+              // second account iteration: populate the remaining side directly...
+              if (isDebitLeg) {
+                transactionItems[0].senderAccountId = account.id;
+              } else {
+                transactionItems[0].receiverAccountId = account.id;
+              }
+            }
+          } else {
+            // multi-leg / gl transfers: push separate leg per account...
+            transactionItems.push({
+              id: uuidv7(),
+              tenantId,
+              senderAccountId: isDebitLeg ? account.id : null,
+              receiverAccountId: isDebitLeg ? null : account.id,
+              amount: this.calc.toMinor(amount),
+              fee: this.calc.toMinor('0'),
+              category: TransactionCategory.Transfer,
+              status: TransactionStatus.Successful,
+              reference: `${payload.referenceNumber}_${isDebitLeg ? 'DR' : 'CR'}_${account.id}`,
+              narration: payload.comments,
+              officeId,
+              createdBy: userId,
+              createdAt: transactionAt,
+              updatedAt: transactionAt,
+            });
+          }
 
           // TODO: PUSH TO QUEUE FOR NOTIFICATION...
         }
@@ -1086,6 +1132,4 @@ export class TransactionService {
       data: plainToInstance(TransferResp, { transactionId }),
     };
   }
-
-  async glTransfer() {}
 }
