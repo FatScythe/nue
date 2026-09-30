@@ -10,11 +10,8 @@ import { Calculator, DATE_FORMAT, isNumber, type CoreReqUser } from '@common';
 //libs...
 import {
   Accounts,
-  AccountStatus,
   AccountType,
-  Currency,
   DATABASE_CONNECTION,
-  DBTransaction,
   GeneralLedgerRepository,
   GeneralLedgers,
   JournalEntries,
@@ -37,25 +34,7 @@ import {
   TransferDirection,
   TransferResp,
 } from './dto';
-
-type TransactionPayload = { amount: string } & (
-  | { glAccountId: string }
-  | { accountId: string }
-  | { glAccountId: string; accountId: string }
-);
-
-interface TransferPayload {
-  comments: string;
-  credits: TransactionPayload[];
-  currencyCode: Currency.Ngn;
-  customerAccounts: Extract<TransactionPayload, { accountId: string }>[];
-  debits: TransactionPayload[];
-  fee?: { glId: string; amount: string };
-  operationType: 'credit' | 'debit';
-  referenceNumber: string; // this will append a suffix...
-  // uniqueReferenceKey: string;
-  transactionDate?: string;
-}
+import { TransferPayload } from './typings';
 
 @Injectable()
 export class TransactionService {
@@ -91,12 +70,13 @@ export class TransactionService {
     try {
       const db = opts?.dbTrnx || this.db;
       const { userId, tenantId, officeId } = context;
-      const {
-        customerAccounts = [],
-        debits = [],
-        credits = [],
-        operationType,
-      } = payload;
+
+      const customerAccounts =
+        'customerAccounts' in payload ? payload.customerAccounts : [];
+      const debits = 'debits' in payload ? payload.debits : [];
+      const credits = 'credits' in payload ? payload.credits : [];
+      const operationType =
+        'operationType' in payload ? payload.operationType : null;
 
       // basic validations...
       const MAX_TRNX_ITEM_LIMIT = 100;
@@ -848,8 +828,6 @@ export class TransactionService {
           `fund transfer from accountId ${dto.senderAccountId} to ${dto.receiverAccountId}`,
         credits: [{ accountId: dto.receiverAccountId, amount: dto.amount }],
         debits: [{ accountId: dto.senderAccountId, amount: dto.amount }],
-        customerAccounts: [],
-        currencyCode: Currency.Ngn,
         operationType: 'debit',
         referenceNumber: dto.reference,
         ...(feeGlId && { fee: { amount: feeAmount, glId: feeGlId } }),
@@ -952,7 +930,6 @@ export class TransactionService {
           ? []
           : [{ glAccountId: targetGl.id, amount: dto.amount }],
         customerAccounts: [{ accountId: account.id, amount: dto.amount }],
-        currencyCode: Currency.Ngn,
         operationType: isAccountToGl ? 'debit' : 'credit',
         referenceNumber: dto.reference,
       },
