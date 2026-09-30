@@ -258,6 +258,7 @@ CREATE TABLE "journal_entries" (
 	"id" varchar(36) PRIMARY KEY NOT NULL,
 	"tenant_id" integer NOT NULL,
 	"transaction_id" varchar(36),
+	"reference" varchar(100) NOT NULL,
 	"entry_date" timestamp with time zone NOT NULL,
 	"description" text NOT NULL,
 	"status" "journal_entry_status" DEFAULT 'posted' NOT NULL,

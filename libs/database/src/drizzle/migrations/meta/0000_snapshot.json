@@ -1,5 +1,5 @@
 {
-  "id": "5b14ffb3-9a7f-4f05-bcbb-1d74b702a221",
+  "id": "4351ce6b-0b7f-4ec2-9b80-d4145f90ccf3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2525,6 +2525,12 @@
           "type": "varchar(36)",
           "primaryKey": false,
           "notNull": false
+        },
+        "reference": {
+          "name": "reference",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
         },
         "entry_date": {
           "name": "entry_date",

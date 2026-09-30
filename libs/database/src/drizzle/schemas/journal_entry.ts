@@ -31,6 +31,7 @@ export const JournalEntries = pgTable(
       () => Transactions.id,
       { onDelete: 'restrict' },
     ), // optional link to user-facing transaction...
+    reference: varchar('reference', { length: 100 }).notNull(),
     entryDate: timestamp('entry_date', { withTimezone: true }).notNull(),
     description: text('description').notNull(),
     status: journalEntryStatusEnum('status')

@@ -1,6 +1,6 @@
 {
-  "id": "bf9ed0eb-885e-42ab-bc27-d7593451dc5d",
-  "prevId": "5b14ffb3-9a7f-4f05-bcbb-1d74b702a221",
+  "id": "d7a63253-78a7-417b-9140-54ad71c21c86",
+  "prevId": "4351ce6b-0b7f-4ec2-9b80-d4145f90ccf3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2620,6 +2620,12 @@
           "type": "varchar(36)",
           "primaryKey": false,
           "notNull": false
+        },
+        "reference": {
+          "name": "reference",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
         },
         "entry_date": {
           "name": "entry_date",
