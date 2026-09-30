@@ -16,17 +16,11 @@ import {
   ChargeTime,
   DATABASE_CONNECTION,
   GeneralLedgers,
-  JournalEntries,
-  JournalEntryLines,
-  JournalEntryStatus,
   LoanDetails,
   LoanRepaymentFrequency,
   LoanSchedules,
   LoanScheduleStatus,
   LoanStatus,
-  TransactionCategory,
-  Transactions,
-  TransactionStatus,
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
 
@@ -34,6 +28,7 @@ import { AccountService } from '../account/account.service';
 import { CreateLoanAccountDto } from '../account/dto';
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
+import { TransactionService } from '../transaction/transaction.service';
 import {
   ApproveLoanDto,
   CalculateLoanRepaymentDto,
@@ -54,6 +49,7 @@ export class LoanService {
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly accountRepo: AccountRepository,
     private readonly calc: Calculator,
+    private readonly transactionService: TransactionService,
   ) {}
 
   async createLoanAccount(dto: CreateLoanAccountDto, user: CoreReqUser) {
@@ -788,12 +784,6 @@ export class LoanService {
     }));
 
     await this.db.transaction(async (tx) => {
-      const [disburseAccount] = await tx
-        .select()
-        .from(Accounts)
-        .where(eq(Accounts.id, effectiveDisbursementAccountId))
-        .for('update');
-
       // lock the account loan_detail...
       const [accountLoanDetail] = await tx
         .select()
@@ -801,22 +791,23 @@ export class LoanService {
         .where(eq(LoanDetails.accountId, accountId))
         .for('update');
 
-      if (!accountLoanDetail)
+      if (!accountLoanDetail) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `invalid acccount loan details`,
           { error_code: 'DBL013' },
         );
+      }
 
-      if (accountLoanDetail.status !== LoanStatus.Approved)
+      if (accountLoanDetail.status !== LoanStatus.Approved) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           `invalid loan status: ${accountLoanDetail.status}`,
           { error_code: 'DBL014' },
         );
+      }
 
       const loanGlId = accountData.controlGlAccountId;
-      const depositGlId = disburseAccount.controlGlAccountId;
 
       const loanFeeAmount = loanDetails.chargeValue;
       const loanPrincipalAmount = loanDetails.principalAmount;
@@ -838,14 +829,6 @@ export class LoanService {
         );
       }
 
-      if (!depositGlId) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          `invalid disbursement account gl`,
-          { error_code: 'DBL016' },
-        );
-      }
-
       if (isUpfrontFeeApplied && !feeGlId) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
@@ -858,98 +841,34 @@ export class LoanService {
         ? this.calc.subtract(principal, fee)
         : principal;
 
-      // debit loanGl ---> credit disbursementGl ? credit disbursementAccount feeGl --> mark loan account balance as negative balance...
-      // audit disbursement account transaction record...
-      const [txn] = await tx
-        .insert(Transactions)
-        .values({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          senderAccountId: null,
-          receiverAccountId: effectiveDisbursementAccountId,
-          amount: this.calc.toMinor(netDisbursement),
-          fee: this.calc.toMinor(fee),
-          category: TransactionCategory.Deposit,
-          status: TransactionStatus.Successful,
-          reference: `LOAN-${accountData.id}`,
-          narration: 'loan disbursed',
-          officeId: accountData.officeId,
-          createdBy: userId,
-        })
-        .returning();
+      const reference = `LOAN-${accountData.id}`;
 
-      // post double-entry journal header...
-      const [journal] = await tx
-        .insert(JournalEntries)
-        .values({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          transactionId: txn.id,
-          entryDate: transactionAt,
-          description: `disburse loan to disbursement account number ${disburseAccount.accountNumber}`,
-          status: JournalEntryStatus.Posted,
-          officeId: accountData.officeId,
-          createdBy: userId,
-          approvedBy: userId,
-        })
-        .returning();
-
-      const lines: Array<typeof JournalEntryLines.$inferInsert> = [
+      // delegate multi-leg journal posting, account balance updates, and transaction auditing...
+      await this.transactionService.postMultiLegTransfer(
         {
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: loanGlId,
-          debit: this.calc.toMinor(principal),
-          credit: BigInt('0'),
-          description: `Debit Loan Gl: For loan account number ${accountData.accountNumber} (Principal)`,
+          comments: `disburse loan to disbursement account number ${disbursementAccount.accountNumber}`,
+          credits: [
+            {
+              accountId: effectiveDisbursementAccountId,
+              amount: String(netDisbursement),
+            },
+            ...(isUpfrontFeeApplied && feeGlId
+              ? [{ glAccountId: feeGlId, amount: String(fee) }]
+              : []),
+          ],
+          debits: [{ glAccountId: loanGlId, amount: String(principal) }],
+          referenceNumber: reference,
+          transactionDate: moment(disbursedAt).format(DATE_FORMAT),
         },
         {
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: depositGlId,
-          credit: this.calc.toMinor(netDisbursement),
-          debit: BigInt('0'),
-          description: `Credit Deposit Gl: For loan account number ${accountData.accountNumber} (Principal)`,
+          officeId: accountData.officeId,
+          tenantId: accountData.tenantId,
+          userId,
         },
-        ...(isUpfrontFeeApplied && feeGlId
-          ? [
-              {
-                id: uuidv7(),
-                tenantId: tenantId!,
-                journalEntryId: journal.id,
-                glAccountId: feeGlId,
-                credit: this.calc.toMinor(fee),
-                debit: BigInt('0'),
-                description: `Credit Fee Gl: For loan account number ${accountData.accountNumber} (Fee)`,
-              },
-            ]
-          : []),
-      ];
-
-      await tx.insert(JournalEntryLines).values(lines);
-
-      const disbursementAccountBalance = this.calc.add(
-        this.calc.toMajor(disburseAccount.balance),
-        netDisbursement,
-      );
-      const disbursementAccountBookBalance = this.calc.add(
-        this.calc.toMajor(disburseAccount.bookBalance),
-        netDisbursement,
+        { throwApiError: true, dbTrnx: tx },
       );
 
-      // update disbursement account balance...
-      await tx
-        .update(Accounts)
-        .set({
-          balance: this.calc.toMinor(disbursementAccountBalance),
-          bookBalance: this.calc.toMinor(disbursementAccountBookBalance),
-          updatedAt: transactionAt,
-        })
-        .where(eq(Accounts.id, disburseAccount.id));
-
-      // mark loan as disbused, update linked accounts if changed, and set disbursement date...
+      // mark loan as disbursed, update linked accounts if changed, and set disbursement date...
       await tx
         .update(LoanDetails)
         .set({
@@ -961,7 +880,7 @@ export class LoanService {
         })
         .where(eq(LoanDetails.accountId, accountId));
 
-      // activate main loan account & update balance...
+      // activate main loan account & set initial principal balance...
       await tx
         .update(Accounts)
         .set({
