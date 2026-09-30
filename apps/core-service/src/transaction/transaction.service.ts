@@ -43,17 +43,17 @@ type TransactionPayload = { amount: string } & (
   | { accountId: string }
   | { glAccountId: string; accountId: string }
 );
+
 interface TransferPayload {
   comments: string;
   credits: TransactionPayload[];
   currencyCode: Currency.Ngn;
   customerAccounts: Extract<TransactionPayload, { accountId: string }>[];
   debits: TransactionPayload[];
-  officeId: number;
   fee?: { glId: string; amount: string };
   operationType: 'credit' | 'debit';
   referenceNumber: string; // this will append a suffix...
-  uniqueReferenceKey: string;
+  // uniqueReferenceKey: string;
   transactionDate?: string;
 }
 
@@ -74,16 +74,22 @@ export class TransactionService {
     context: { userId: string; officeId: number; tenantId: number },
     opts?: { throwApiError?: boolean; dbTrnx?: NodePgDatabase<typeof schema> },
   ) {
-    try {
-      const db = opts?.dbTrnx || this.db;
-      const errOpt = {
+    const buildError = (
+      code: string,
+      message: string,
+      details?: Record<string, unknown>,
+    ) =>
+      new Error(message, {
         cause: {
-          code: 'TRANSFER_FAILED',
+          code,
           layer: 'SERVICE',
           module: 'TRANSACTION',
+          details,
         },
-      };
+      });
 
+    try {
+      const db = opts?.dbTrnx || this.db;
       const { userId, tenantId, officeId } = context;
       const {
         customerAccounts = [],
@@ -98,9 +104,21 @@ export class TransactionService {
         customerAccounts.length + debits.length + credits.length;
 
       if (totalItems > MAX_TRNX_ITEM_LIMIT) {
-        throw new Error(
+        throw buildError(
+          'TRANSFER_ITEM_LIMIT_EXCEEDED',
           `payload items count (${totalItems}) exceeds maximum limit of ${MAX_TRNX_ITEM_LIMIT}`,
-          errOpt,
+          { totalItems, maxLimit: MAX_TRNX_ITEM_LIMIT },
+        );
+      }
+
+      if (
+        !payload.referenceNumber ||
+        payload.referenceNumber.trim().length > 100
+      ) {
+        throw buildError(
+          'INVALID_REFERENCE_NUMBER',
+          'referenceNumber is required and must not exceed 100 characters',
+          { referenceNumber: payload.referenceNumber },
         );
       }
 
@@ -109,56 +127,73 @@ export class TransactionService {
       const isCredit = operationType === 'credit';
 
       if (isGlCustomerTrnx && !isDebit && !isCredit) {
-        throw new Error(
+        throw buildError(
+          'INVALID_OPERATION_TYPE',
           'operationType must be either "debit" or "credit" when customerAccounts are provided',
-          errOpt,
+          { operationType, customerAccountsCount: customerAccounts.length },
         );
       }
 
       // validations...
       if (isGlCustomerTrnx) {
         // we can only have customer account with debit or with credits...
-        if (customerAccounts.length && debits.length && credits.length)
-          throw new Error(
+        if (customerAccounts.length && debits.length && credits.length) {
+          throw buildError(
+            'INVALID_CUSTOMER_ACCOUNTS_PAYLOAD',
             'customer accounts cannot exist with both debits and credits payload',
-            errOpt,
+            {
+              customerAccountsCount: customerAccounts.length,
+              debitsCount: debits.length,
+              creditsCount: credits.length,
+            },
           );
+        }
 
         // if it is to credit the customer...
         if (isCredit) {
-          if (!debits.length)
-            throw new Error(
+          if (!debits.length) {
+            throw buildError(
+              'DEBITS_REQUIRED_FOR_CREDIT_OPERATION',
               'debits payload is required for credit operation',
-              errOpt,
+              { operationType, debitsCount: debits.length },
             );
+          }
 
-          if (credits.length)
-            throw new Error(
+          if (credits.length) {
+            throw buildError(
+              'CREDITS_NOT_ALLOWED_FOR_CREDIT_OPERATION',
               'credit payload is not required for credit operation',
-              errOpt,
+              { operationType, creditsCount: credits.length },
             );
+          }
         }
 
         // if it is to debit the customer...
         if (isDebit) {
-          if (!credits.length)
-            throw new Error(
+          if (!credits.length) {
+            throw buildError(
+              'CREDITS_REQUIRED_FOR_DEBIT_OPERATION',
               'credits payload is required for debit operation',
-              errOpt,
+              { operationType, creditsCount: credits.length },
             );
+          }
 
-          if (debits.length)
-            throw new Error(
+          if (debits.length) {
+            throw buildError(
+              'DEBITS_NOT_ALLOWED_FOR_DEBIT_OPERATION',
               'debit payload is not required for debit operation',
-              errOpt,
+              { operationType, debitsCount: debits.length },
             );
+          }
         }
       } else {
-        if (!debits.length || !credits.length)
-          throw new Error(
+        if (!debits.length || !credits.length) {
+          throw buildError(
+            'DEBITS_AND_CREDITS_REQUIRED',
             'both debits and credits payloads are required',
-            errOpt,
+            { debitsCount: debits.length, creditsCount: credits.length },
           );
+        }
       }
 
       type EffectivePayload = {
@@ -183,14 +218,15 @@ export class TransactionService {
 
       const checkDuplicateAccount = (
         id: string,
-        payload: EffectivePayload['acctAmount'],
+        payloadMap: EffectivePayload['acctAmount'],
         type: 'gl' | 'account',
         payloadKey: 'credits' | 'debits' | 'customerAccounts',
       ) => {
-        if (payload[id]) {
-          throw new Error(
+        if (payloadMap[id]) {
+          throw buildError(
+            'DUPLICATE_ACCOUNT_ID',
             `duplicate ${type} Id: ${id} in ${payloadKey} payload`,
-            errOpt,
+            { id, type, payloadKey },
           );
         }
       };
@@ -200,9 +236,10 @@ export class TransactionService {
         payloadKey: 'credits' | 'debits' | 'customerAccounts' | 'fee',
       ) => {
         if (!isNumber(amount) || Number(amount) <= 0) {
-          throw new Error(
+          throw buildError(
+            'INVALID_AMOUNT',
             `invalid amount: ${amount} in ${payloadKey} payload`,
-            errOpt,
+            { amount, payloadKey },
           );
         }
       };
@@ -213,9 +250,10 @@ export class TransactionService {
         const accountId = 'accountId' in curr ? curr.accountId?.trim() : null;
 
         if (!accountId) {
-          throw new Error(
+          throw buildError(
+            'MISSING_ACCOUNT_ID',
             'missing accountId in customerAccounts payload',
-            errOpt,
+            { payloadKey: 'customerAccounts' },
           );
         }
 
@@ -265,9 +303,10 @@ export class TransactionService {
           effectiveExtractedPayload.debitAccountGlIds.add(glAccountId);
           effectiveExtractedPayload.acctAmount[glAccountId] = amount;
         } else {
-          throw new Error(
+          throw buildError(
+            'MISSING_ACCOUNT_OR_GL_ID',
             'each debits item must specify either accountId or glAccountId',
-            errOpt,
+            { payloadKey: 'debits' },
           );
         }
       }
@@ -300,9 +339,10 @@ export class TransactionService {
           effectiveExtractedPayload.creditAccountGlIds.add(glAccountId);
           effectiveExtractedPayload.acctAmount[glAccountId] = amount;
         } else {
-          throw new Error(
+          throw buildError(
+            'MISSING_ACCOUNT_OR_GL_ID',
             'each credits item must specify either accountId or glAccountId',
-            errOpt,
+            { payloadKey: 'credits' },
           );
         }
       }
@@ -314,11 +354,13 @@ export class TransactionService {
         ...effectiveExtractedPayload.creditAmounts,
       );
 
-      if (!this.calc.isEqual(creditTotal, debitTotal))
-        throw new Error(
+      if (!this.calc.isEqual(creditTotal, debitTotal)) {
+        throw buildError(
+          'TRANSFER_UNBALANCED',
           `total debits (${debitTotal}) must equal total credits (${creditTotal})`,
-          errOpt,
+          { debitTotal, creditTotal },
         );
+      }
 
       const feeAmount = payload.fee?.amount ? payload.fee.amount.trim() : '0';
 
@@ -327,7 +369,9 @@ export class TransactionService {
 
         const feeGlId = payload.fee.glId?.trim();
         if (!feeGlId) {
-          throw new Error('invalid fee GL ID', errOpt);
+          throw buildError('INVALID_FEE_GL_ID', 'invalid fee GL ID', {
+            feeGlId,
+          });
         }
 
         // include fee GL so it gets locked & validated in fetchedGls...
@@ -350,9 +394,13 @@ export class TransactionService {
         payload.transactionDate &&
         !moment(payload.transactionDate, DATE_FORMAT, true).isValid()
       ) {
-        throw new Error(
+        throw buildError(
+          'INVALID_TRANSACTION_DATE_FORMAT',
           `invalid transaction date format, expected ${DATE_FORMAT}; received ${payload.transactionDate}`,
-          errOpt,
+          {
+            transactionDate: payload.transactionDate,
+            expectedFormat: DATE_FORMAT,
+          },
         );
       }
 
@@ -360,7 +408,7 @@ export class TransactionService {
         ? new Date(payload.transactionDate)
         : new Date();
 
-      return db.transaction(async (tx) => {
+      return await db.transaction(async (tx) => {
         const fetchedAccounts =
           sortedAccountIds.length > 0
             ? await tx
@@ -379,9 +427,14 @@ export class TransactionService {
         if (sortedAccountIds.length !== fetchedAccounts.length) {
           const foundIds = new Set(fetchedAccounts.map((a) => a.id));
           const missingIds = sortedAccountIds.filter((id) => !foundIds.has(id));
-          throw new Error(
+          throw buildError(
+            'ACCOUNT_NOT_FOUND',
             `invalid account ID(s): ${missingIds.slice(0, 5).join(', ')}`,
-            errOpt,
+            {
+              missingAccountIds: missingIds,
+              requestedAccountIds: sortedAccountIds,
+              foundCount: fetchedAccounts.length,
+            },
           );
         }
 
@@ -409,9 +462,14 @@ export class TransactionService {
           const missingGls = sortedGlAccountIds.filter(
             (id) => !foundGlIds.has(id),
           );
-          throw new Error(
+          throw buildError(
+            'GL_ACCOUNT_NOT_FOUND',
             `invalid GL account ID(s): ${missingGls.slice(0, 5).join(', ')}`,
-            errOpt,
+            {
+              missingGlAccountIds: missingGls,
+              requestedGlAccountIds: sortedGlAccountIds,
+              foundCount: fetchedGls.length,
+            },
           );
         }
 
@@ -427,20 +485,23 @@ export class TransactionService {
 
         // throw if a fee was supplied on a multi-leg / non-1-to-1 transfer...
         if (payload.fee && !isAcctToAcctTransfer) {
-          throw new Error(
+          throw buildError(
+            'FEE_NOT_ALLOWED_FOR_MULTI_LEG',
             'fee payload is only allowed for direct account-to-account transfers',
-            errOpt,
+            { isAcctToAcctTransfer, feeAmount },
           );
         }
 
-        const transactionId = isAcctToAcctTransfer ? uuidv7() : null;
+        const isSingleAccountToGl = fetchedAccounts.length === 1;
+        const transactionId =
+          isAcctToAcctTransfer || isSingleAccountToGl ? uuidv7() : null;
 
         const [journal] = await tx
           .insert(JournalEntries)
           .values({
             id: uuidv7(),
             tenantId: tenantId!,
-            // TODO: add reference to table maybe??
+            reference: payload.referenceNumber,
             transactionId,
             entryDate: transactionAt,
             description: payload?.comments || `bulk transfer`,
@@ -477,9 +538,16 @@ export class TransactionService {
               totalDebitAmount,
             )
           ) {
-            throw Error(
-              `insufficient balance for debit account: ${account.id}, amount to be debitted: ${amount}, account balance: ${account.balance}`,
-              errOpt,
+            throw buildError(
+              'INSUFFICIENT_BALANCE',
+              `insufficient balance for debit account: ${account.id}, amount to be debitted: ${amount}, account balance: ${this.calc.toMajorStr(account.balance)}`,
+              {
+                accountId: account.id,
+                requiredAmount: totalDebitAmount,
+                transferAmount: amount,
+                feeAmount: isFeeDebit ? feeAmount : '0',
+                currentBalance: account.balance,
+              },
             );
           }
 
@@ -561,7 +629,7 @@ export class TransactionService {
           } else {
             // multi-leg / gl transfers: push separate leg per account...
             transactionItems.push({
-              id: uuidv7(),
+              id: isSingleAccountToGl ? transactionId! : uuidv7(),
               tenantId,
               senderAccountId: isDebitLeg ? account.id : null,
               receiverAccountId: isDebitLeg ? null : account.id,
@@ -569,7 +637,9 @@ export class TransactionService {
               fee: this.calc.toMinor('0'),
               category: TransactionCategory.Transfer,
               status: TransactionStatus.Successful,
-              reference: `${payload.referenceNumber}_${isDebitLeg ? 'DR' : 'CR'}_${account.id}`,
+              reference: isSingleAccountToGl
+                ? payload.referenceNumber
+                : `${payload.referenceNumber}_${isDebitLeg ? 'DR' : 'CR'}_${account.id}`,
               narration: payload.comments,
               officeId,
               createdBy: userId,
@@ -584,9 +654,14 @@ export class TransactionService {
         for (const gl of fetchedGls) {
           // validate directBooking check for each  gl...
           if (!gl.allowDirectBooking) {
-            throw new Error(
+            throw buildError(
+              'DIRECT_BOOKING_NOT_ALLOWED',
               `gl account ${gl.id} does not allow direct manual booking`,
-              errOpt,
+              {
+                glAccountId: gl.id,
+                glCode: gl.code,
+                glName: gl.name,
+              },
             );
           }
 
@@ -643,16 +718,43 @@ export class TransactionService {
             })
             .returning();
 
-        return { journalId: journal.id, status: TransactionStatus.Successful };
+        return {
+          result: {
+            journalId: journal.id,
+            transactionId,
+            status: TransactionStatus.Successful,
+          },
+          errorCode: null,
+          error: null,
+          details: null,
+        };
       });
     } catch (error: Error | unknown) {
-      if (opts?.throwApiError)
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          (error as Error)?.message || 'unable to complete operation',
-          { error_code: 'T001' },
-        );
-      throw error;
+      const err = error as Error & {
+        cause?: {
+          code?: string;
+          layer?: string;
+          module?: string;
+          details?: Record<string, unknown>;
+        };
+      };
+      const errorCode = err?.cause?.code || 'TRANSFER_FAILED';
+      const errorMessage = err?.message || 'unable to complete operation';
+      const errorDetails = err?.cause?.details || null;
+
+      if (opts?.throwApiError) {
+        throw new ApiException(ApiErrorCode.BadRequest, errorMessage, {
+          error_code: errorCode,
+          cause: err?.cause,
+        });
+      }
+
+      return {
+        result: null,
+        errorCode,
+        error: errorMessage,
+        details: errorDetails,
+      };
     }
   }
 
@@ -666,318 +768,102 @@ export class TransactionService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'sender and receiver accounts must be different',
-        {
-          error_code: 'TAA001',
-        },
+        { error_code: 'TAA001' },
       );
     }
 
-    let transactionId;
-
-    await this.db.transaction(async (tx) => {
-      const transferAmount = this.calc.round(dto.amount, this.DP);
-      const feeAmount = this.calc.round(dto.fee || '0', this.DP);
-
-      const totalDeduction = this.calc.add(transferAmount, feeAmount);
-
-      // lock accounts in lexicographical order by id to prevent deadlocks...
-      const sortedAccountIds = [
-        dto.senderAccountId,
-        dto.receiverAccountId,
-      ].sort();
-
-      const lockedAccounts = await tx
-        .select()
-        .from(Accounts)
-        .where(
-          and(
-            inArray(Accounts.id, sortedAccountIds),
-            eq(Accounts.tenantId, tenantId!),
-          ),
-        )
-        .for('update');
-
-      const sender = lockedAccounts.find((a) => a.id === dto.senderAccountId);
-      const receiver = lockedAccounts.find(
-        (a) => a.id === dto.receiverAccountId,
-      );
-
-      if (!sender) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'sender account not found',
-          {
-            error_code: 'TAA002',
-          },
-        );
-      }
-
-      const isEligibleSender =
-        sender.status === AccountStatus.Active ||
-        sender.status === AccountStatus.PendingNoCredit;
-
-      if (!isEligibleSender) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          `invalid sender account status: ${sender.status}`,
-          { error_code: 'TAA003' },
-        );
-      }
-
-      if (!receiver) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'receiver account not found',
-          {
-            error_code: 'TAA004',
-          },
-        );
-      }
-
-      const isEligibleReceiver =
-        receiver.status === AccountStatus.Active ||
-        receiver.status === AccountStatus.PendingNoDebit;
-
-      if (!isEligibleReceiver) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          `invalid receiver account status: ${receiver.status}`,
-          {
-            error_code: 'TAA005',
-          },
-        );
-      }
-
-      if (!sender.controlGlAccountId) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'sender account has no valid control gl',
-          {
-            error_code: 'TAA006',
-          },
-        );
-      }
-
-      if (!receiver.controlGlAccountId) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'receiver account has no valid control gl',
-          {
-            error_code: 'TAA007',
-          },
-        );
-      }
-
-      const senderDepositGlId = sender.controlGlAccountId;
-      const receiverDepositGlId = receiver.controlGlAccountId;
-
-      const isInsufficientBalance = this.calc.isGreaterThan(
-        totalDeduction,
-        this.calc.toMajor(sender.balance),
-      );
-
-      if (isInsufficientBalance) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'insufficient sender account balance',
-          {
-            error_code: 'TAA008',
-          },
-        );
-      }
-
-      let feeGlId: string | null = null;
-
-      let accountDetails:
-        | typeof SavingsDetails.$inferSelect
-        | typeof LoanDetails.$inferSelect
-        | undefined = undefined;
-
-      if (this.calc.isGreaterThan(feeAmount, '0')) {
-        if (sender.type === AccountType.Savings) {
-          accountDetails = await tx.query.SavingsDetails.findFirst({
-            where: and(
-              eq(SavingsDetails.accountId, sender.id),
-              eq(SavingsDetails.tenantId, tenantId!),
-            ),
-          });
-        } else if (sender.type === AccountType.Loan) {
-          accountDetails = await tx.query.LoanDetails.findFirst({
-            where: and(
-              eq(LoanDetails.accountId, sender.id),
-              eq(LoanDetails.tenantId, tenantId!),
-            ),
-          });
-        } else {
-          throw new ApiException(
-            ApiErrorCode.BadRequest,
-            `invalid sender account type: ${sender.type}`,
-            {
-              error_code: 'TAA009',
-            },
-          );
-        }
-
-        if (!accountDetails || !accountDetails.feeIncomeGlAccountId)
-          throw new ApiException(
-            ApiErrorCode.BadRequest,
-            `invalid sender ${sender.type} account details`,
-            {
-              error_code: 'TAA010',
-            },
-          );
-
-        feeGlId = accountDetails.feeIncomeGlAccountId;
-      }
-
-      // calculate and update sender balances...
-      const senderBalance = this.calc.subtract(
-        this.calc.toMajor(sender.balance),
-        totalDeduction,
-      );
-
-      const senderBookBalance = this.calc.subtract(
-        this.calc.toMajor(sender.bookBalance),
-        totalDeduction,
-      );
-
-      await tx
-        .update(Accounts)
-        .set({
-          balance: this.calc.toMinor(senderBalance),
-          bookBalance: this.calc.toMinor(senderBookBalance),
-          updatedAt: new Date(),
-        })
-        .where(eq(Accounts.id, sender.id));
-
-      // calculate and update receiver balances...
-      const receiverBalance = this.calc.add(
-        this.calc.toMajor(receiver.balance),
-        transferAmount,
-      );
-      const receiverBookBalance = this.calc.add(
-        this.calc.toMajor(receiver.bookBalance),
-        transferAmount,
-      );
-
-      await tx
-        .update(Accounts)
-        .set({
-          balance: this.calc.toMinor(receiverBalance),
-          bookBalance: this.calc.toMinor(receiverBookBalance),
-          updatedAt: new Date(),
-        })
-        .where(eq(Accounts.id, receiver.id));
-
-      // audit transaction record...
-      const txn = await this.transactionRepo.create(
-        {
-          id: uuidv7(),
-          tenantId: tenantId!,
-          senderAccountId: sender.id,
-          receiverAccountId: receiver.id,
-          amount: this.calc.toMinor(transferAmount),
-          fee: this.calc.toMinor(feeAmount),
-          category: TransactionCategory.Transfer,
-          status: TransactionStatus.Successful,
-          reference: dto.reference,
-          narration: dto.narration,
-          officeId: sender.officeId,
-          createdBy: userId,
-        },
-        tx,
-      );
-
-      if (!txn) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'unable to complete transfer',
-          {
-            error_code: 'TAA011',
-          },
-        );
-      }
-
-      // post double-entry journal header...
-      const [journal] = await tx
-        .insert(JournalEntries)
-        .values({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          transactionId: txn.id,
-          entryDate: new Date(),
-          description:
-            dto.narration ||
-            `Transfer from ${sender.accountNumber} to ${receiver.accountNumber}`,
-          status: JournalEntryStatus.Posted,
-          officeId: sender.officeId,
-          createdBy: userId,
-          approvedBy: userId,
-        })
-        .returning();
-
-      // build balanced double-entry gl lines...
-      const lines: Array<typeof JournalEntryLines.$inferInsert> = [
-        {
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: senderDepositGlId,
-          debit: this.calc.toMinor(transferAmount),
-          credit: BigInt('0'),
-          description: `Debit Sender: ${sender.accountNumber}`,
-        },
-        // add fee income gl dr/cr line if fee applies...
-        ...(this.calc.isGreaterThan(feeAmount, '0') && feeGlId
-          ? [
-              {
-                id: uuidv7(),
-                tenantId: tenantId!,
-                journalEntryId: journal.id,
-                glAccountId: senderDepositGlId,
-                debit: this.calc.toMinor(feeAmount),
-                credit: BigInt('0'),
-                description: `Transfer fee charged to ${sender.accountNumber}`,
-              },
-              {
-                id: uuidv7(),
-                tenantId: tenantId!,
-                journalEntryId: journal.id,
-                glAccountId: feeGlId,
-                debit: BigInt('0'),
-                credit: this.calc.toMinor(feeAmount),
-                description: `Transfer fee charged to ${sender.accountNumber}`,
-              },
-            ]
-          : []),
-        {
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: receiverDepositGlId,
-          debit: BigInt('0'),
-          credit: this.calc.toMinor(transferAmount),
-          description: `Credit Receiver: ${receiver.accountNumber}`,
-        },
-      ];
-
-      await tx.insert(JournalEntryLines).values(lines);
-
-      transactionId = txn.id;
-
-      if (!transactionId)
-        throw new ApiException(
-          ApiErrorCode.InternalServerError,
-          'unable to complete transfer',
-          {
-            error_code: 'TAA012',
-          },
-        );
+    const senderAcc = await this.db.query.Accounts.findFirst({
+      columns: {
+        id: true,
+        balance: true,
+        officeId: true,
+        tenantId: true,
+        type: true,
+      },
+      where: and(
+        eq(Accounts.id, dto.senderAccountId),
+        eq(Accounts.tenantId, tenantId!),
+      ),
     });
+
+    if (!senderAcc) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'invalid sender account',
+        { error_code: 'TAA001' },
+      );
+    }
+
+    // balance pre-check against total deduction (transfer amount + fee)
+    const feeAmount = dto.fee || '0';
+    const totalDeduction = this.calc.add(dto.amount, feeAmount);
+
+    if (
+      this.calc.isLessThan(this.calc.toMajor(senderAcc.balance), totalDeduction)
+    ) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'insufficient balance in sender account',
+        { error_code: 'TAA002' },
+      );
+    }
+
+    // conditionally query details table ONLY if a fee is applied
+    let feeGlId;
+
+    if (this.calc.isGreaterThan(feeAmount, '0')) {
+      if (senderAcc.type === AccountType.Savings) {
+        const details = await this.db.query.SavingsDetails.findFirst({
+          columns: { feeIncomeGlAccountId: true },
+          where: and(
+            eq(SavingsDetails.accountId, senderAcc.id),
+            eq(SavingsDetails.tenantId, tenantId!),
+          ),
+        });
+        feeGlId = details?.feeIncomeGlAccountId;
+      } else if (senderAcc.type === AccountType.Loan) {
+        const details = await this.db.query.LoanDetails.findFirst({
+          columns: { feeIncomeGlAccountId: true },
+          where: and(
+            eq(LoanDetails.accountId, senderAcc.id),
+            eq(LoanDetails.tenantId, tenantId!),
+          ),
+        });
+        feeGlId = details?.feeIncomeGlAccountId;
+      }
+
+      if (!feeGlId) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          `sender ${senderAcc.type} account has no configured fee income GL`,
+          { error_code: 'TAA03' },
+        );
+      }
+    }
+
+    const { result } = await this.postMultiLegTransfer(
+      {
+        comments:
+          dto.narration ||
+          `fund transfer from accountId ${dto.senderAccountId} to ${dto.receiverAccountId}`,
+        credits: [{ accountId: dto.receiverAccountId, amount: dto.amount }],
+        debits: [{ accountId: dto.senderAccountId, amount: dto.amount }],
+        customerAccounts: [],
+        currencyCode: Currency.Ngn,
+        operationType: 'debit',
+        referenceNumber: dto.reference,
+        ...(feeGlId && { fee: { amount: feeAmount, glId: feeGlId } }),
+      },
+      { officeId: senderAcc.officeId, tenantId: senderAcc.tenantId, userId },
+      { throwApiError: true },
+    );
 
     return {
       message: 'transfer completed successfully',
-      data: plainToInstance(TransferResp, { transactionId }),
+      data: plainToInstance(TransferResp, {
+        transactionId: result?.transactionId,
+        journalId: result?.journalId,
+      }),
     };
   }
 
@@ -986,13 +872,12 @@ export class TransactionService {
     user: CoreReqUser,
   ) {
     const { tenantId, id: userId } = user;
+    const isAccountToGl = dto.direction === TransferDirection.AccountToGl;
 
-    // retrieve required general ledger accounts by code...
-    const glCodes = [dto.glAccountCode, dto.depositAccountGlCode];
-
-    const genLedgers = await this.generalLedgerRepo.findAll({
+    // validate target GL account existence and direct booking permission...
+    const targetGl = await this.generalLedgerRepo.findOne({
       where: and(
-        inArray(GeneralLedgers.code, glCodes),
+        eq(GeneralLedgers.code, dto.glAccountCode),
         eq(GeneralLedgers.tenantId, tenantId!),
       ),
       selectFn: (gl) => ({
@@ -1003,15 +888,11 @@ export class TransactionService {
       }),
     });
 
-    const targetGl = genLedgers.find((gl) => gl.code === dto.glAccountCode);
-
     if (!targetGl) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'invalid target general ledger',
-        {
-          error_code: 'TAG001',
-        },
+        { error_code: 'TAG001' },
       );
     }
 
@@ -1019,188 +900,72 @@ export class TransactionService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'direct booking not allowed for target gl',
-        {
-          error_code: 'TAG002',
-        },
+        { error_code: 'TAG002' },
       );
     }
 
-    const depositGl = genLedgers.find(
-      (gl) => gl.code === dto.depositAccountGlCode,
-    );
-    if (!depositGl) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        'invalid customer account deposit general ledger',
-        {
-          error_code: 'TAG003',
-        },
-      );
-    }
+    // retrieve customer account...
+    const account = await this.db.query.Accounts.findFirst({
+      columns: {
+        id: true,
+        balance: true,
+        officeId: true,
+        tenantId: true,
+      },
+      where: and(
+        eq(Accounts.id, dto.accountId),
+        eq(Accounts.tenantId, tenantId!),
+      ),
+    });
 
-    let transactionId;
-
-    await this.db.transaction(async (tx) => {
-      const transferAmount = this.calc.toMinor(dto.amount);
-      const isAccountToGl = dto.direction === TransferDirection.AccountToGl;
-
-      // lock account to prevent race conditions...
-      const [account] = await tx
-        .select()
-        .from(Accounts)
-        .where(
-          and(eq(Accounts.id, dto.accountId), eq(Accounts.tenantId, tenantId!)),
-        )
-        .for('update');
-
-      if (!account) {
-        throw new ApiException(ApiErrorCode.BadRequest, 'account not found', {
-          error_code: 'TAG004',
-        });
-      }
-
-      if (isAccountToGl) {
-        const isInsufficientBalance =
-          this.calc.compare(account.balance, transferAmount) === -1;
-
-        if (isInsufficientBalance) {
-          throw new ApiException(
-            ApiErrorCode.BadRequest,
-            'insufficient balance',
-            {
-              error_code: 'TAG005',
-            },
-          );
-        }
-      }
-
-      // update customer account balances...
-      const newBalance = isAccountToGl
-        ? this.calc.subtract(account.balance, transferAmount)
-        : this.calc.add(account.balance, transferAmount);
-
-      const newBookBalance = isAccountToGl
-        ? this.calc.subtract(account.bookBalance, transferAmount)
-        : this.calc.add(account.bookBalance, transferAmount);
-
-      await tx
-        .update(Accounts)
-        .set({
-          balance: BigInt(newBalance),
-          bookBalance: BigInt(newBookBalance),
-          updatedAt: new Date(),
-        })
-        .where(eq(Accounts.id, account.id));
-
-      // audit transaction record...
-      const txn = await this.transactionRepo.create({
-        id: uuidv7(),
-        tenantId: tenantId!,
-        senderAccountId: isAccountToGl ? account.id : null,
-        receiverAccountId: isAccountToGl ? null : account.id,
-        amount: transferAmount,
-        fee: BigInt(0),
-        category: TransactionCategory.Transfer,
-        status: TransactionStatus.Successful,
-        reference: dto.reference,
-        narration: dto.narration,
-        officeId: account.officeId,
-        createdBy: userId,
+    if (!account) {
+      throw new ApiException(ApiErrorCode.BadRequest, 'account not found', {
+        error_code: 'TAG003',
       });
+    }
 
-      if (!txn) {
+    // balance check if debiting customer account...
+    if (isAccountToGl) {
+      if (
+        this.calc.isLessThan(this.calc.toMajor(account.balance), dto.amount)
+      ) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
-          'unable to complete transfer',
-          {
-            error_code: 'TAG006',
-          },
+          'insufficient balance',
+          { error_code: 'TAG004' },
         );
       }
+    }
 
-      transactionId = txn.id;
+    // build leg payload and delegate posting...
+    const comments = (
+      dto.narration || `gl transfer for account ${account.id}`
+    ).toLowerCase();
 
-      if (!transactionId)
-        throw new ApiException(
-          ApiErrorCode.InternalServerError,
-          'unable to complete transfer',
-          {
-            error_code: 'TAG007',
-          },
-        );
-
-      // post double-entry journal header...
-      const [journal] = await tx
-        .insert(JournalEntries)
-        .values({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          transactionId: txn.id,
-          entryDate: new Date(),
-          description:
-            dto.narration || `gl transfer for account ${account.accountNumber}`,
-          status: JournalEntryStatus.Posted,
-          officeId: account.officeId,
-          createdBy: userId,
-          approvedBy: userId,
-        })
-        .returning();
-
-      // build balanced double-entry gl lines...
-      const lines: Array<typeof JournalEntryLines.$inferInsert> = [];
-
-      if (isAccountToGl) {
-        // debit deposit control gl...
-        lines.push({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: depositGl.id,
-          debit: BigInt(transferAmount),
-          credit: BigInt(0),
-          description: `debit customer account: ${account.accountNumber}`,
-        });
-
-        // credit target gl...
-        lines.push({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: targetGl.id,
-          debit: BigInt(0),
-          credit: BigInt(transferAmount),
-          description: dto.narration || `credit gl account: ${targetGl.name}`,
-        });
-      } else {
-        // debit target gl...
-        lines.push({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: targetGl.id,
-          debit: BigInt(transferAmount),
-          credit: BigInt(0),
-          description: dto.narration || `debit gl account: ${targetGl.name}`,
-        });
-
-        // credit deposit control gl...
-        lines.push({
-          id: uuidv7(),
-          tenantId: tenantId!,
-          journalEntryId: journal.id,
-          glAccountId: depositGl.id,
-          debit: BigInt(0),
-          credit: BigInt(transferAmount),
-          description: `credit customer account: ${account.accountNumber}`,
-        });
-      }
-
-      await tx.insert(JournalEntryLines).values(lines);
-    });
+    const { result } = await this.postMultiLegTransfer(
+      {
+        comments,
+        credits: isAccountToGl
+          ? [{ glAccountId: targetGl.id, amount: dto.amount }]
+          : [],
+        debits: isAccountToGl
+          ? []
+          : [{ glAccountId: targetGl.id, amount: dto.amount }],
+        customerAccounts: [{ accountId: account.id, amount: dto.amount }],
+        currencyCode: Currency.Ngn,
+        operationType: isAccountToGl ? 'debit' : 'credit',
+        referenceNumber: dto.reference,
+      },
+      { officeId: account.officeId, tenantId: account.tenantId, userId },
+      { throwApiError: true },
+    );
 
     return {
       message: 'transfer completed successfully',
-      data: plainToInstance(TransferResp, { transactionId }),
+      data: plainToInstance(TransferResp, {
+        journalId: result?.journalId,
+        transactionId: result?.transactionId,
+      }),
     };
   }
 }

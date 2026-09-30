@@ -6,4 +6,8 @@ export class TransferResp {
   @Expose()
   @ApiProperty()
   transactionId: string;
+
+  @Expose()
+  @ApiProperty()
+  journalId: string;
 }
