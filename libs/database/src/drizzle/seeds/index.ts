@@ -2,9 +2,12 @@ import * as dotenv from 'dotenv';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
+import { DEFAULT_GL_DEPOSIT_CODE } from '../database.constant';
 import * as schema from '../schemas';
+import { seedAccounts } from './handlers/account.seed';
 import { seedBusinessTenant } from './handlers/business.seed';
 import { seedCrons } from './handlers/cron.seed';
+import { seedCustomers } from './handlers/customer.seed';
 import { seedGeneralLedgers } from './handlers/general_ledger.seed';
 import { seedOffices } from './handlers/office.seed';
 import { seedCoreRoles } from './handlers/role.seed';
@@ -59,7 +62,7 @@ async function runSeeds() {
       );
 
       // Step 6: General Ledgers (Requires business.id, sysAdmin.id)
-      await runSeedTask('General Ledgers', () =>
+      const genLedger = await runSeedTask('General Ledgers', () =>
         seedGeneralLedgers(tx, {
           businessId: business.id,
           sysAdminId: sysAdmin.id,
@@ -67,9 +70,28 @@ async function runSeeds() {
       );
 
       // Step 7: Offices (Requires business.id)
-      await runSeedTask('Head Office', () =>
+      const office = await runSeedTask('Head Office', () =>
         seedOffices(tx, {
           businessId: business.id,
+        }),
+      );
+
+      // Step 8: Customers
+      const customers = await runSeedTask('Customers', () =>
+        seedCustomers(tx, {
+          tenantId: business.id,
+          officeId: office.id,
+        }),
+      );
+
+      // Step 9: Accounts
+      const accounts = await runSeedTask('Accounts', () =>
+        seedAccounts(tx, {
+          tenantId: business.id,
+          officeId: office.id,
+          controlGlAccountId: genLedger.find(
+            (i) => i.code === DEFAULT_GL_DEPOSIT_CODE,
+          )?.id,
         }),
       );
     });

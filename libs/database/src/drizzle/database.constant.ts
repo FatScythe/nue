@@ -1,1 +1,14 @@
 export const DEFAULT_API_KEY = 'nsk_live_7a2b9c51e3d84f026m9q1r4s8v0w';
+
+export const DEFAULT_MALE_CUSTOMER_ID = '01a0f64c-dc41-72ab-b490-59f7885edbb8';
+export const DEFAULT_FEMALE_CUSTOMER_ID =
+  '01a0f64c-dc44-7e33-a444-529feb330061';
+export const DEFAULT_BUSINESS_CUSTOMER_ID =
+  '01a0f64c-dc44-7e33-a444-52a0a98a0201';
+
+export const DEFAULT_MALE_ACCOUNT_ID = '01a0f6b5-c43b-72fd-b350-5a510ac7be20';
+export const DEFAULT_FEMALE_ACCOUNT_ID = '01a0f6b5-c43d-7c1b-9658-688740fdcba2';
+export const DEFAULT_BUSINESS_ACCOUNT_ID =
+  '01a0f6b5-c43d-7c1b-9658-68880b568f0c';
+
+export const DEFAULT_GL_DEPOSIT_CODE = '3310';

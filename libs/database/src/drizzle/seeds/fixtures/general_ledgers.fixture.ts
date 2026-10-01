@@ -1,3 +1,4 @@
+import { DEFAULT_GL_DEPOSIT_CODE } from '@database/drizzle/database.constant';
 import { GeneralLedgers } from '@database/drizzle/schemas';
 
 import { GlCategory, GlNormalBalance } from '../../enums';
@@ -28,7 +29,7 @@ export const LEDGERS_FIXTURE: Partial<typeof GeneralLedgers.$inferInsert>[] = [
     allowDirectBooking: true,
     normalBalance: GlNormalBalance.Credit,
     category: GlCategory.Liability,
-    code: '3310',
+    code: DEFAULT_GL_DEPOSIT_CODE,
     name: 'Customer Deposit Fee',
   },
   {
