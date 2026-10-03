@@ -8,12 +8,14 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
+import moment from 'moment';
 
 import { IsValidDate, IsValidReference } from '@common';
+import { DEFAULT_MALE_ACCOUNT_ID } from '@database';
 
 export class PlaceLienDto {
   @ApiProperty({
-    example: '018f3a5e-7a2b-7c8d-9e0f-1a2b3c4d5e6f',
+    example: DEFAULT_MALE_ACCOUNT_ID,
     description: 'Savings/Current account ID',
   })
   @IsUUID('7')
@@ -46,7 +48,7 @@ export class PlaceLienDto {
   reference: string;
 
   @ApiPropertyOptional({
-    example: '2026-12-31T23:59:59.000Z',
+    example: moment().add(1, 'day').toISOString(),
     description: 'Optional automated release date',
   })
   @IsDateString()

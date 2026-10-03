@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 
 import { IsNumericString, IsValidReference } from '@common';
+import { DEFAULT_MALE_ACCOUNT_ID } from '@database';
 
 export enum TransferDirection {
   AccountToGl = 'account_to_gl',
@@ -38,21 +39,12 @@ export class AccountGlTransferDto {
   amount: string;
 
   @ApiProperty({
-    example: '018f3a5e-7a2b-7c8d-9e0f-1a2b3c4d5e6f',
+    example: DEFAULT_MALE_ACCOUNT_ID,
     description: 'Customer account ID',
   })
   @IsUUID('7')
   @IsNotEmpty()
   accountId: string;
-
-  @ApiProperty({
-    example: '0183',
-    description: 'Customer deposit liability Gl code',
-  })
-  @IsValidReference()
-  @Length(1, 10)
-  @IsNotEmpty()
-  depositAccountGlCode: string;
 
   @ApiProperty({
     example: '9041',

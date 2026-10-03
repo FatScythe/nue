@@ -3,10 +3,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
+import {
+  DEFAULT_FEMALE_ACCOUNT_ID,
+  DEFAULT_FEMALE_CUSTOMER_ID,
+} from '@database';
+
 export class CreateCustomerRespDto {
   @ApiProperty({
     description: 'Unique UUID v7 identifier for the created customer',
-    example: '018f3a5e-1234-7a2b-8123-456789abcdef',
+    example: DEFAULT_FEMALE_CUSTOMER_ID,
   })
   @Expose()
   @IsNotEmpty()
@@ -16,7 +21,7 @@ export class CreateCustomerRespDto {
   @ApiPropertyOptional({
     description:
       'Unique UUID v7 identifier for the associated savings account (if requested)',
-    example: '018f3a5e-5678-7a2b-8123-456789abcdef',
+    example: DEFAULT_FEMALE_ACCOUNT_ID,
   })
   @Expose()
   @IsOptional()

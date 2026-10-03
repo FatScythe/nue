@@ -3,39 +3,43 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 
 import { PaginationMetaResponseDto } from '@common/dto/reponse.dto';
-import { CustomerGender, CustomerStatus, CustomerType } from '@database';
+import {
+  CustomerGender,
+  CustomerStatus,
+  CustomerType,
+  DEFAULT_FEMALE_CUSTOMER_ID,
+} from '@database';
 
 export class GetAllCustomerRespDto {
   @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    example: DEFAULT_FEMALE_CUSTOMER_ID,
     description: 'Unique identifier for the customer',
   })
   @Expose()
   id: string;
 
   @ApiProperty({
-    example: 'customer@example.com',
+    example: 'jane.smith@mail.com',
     description: 'Email address of the customer',
   })
   @Expose()
   emailAddress: string;
 
   @ApiPropertyOptional({
-    example: 'Jane',
+    example: 'JANE',
     description: 'First name of the individual customer',
   })
   @Expose()
   firstName?: string;
 
   @ApiPropertyOptional({
-    example: 'Smith',
+    example: 'SMITH',
     description: 'Last name of the individual customer',
   })
   @Expose()
   lastName?: string;
 
   @ApiPropertyOptional({
-    example: 'Acme Corp',
     description: 'Business name of the corporate customer',
   })
   @Expose()

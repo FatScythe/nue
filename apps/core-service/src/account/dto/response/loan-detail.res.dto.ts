@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { Expose } from 'class-transformer';
+import moment from 'moment';
 
 import {
   ChargeCalculationType,
@@ -11,59 +12,65 @@ import {
 } from '@database';
 
 export class LoanDetailsRespDto {
-  @ApiProperty()
+  @ApiProperty({ example: '500000.00' })
   @Expose()
   principalAmount: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: '510000.00' })
   @Expose()
   outstandingBalance: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 12 })
   @Expose()
   tenor: number;
 
-  @ApiProperty({ enum: LoanRepaymentFrequency })
+  @ApiProperty({
+    enum: LoanRepaymentFrequency,
+    example: LoanRepaymentFrequency.Monthly,
+  })
   @Expose()
   repaymentFrequency: LoanRepaymentFrequency;
 
-  @ApiProperty()
+  @ApiProperty({ example: 0.0 })
   @Expose()
   interestRate: number;
 
-  @ApiProperty({ enum: LoanStatus })
+  @ApiProperty({ enum: LoanStatus, example: LoanStatus.Disbursed })
   @Expose()
   status: LoanStatus;
 
-  @ApiProperty()
+  @ApiProperty({ example: '10000.00' })
   @Expose()
   chargeValue: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    enum: ChargeCalculationType,
+    example: ChargeCalculationType.Fixed,
+  })
   @Expose()
   chargeCalculationType: ChargeCalculationType;
 
-  @ApiProperty()
+  @ApiProperty({ enum: ChargeTime, example: ChargeTime.Upfront })
   @Expose()
   chargeTime: ChargeTime;
 
-  @ApiProperty({ enum: MoratoriumType })
+  @ApiProperty({ enum: MoratoriumType, example: MoratoriumType.None })
   @Expose()
   moratoriumType: MoratoriumType;
 
-  @ApiProperty()
+  @ApiProperty({ example: 0 })
   @Expose()
   moratoriumPeriod: number;
 
-  @ApiProperty()
+  @ApiProperty({ example: moment().endOf('month').toISOString() })
   @Expose()
   repaymentStartDate: Date;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: moment().startOf('month').toISOString() })
   @Expose()
   disbursedAt?: Date;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: null })
   @Expose()
   closedAt?: Date;
 }

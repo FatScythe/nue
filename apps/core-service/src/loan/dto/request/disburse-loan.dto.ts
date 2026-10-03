@@ -3,11 +3,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
 
 import { IsValidDate, IsValidReference } from '@common';
+import { DEFAULT_MALE_ACCOUNT_ID } from '@database';
 
 export class DisburseLoanDto {
   @ApiPropertyOptional({
     description: 'Target account ID where funds will be deposited',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    example: DEFAULT_MALE_ACCOUNT_ID,
   })
   @IsUUID('7')
   @IsOptional()
@@ -16,7 +17,7 @@ export class DisburseLoanDto {
 
   @ApiPropertyOptional({
     description: 'Target account ID where loans will be repaid from',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    example: DEFAULT_MALE_ACCOUNT_ID,
   })
   @IsUUID('7')
   @IsOptional()
@@ -25,7 +26,7 @@ export class DisburseLoanDto {
 
   @ApiPropertyOptional({
     description: 'GL Code for upfront loan fee revenue override',
-    example: 'FEE-4001',
+    example: 'FE4001',
   })
   @IsValidReference()
   @Length(1, 10)

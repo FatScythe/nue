@@ -3,10 +3,17 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 import { PaginationParamDto } from '@common/dto';
-import { AccountStatus, AccountType } from '@database';
+import {
+  AccountStatus,
+  AccountType,
+  DEFAULT_BUSINESS_CUSTOMER_ID,
+} from '@database';
 
 export class GetAccountsQueryDto extends PaginationParamDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Unique identifier (UUID) of the customer',
+    example: DEFAULT_BUSINESS_CUSTOMER_ID,
+  })
   @IsString()
   @IsOptional()
   customerId?: string;

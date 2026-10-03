@@ -11,7 +11,11 @@ import {
 } from 'class-validator';
 
 import { IsValidDate } from '@common';
-import { CustomerStatus, CustomerType } from '@database';
+import {
+  CustomerStatus,
+  CustomerType,
+  DEFAULT_BUSINESS_CUSTOMER_ID,
+} from '@database';
 
 export class CreatedByUserResponseDto {
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
@@ -19,19 +23,19 @@ export class CreatedByUserResponseDto {
   @IsUUID(7)
   id: string;
 
-  @ApiProperty({ example: 'John' })
+  @ApiProperty({ example: 'JOHN' })
   @Expose()
   @IsNotEmpty()
   @IsString()
   firstName: string;
 
-  @ApiProperty({ example: 'Doe' })
+  @ApiProperty({ example: 'DOE' })
   @Expose()
   @IsNotEmpty()
   @IsString()
   lastName: string;
 
-  @ApiProperty({ example: 'john.doe@example.com' })
+  @ApiProperty({ example: 'john.doe@nue.com' })
   @Expose()
   @IsNotEmpty()
   @IsEmail()
@@ -40,7 +44,7 @@ export class CreatedByUserResponseDto {
 
 export class GetSingleCustomerResponseDto {
   @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    example: DEFAULT_BUSINESS_CUSTOMER_ID,
     description: 'Unique identifier for the customer',
   })
   @Expose()
@@ -49,7 +53,7 @@ export class GetSingleCustomerResponseDto {
   id: string;
 
   @ApiProperty({
-    example: 'customer@example.com',
+    example: 'nue.corp@example.com',
     description: 'Email address of the customer',
   })
   @Expose()
@@ -58,7 +62,7 @@ export class GetSingleCustomerResponseDto {
   emailAddress: string;
 
   @ApiPropertyOptional({
-    example: 'Jane',
+    example: 'NUE',
     description: 'First name of the individual customer',
   })
   @Expose()
@@ -67,7 +71,7 @@ export class GetSingleCustomerResponseDto {
   firstName?: string;
 
   @ApiPropertyOptional({
-    example: 'Smith',
+    example: 'CORP',
     description: 'Last name of the individual customer',
   })
   @Expose()
@@ -76,7 +80,7 @@ export class GetSingleCustomerResponseDto {
   lastName?: string;
 
   @ApiPropertyOptional({
-    example: 'Acme Corp',
+    example: 'NUE CORP',
     description: 'Business name of the corporate customer',
     required: false,
   })

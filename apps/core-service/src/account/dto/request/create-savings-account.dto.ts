@@ -19,6 +19,7 @@ import {
   IsValidDate,
   IsValidReference,
 } from '@common';
+import { DEFAULT_FEMALE_CUSTOMER_ID } from '@database';
 
 export class CreateSavingsAccountDto {
   @ApiPropertyOptional({
@@ -42,7 +43,7 @@ export class CreateSavingsAccountDto {
 
   @ApiProperty({
     description: 'Unique identifier (UUID) of the customer',
-    example: '018f3a5e-1234-7a2b-8123-456789abcdef',
+    example: DEFAULT_FEMALE_CUSTOMER_ID,
   })
   @IsString()
   @IsNotEmpty()

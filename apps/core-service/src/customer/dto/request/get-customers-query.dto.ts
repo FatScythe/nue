@@ -8,6 +8,7 @@ import { CustomerStatus, CustomerType } from '@database';
 
 export class GetCustomersQueryDto extends PaginationParamDto {
   @ApiPropertyOptional({
+    example: 'JOHN DO...',
     description: 'Search by name, email, or phone number',
   })
   @IsOptional()
@@ -15,12 +16,13 @@ export class GetCustomersQueryDto extends PaginationParamDto {
   @Transform(({ value }) => value?.trim())
   search?: string;
 
-  @ApiPropertyOptional({ enum: CustomerType })
+  @ApiPropertyOptional({ example: CustomerType.Individual, enum: CustomerType })
   @IsOptional()
   @IsEnum(CustomerType)
   type?: CustomerType;
 
   @ApiPropertyOptional({
+    example: CustomerStatus.Active,
     enum: [
       CustomerStatus.Active,
       CustomerStatus.Deactivated,

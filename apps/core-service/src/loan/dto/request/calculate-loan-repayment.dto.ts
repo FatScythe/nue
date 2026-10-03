@@ -21,7 +21,7 @@ export class CalculateLoanRepaymentDto {
   // @IsOptional()
   // productId?: string;
 
-  @ApiProperty({ description: 'Principal loan amount', example: '100000' })
+  @ApiProperty({ description: 'Principal loan amount', example: '500000.00' })
   @IsNumericString({
     min: 0,
     maxDecimalPlaces: 2,

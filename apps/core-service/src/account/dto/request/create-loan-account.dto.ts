@@ -20,12 +20,16 @@ import {
   IsValidDate,
   IsValidReference,
 } from '@common';
-import { LoanRepaymentFrequency, MoratoriumType } from '@database';
+import {
+  DEFAULT_BUSINESS_CUSTOMER_ID,
+  LoanRepaymentFrequency,
+  MoratoriumType,
+} from '@database';
 
 export class CreateLoanAccountDto {
   @ApiProperty({
     description: 'Target Customer ID',
-    example: '019ff6e3-14bd-7da7-bc81-f83e8d48a883',
+    example: DEFAULT_BUSINESS_CUSTOMER_ID,
   })
   @IsString()
   @IsNotEmpty()

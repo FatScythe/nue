@@ -40,7 +40,7 @@ export class RepaymentScheduleItemDto {
 }
 
 export class SingleLoanRespDto {
-  @ApiProperty({ example: 'acc_123456789' })
+  @ApiProperty({ example: '87u0f64c-dc44-7e33-a444-52a0a98a0203' })
   @Expose()
   accountId: string;
 
@@ -48,7 +48,7 @@ export class SingleLoanRespDto {
   @Expose()
   accountNumber: string;
 
-  @ApiProperty({ example: 'John Doe Loan Account' })
+  @ApiProperty({ example: 'JOHN DOE LOAN ACCOUNT' })
   @Expose()
   accountName: string;
 
@@ -60,11 +60,11 @@ export class SingleLoanRespDto {
   @Expose()
   status: AccountStatus;
 
-  @ApiProperty({ example: '100000' })
+  @ApiProperty({ example: '-100000.00' })
   @Expose()
   balance: string;
 
-  @ApiProperty({ example: '100000' })
+  @ApiProperty({ example: '-100000.00' })
   @Expose()
   bookBalance: string;
 
@@ -82,14 +82,14 @@ export class SingleLoanRespDto {
 
   @ApiProperty({
     description: 'Total interest accrued over the tenor',
-    example: '12500',
+    example: '0.00',
   })
   @Expose()
   totalInterest: string;
 
   @ApiProperty({
     description: 'Sum of principal and total interest',
-    example: '112500',
+    example: '100000',
   })
   @Expose()
   totalRepayment: string;

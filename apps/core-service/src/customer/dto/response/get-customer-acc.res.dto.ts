@@ -17,10 +17,12 @@ import {
   CustomerGender,
   CustomerStatus,
   CustomerType,
+  DEFAULT_MALE_ACCOUNT_ID,
+  DEFAULT_MALE_CUSTOMER_ID,
 } from '@database';
 
 export class AccountResponseDto {
-  @ApiProperty({ example: '019fea66-9270-7e7d-9291-0b163909cbd9' })
+  @ApiProperty({ example: DEFAULT_MALE_ACCOUNT_ID })
   @Expose()
   @IsNotEmpty()
   @IsUUID(7)
@@ -64,7 +66,7 @@ export class AccountResponseDto {
 }
 
 export class GetCustomerWithAccountsResponseDto {
-  @ApiProperty({ example: '019fea66-9244-7818-8647-0060d611ca2e' })
+  @ApiProperty({ example: DEFAULT_MALE_CUSTOMER_ID })
   @Expose()
   @IsNotEmpty()
   @IsUUID(7)
