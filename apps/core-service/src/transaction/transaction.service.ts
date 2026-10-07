@@ -26,15 +26,16 @@ import {
 } from '@database';
 import * as schema from '@database/drizzle/schemas';
 
+import { AccountService } from '../account/account.service';
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
+import { TransferPayload } from '../common/types';
 import {
   AccountGlTransferDto,
   AccountToAccountTransferDto,
   TransferDirection,
   TransferResp,
 } from './dto';
-import { TransferPayload } from './typings';
 
 @Injectable()
 export class TransactionService {
@@ -46,6 +47,7 @@ export class TransactionService {
     private readonly transactionRepo: TransactionRepository,
     private readonly generalLedgerRepo: GeneralLedgerRepository,
     private readonly calc: Calculator,
+    private readonly accountService: AccountService,
   ) {}
 
   async postMultiLegTransfer(
@@ -510,37 +512,36 @@ export class TransactionService {
             ? this.calc.add(amount, feeAmount)
             : amount;
 
+          // calculate available balance: (bookBalance - lienAmount) + overdraftLimit....
+          const overdraftLimit = BigInt('0');
+          const availableBalance = this.calc.add(
+            this.calc.subtract(account.bookBalance, account.lienAmount),
+            overdraftLimit,
+          );
+
           // validate debit leg account balance
           if (
             isDebitLeg &&
             this.calc.isLessThan(
-              this.calc.toMajor(account.balance),
+              this.calc.toMajor(availableBalance),
               totalDebitAmount,
             )
           ) {
             throw buildError(
               'INSUFFICIENT_BALANCE',
-              `insufficient balance for debit account: ${account.id}, amount to be debitted: ${amount}, account balance: ${this.calc.toMajorStr(account.balance)}`,
+              `insufficient balance for debit account: ${account.id}, amount to be debitted: ${amount}, available account balance: ${this.calc.toMajorStr(availableBalance)}, account book balance: ${this.calc.toMajorStr(account.bookBalance)}`,
               {
                 accountId: account.id,
                 requiredAmount: totalDebitAmount,
                 transferAmount: amount,
                 feeAmount: isFeeDebit ? feeAmount : '0',
-                currentBalance: account.balance,
+                availableBalance,
               },
             );
           }
 
           accountUpdates.push({
             ...account,
-            balance: this.calc.toMinor(
-              isDebitLeg
-                ? this.calc.subtract(
-                    this.calc.toMajor(account.balance),
-                    totalDebitAmount,
-                  )
-                : this.calc.add(this.calc.toMajor(account.balance), amount),
-            ),
             bookBalance: this.calc.toMinor(
               isDebitLeg
                 ? this.calc.subtract(
@@ -691,7 +692,6 @@ export class TransactionService {
             .onConflictDoUpdate({
               target: Accounts.id,
               set: {
-                balance: sql`EXCLUDED.balance`,
                 bookBalance: sql`EXCLUDED.book_balance`,
                 updatedAt: transactionAt,
               },
@@ -753,18 +753,23 @@ export class TransactionService {
     }
 
     const senderAcc = await this.db.query.Accounts.findFirst({
-      columns: {
-        id: true,
-        balance: true,
-        officeId: true,
-        tenantId: true,
-        type: true,
-      },
+      // columns: {
+      //   id: true,
+      //   bookBalance: true,
+      //   lienAmount: true,
+      //   officeId: true,
+      //   tenantId: true,
+      //   type: true,
+      // },
       where: and(
         eq(Accounts.id, dto.senderAccountId),
         eq(Accounts.tenantId, tenantId!),
       ),
     });
+
+    // balance pre-check against total deduction (transfer amount + fee)
+    const feeAmount = dto.fee || '0';
+    const totalDeduction = this.calc.add(dto.amount, feeAmount);
 
     if (!senderAcc) {
       throw new ApiException(
@@ -774,19 +779,12 @@ export class TransactionService {
       );
     }
 
-    // balance pre-check against total deduction (transfer amount + fee)
-    const feeAmount = dto.fee || '0';
-    const totalDeduction = this.calc.add(dto.amount, feeAmount);
-
-    if (
-      this.calc.isLessThan(this.calc.toMajor(senderAcc.balance), totalDeduction)
-    ) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        'insufficient balance in sender account',
-        { error_code: 'TAA002' },
-      );
-    }
+    // validates existence, status, PND restriction, and available balance against total deduction
+    this.accountService.assertPostingAllowed({
+      account: senderAcc,
+      amount: totalDeduction,
+      entryType: 'debit',
+    });
 
     // conditionally query details table ONLY if a fee is applied
     let feeGlId;
@@ -886,7 +884,12 @@ export class TransactionService {
     const account = await this.db.query.Accounts.findFirst({
       columns: {
         id: true,
-        balance: true,
+        bookBalance: true,
+        lienAmount: true,
+        status: true,
+        restrictionReason: true,
+        postNoCredit: true,
+        postNoDebit: true,
         officeId: true,
         tenantId: true,
       },
@@ -897,22 +900,19 @@ export class TransactionService {
     });
 
     if (!account) {
-      throw new ApiException(ApiErrorCode.BadRequest, 'account not found', {
+      throw new ApiException(ApiErrorCode.InvalidAccount, 'account not found', {
         error_code: 'TAG003',
       });
     }
 
     // balance check if debiting customer account...
     if (isAccountToGl) {
-      if (
-        this.calc.isLessThan(this.calc.toMajor(account.balance), dto.amount)
-      ) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'insufficient balance',
-          { error_code: 'TAG004' },
-        );
-      }
+      // validates existence, status, PND restriction, and available balance against total deduction...
+      this.accountService.assertPostingAllowed({
+        account,
+        amount: this.calc.toMinor(dto.amount),
+        entryType: 'debit',
+      });
     }
 
     // build leg payload and delegate posting...
