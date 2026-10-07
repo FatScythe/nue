@@ -62,7 +62,7 @@ export class SingleLoanRespDto {
 
   @ApiProperty({ example: '-100000.00' })
   @Expose()
-  balance: string;
+  availableBalance: string;
 
   @ApiProperty({ example: '-100000.00' })
   @Expose()
@@ -89,10 +89,18 @@ export class SingleLoanRespDto {
 
   @ApiProperty({
     description: 'Sum of principal and total interest',
-    example: '100000',
+    example: '100000.00',
   })
   @Expose()
   totalRepayment: string;
+
+  @ApiProperty({
+    description:
+      'Total processing charge to be paid for the duration of the loan',
+    example: '1000.00',
+  })
+  @Expose()
+  totalCharge: string;
 
   @ApiProperty({ type: [RepaymentScheduleItemDto] })
   @Expose()

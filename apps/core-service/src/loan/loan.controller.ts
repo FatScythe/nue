@@ -21,6 +21,7 @@ import {
   Permissions,
   Scope,
 } from '../common/decorator';
+import { GenericRespDto } from '../common/dto';
 import {
   ApproveLoanDto,
   CalculateLoanRepaymentDto,
@@ -28,6 +29,7 @@ import {
   DeclineLoanDto,
   DisburseLoanDto,
   SingleLoanRespDto,
+  UpdateLoanDetailsDto,
 } from './dto';
 import { LoanService } from './loan.service';
 
@@ -86,6 +88,9 @@ export class LoanController {
   @Patch(':id/approve')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Approve a pending loan application' })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Loan application approved successfully',
+  })
   approveLoan(
     @Param('id', ParseUUID) accountId: string,
     @Body() dto: ApproveLoanDto,
@@ -98,6 +103,9 @@ export class LoanController {
   @Patch(':id/decline')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Decline a pending loan application' })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Loan application declined successfully',
+  })
   declineLoan(
     @Param('id', ParseUUID) accountId: string,
     @Body() dto: DeclineLoanDto,
@@ -110,11 +118,29 @@ export class LoanController {
   @Patch(':id/undo-approval')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Undo approval or decline decision for a loan' })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Loan approval decision successfully reverted',
+  })
   undoApproval(
     @Param('id', ParseUUID) accountId: string,
     @GetUser() user: CoreReqUser,
   ) {
     return this.loanService.undoApproval(accountId, user);
+  }
+
+  @Permissions('loan:update')
+  @Patch(':id/update')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'update details for a pending loan' })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Loan account details updated successfully',
+  })
+  updateLoanDetails(
+    @Param('id', ParseUUID) accountId: string,
+    @Body() dto: UpdateLoanDetailsDto,
+    @GetUser() user: CoreReqUser,
+  ) {
+    return this.loanService.updateLoanDetails({ accountId, dto, user });
   }
 
   @Permissions('loan:disburse')

@@ -26,6 +26,14 @@ export class CalculateLoanRepaymentRespDto {
   @Expose()
   totalRepayment: string;
 
+  @ApiProperty({
+    description:
+      'Total processing charge to be paid for the duration of the loan',
+    example: '1000.00',
+  })
+  @Expose()
+  totalCharge: string;
+
   @ApiProperty({ type: [RepaymentScheduleItemDto] })
   @Expose()
   @Type(() => RepaymentScheduleItemDto)

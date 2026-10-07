@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { ICalculateLoanRepayment } from '@app/core-service/src/common/types';
 import {
   IsEnum,
   IsInt,
@@ -13,9 +14,15 @@ import {
 } from 'class-validator';
 
 import { IsNumericString } from '@common';
-import { LoanRepaymentFrequency, MoratoriumType } from '@database';
+import {
+  ChargeCalculationType,
+  ChargeTime,
+  InterestRateType,
+  LoanRepaymentFrequency,
+  MoratoriumType,
+} from '@database';
 
-export class CalculateLoanRepaymentDto {
+export class CalculateLoanRepaymentDto implements ICalculateLoanRepayment {
   // @ApiPropertyOptional()
   // @IsString()
   // @IsOptional()
@@ -30,13 +37,23 @@ export class CalculateLoanRepaymentDto {
   principalAmount: string;
 
   @ApiProperty({
-    description: 'Annual interest rate percentage (0 to 100)',
-    example: 0.0,
+    description:
+      'Annual interest rate percentage (0 to 100, e.g., 12.5 for 12.5%)',
+    example: 12.5,
+    minimum: 0,
+    maximum: 100,
   })
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(100)
   interestRate: number;
+
+  @ApiProperty({
+    enum: InterestRateType,
+    example: InterestRateType.DecliningBalance,
+  })
+  @IsEnum(InterestRateType)
+  interestRateType: InterestRateType;
 
   @ApiProperty({
     description: 'Loan tenor in terms of the repayment frequency units',
@@ -72,7 +89,36 @@ export class CalculateLoanRepaymentDto {
     example: 0,
   })
   @IsOptional()
-  @IsNumber()
+  @IsPositive()
+  @IsInt()
   @Min(0)
   moratoriumPeriod?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Processing or loan charge value (fixed amount or percentage rate)',
+    example: '5000.0',
+    minimum: 0,
+  })
+  @IsNumericString({ min: 0, maxDecimalPlaces: 2 })
+  @IsOptional()
+  chargeValue?: string;
+
+  @ApiPropertyOptional({
+    description: 'Calculation method for loan charges',
+    enum: ChargeCalculationType,
+    example: ChargeCalculationType.Fixed,
+  })
+  @IsEnum(ChargeCalculationType)
+  @IsOptional()
+  chargeCalculationType?: ChargeCalculationType;
+
+  @ApiPropertyOptional({
+    description: 'Timing of charge collection',
+    enum: ChargeTime,
+    example: ChargeTime.Upfront,
+  })
+  @IsEnum(ChargeTime)
+  @IsOptional()
+  chargeTime?: ChargeTime;
 }
