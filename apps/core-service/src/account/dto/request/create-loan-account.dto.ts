@@ -21,7 +21,10 @@ import {
   IsValidReference,
 } from '@common';
 import {
+  ChargeCalculationType,
+  ChargeTime,
   DEFAULT_BUSINESS_CUSTOMER_ID,
+  InterestRateType,
   LoanRepaymentFrequency,
   MoratoriumType,
 } from '@database';
@@ -69,17 +72,35 @@ export class CreateLoanAccountDto {
   interestRate: number;
 
   @ApiPropertyOptional({
-    description: 'Processing fee in major currency',
-    example: '500.0',
+    description: 'Processing or loan charge value',
+    example: '500.00',
   })
   @IsNumericString({ min: 0, maxDecimalPlaces: 2 })
   @IsOptional()
-  processingFee?: string;
+  chargeValue?: string;
+
+  @ApiPropertyOptional({
+    enum: ChargeCalculationType,
+    example: ChargeCalculationType.Fixed,
+    default: ChargeCalculationType.Fixed,
+  })
+  @IsEnum(ChargeCalculationType)
+  @IsOptional()
+  chargeCalculationType?: ChargeCalculationType = ChargeCalculationType.Fixed;
+
+  @ApiPropertyOptional({
+    enum: ChargeTime,
+    example: ChargeTime.Upfront,
+    default: ChargeTime.Upfront,
+  })
+  @IsEnum(ChargeTime)
+  @IsOptional()
+  chargeTime?: ChargeTime = ChargeTime.Upfront;
 
   @ApiPropertyOptional({ enum: MoratoriumType, default: MoratoriumType.None })
   @IsEnum(MoratoriumType)
   @IsOptional()
-  moratoriumType?: MoratoriumType;
+  moratoriumType?: MoratoriumType = MoratoriumType.None;
 
   @ApiPropertyOptional({ description: 'Moratorium duration', default: 0 })
   @IsInt()
@@ -138,6 +159,15 @@ export class CreateLoanAccountDto {
   @Length(1, 10)
   @IsNotEmpty()
   incomeGlCode: string;
+
+  @ApiPropertyOptional({
+    enum: InterestRateType,
+    example: InterestRateType.DecliningBalance,
+    default: InterestRateType.DecliningBalance,
+  })
+  @IsEnum(InterestRateType)
+  @IsOptional()
+  interestRateType?: InterestRateType;
 
   @ApiProperty({
     example: '3310',

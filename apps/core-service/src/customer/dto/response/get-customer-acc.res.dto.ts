@@ -62,7 +62,7 @@ export class AccountResponseDto {
   @Expose()
   @IsNotEmpty()
   @IsString()
-  balance: string;
+  availableBalance: string;
 }
 
 export class GetCustomerWithAccountsResponseDto {

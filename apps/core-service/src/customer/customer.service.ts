@@ -387,7 +387,7 @@ export class CustomerService {
           status: Accounts.status,
           type: Accounts.type,
           bookBalance: Accounts.bookBalance,
-          balance: Accounts.balance,
+          lienAmount: Accounts.lienAmount,
         },
       }),
       joinFn: (query) =>
@@ -419,10 +419,17 @@ export class CustomerService {
           ? moment(row.customer.dateOfIncorporation).format(DATE_FORMAT)
           : undefined;
 
+        // calculate available balance: (bookBalance - lienAmount) + overdraftLimit....
+        const overdraftLimit = BigInt('0');
+        const availableBalance = this.calc.add(
+          this.calc.subtract(row.account.bookBalance, row.account.lienAmount),
+          overdraftLimit,
+        );
+
         const account = row.account?.id
           ? ({
               ...row.account,
-              balance: this.calc.toMajorStr(row.account.balance, this.DP),
+              availableBalance: this.calc.toMajorStr(availableBalance, this.DP),
               bookBalance: this.calc.toMajorStr(
                 row.account.bookBalance,
                 this.DP,

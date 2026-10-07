@@ -41,7 +41,7 @@ export class AccountItemRespDto {
 
   @ApiProperty({ example: '45000.00' })
   @Expose()
-  balance: string;
+  availableBalance: string;
 
   @ApiProperty({ example: '45000.00' })
   @Expose()

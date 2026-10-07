@@ -233,33 +233,14 @@ export class AccountService {
   async createLoanAccount(dto: CreateLoanAccountDto, user: CoreReqUser) {
     const { tenantId } = user;
 
-    if (dto.processingFee && dto.principalAmount) {
-      // ensure fee is strictly less than principal...
-      if (
-        this.calc.isGreaterThanOrEqual(dto.processingFee, dto.principalAmount)
-      ) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          'processing fee cannot be equal to or exceed the loan principal amount',
-          { error_code: 'CLA001' },
-        );
-      }
-
-      // cap fee at a maximum percentage (e.g., 10% of principal)...
-      const MAX_FEE_PERCENTAGE = '0.1'; // 10%
-      const maxAllowedFee = this.calc.multiply(
-        dto.principalAmount,
-        MAX_FEE_PERCENTAGE,
-      );
-
-      if (this.calc.isGreaterThan(dto.processingFee, maxAllowedFee)) {
-        throw new ApiException(
-          ApiErrorCode.BadRequest,
-          `processing fee cannot exceed 10% of the loan principal amount`,
-          { error_code: 'CLA002' },
-        );
-      }
-    }
+    // validate loan processing charge details and GL requirements...
+    this.validateLoanChargeDetails({
+      principalAmount: dto.principalAmount,
+      chargeValue: dto.chargeValue,
+      chargeCalculationType: dto.chargeCalculationType,
+      chargeTime: dto.chargeTime,
+      feeGlCodeOrId: dto.feeGlCode,
+    });
 
     const customer = await this.customerRepo.findOne({
       where: and(
@@ -279,7 +260,7 @@ export class AccountService {
 
     if (!customer) {
       throw new ApiException(ApiErrorCode.BadRequest, 'customer not found', {
-        error_code: 'CLA003',
+        error_code: 'CLA005',
       });
     }
 
@@ -305,7 +286,7 @@ export class AccountService {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'one or more linked accounts were not found or do not belong to this customer',
-          { error_code: 'CLA004' },
+          { error_code: 'CLA006' },
         );
       }
     }
@@ -342,7 +323,7 @@ export class AccountService {
 
     if (!loanGlId)
       throw new ApiException(ApiErrorCode.BadRequest, 'invalid loan gl code', {
-        error_code: 'CLA005',
+        error_code: 'CLA007',
       });
 
     if (!incomeGlId)
@@ -350,13 +331,13 @@ export class AccountService {
         ApiErrorCode.BadRequest,
         'invalid income gl code',
         {
-          error_code: 'CLA006',
+          error_code: 'CLA008',
         },
       );
 
     if (feeGlCode && !feeGlId)
       throw new ApiException(ApiErrorCode.BadRequest, 'invalid fee gl code', {
-        error_code: 'CLA007',
+        error_code: 'CLA009',
       });
 
     let accountId: string | null = null,
@@ -386,7 +367,7 @@ export class AccountService {
       );
 
       const principalMinor = this.calc.toMinor(dto.principalAmount);
-      const processingFeeMinor = this.calc.toMinor(dto.processingFee || 0);
+      const chargeValue = this.calc.toMinor(dto.chargeValue || '0');
       await this.accountRepo.createLoanDetails(
         {
           accountId: createdAccount.accountId,
@@ -399,9 +380,10 @@ export class AccountService {
           repaymentFrequency: dto.repaymentFrequency,
           interestRate: this.calc.round(dto.interestRate, this.DP),
           status: LoanStatus.Pending,
-          chargeCalculationType: ChargeCalculationType.Fixed,
-          chargeTime: ChargeTime.Upfront,
-          chargeValue: processingFeeMinor,
+          chargeCalculationType:
+            dto.chargeCalculationType || ChargeCalculationType.Fixed,
+          chargeTime: dto.chargeTime || ChargeTime.Upfront,
+          chargeValue,
           moratoriumType: dto.moratoriumType || MoratoriumType.None,
           moratoriumPeriod: dto.moratoriumPeriod || 0,
           incomeGlAccountId: incomeGlId,
@@ -419,7 +401,7 @@ export class AccountService {
       throw new ApiException(
         ApiErrorCode.InternalServerError,
         'failed to create loan account record',
-        { error_code: 'CLA004' },
+        { error_code: 'CLA010' },
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -479,11 +461,20 @@ export class AccountService {
       .orderBy(desc(Accounts.createdAt));
 
     // convert balance to number for presentation...
-    const formattedData = accountsList.map((acc) => ({
-      ...acc,
-      balance: this.calc.toMajorStr(acc.balance, this.DP),
-      bookBalance: this.calc.toMajorStr(acc.bookBalance, this.DP),
-    }));
+    const formattedData = accountsList.map((acc) => {
+      // calculate available balance: (bookBalance - lienAmount) + overdraftLimit....
+      const overdraftLimit = BigInt('0');
+      const availableBalance = this.calc.add(
+        this.calc.subtract(acc.bookBalance, acc.lienAmount),
+        overdraftLimit,
+      );
+
+      return {
+        ...acc,
+        availableBalance: this.calc.toMajorStr(availableBalance, this.DP),
+        bookBalance: this.calc.toMajorStr(acc.bookBalance, this.DP),
+      };
+    });
 
     return plainToInstance(PaginatedAccountsRespDto, {
       data: formattedData,
@@ -580,9 +571,16 @@ export class AccountService {
       }
     }
 
+    // calculate available balance: (bookBalance - lienAmount) + overdraftLimit....
+    const overdraftLimit = BigInt('0');
+    const availableBalance = this.calc.add(
+      this.calc.subtract(account.bookBalance, account.lienAmount),
+      overdraftLimit,
+    );
+
     const result = {
       ...account,
-      balance: this.calc.toMajorStr(account.balance, this.DP),
+      availableBalance: this.calc.toMajorStr(availableBalance, this.DP),
       bookBalance: this.calc.toMajorStr(account.bookBalance, this.DP),
       savingsDetails: accSavingsDetails,
       loanDetails: accLoanDetails,
@@ -636,7 +634,9 @@ export class AccountService {
         accountName: data.accountName,
         accountNumber,
         officeId: data.officeId,
-        balance,
+        lienAmount: BigInt('0'),
+        postNoCredit: false,
+        postNoDebit: false,
         bookBalance: balance,
         status: data.status || AccountStatus.Pending,
         approvedBy: data.userId,
@@ -657,6 +657,94 @@ export class AccountService {
     }
 
     return { accountId: account.id, accountNumber: account.accountNumber };
+  }
+
+  /**
+   * Validates account existence, active status, restriction flags (PND/PNC),
+   * and available balance prior to executing posting operations.
+   *
+   * @param options.account - The customer or internal account entity to validate
+   * @param options.amount - The posting transaction amount in minor units
+   * @param options.entryType - The accounting direction ('debit' or 'credit')
+   * @param options.overdraftLimit - Approved overdraft limit in minor units (defaults to 0n)
+   *
+   * @throws {ApiException} ACC001 - Account is null or undefined
+   * @throws {ApiException} ACC002 - Account status is not Active
+   * @throws {ApiException} ACC003 - Credit transaction requested on Post No Credit (PNC) account
+   * @throws {ApiException} ACC004 - Debit transaction requested on Post No Debit (PND) account
+   * @throws {ApiException} ACC005 - Insufficient available balance (bookBalance - lienAmount + overdraftLimit)
+   */
+  assertPostingAllowed({
+    account,
+    amount,
+    entryType,
+    overdraftLimit = 0n,
+  }: {
+    account?: Pick<
+      typeof Accounts.$inferSelect,
+      | 'status'
+      | 'postNoCredit'
+      | 'postNoDebit'
+      | 'restrictionReason'
+      | 'bookBalance'
+      | 'lienAmount'
+    >;
+    amount: string | bigint; // minor units
+    entryType: 'debit' | 'credit';
+    overdraftLimit?: string | bigint; // optional overdraft limit in minor units
+  }) {
+    if (!account) {
+      throw new ApiException(ApiErrorCode.InvalidAccount, 'invalid account', {
+        error_code: 'ACC001',
+      });
+    }
+
+    // check account active status...
+    if (account.status !== AccountStatus.Active) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        `account is not active. current status: ${account.status}`,
+        { error_code: 'ACC002' },
+      );
+    }
+
+    // check post no credit (pnc) restriction...
+    if (entryType === 'credit' && account.postNoCredit) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        `account is restricted for credit transactions (PNC). reason: ${
+          account.restrictionReason || 'none specified'
+        }`,
+        { error_code: 'ACC003' },
+      );
+    }
+
+    // check post no debit (pnd) restriction...
+    if (entryType === 'debit' && account.postNoDebit) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        `account is restricted for debit transactions (PND). reason: ${
+          account.restrictionReason || 'none specified'
+        }`,
+        { error_code: 'ACC004' },
+      );
+    }
+
+    // validate available balance for debits: available = (bookBalance - lienAmount) + overdraftLimit...
+    if (entryType === 'debit') {
+      const availableBalance = this.calc.add(
+        this.calc.subtract(account.bookBalance, account.lienAmount),
+        overdraftLimit,
+      );
+
+      if (this.calc.isLessThan(availableBalance, amount)) {
+        throw new ApiException(
+          ApiErrorCode.InsufficientFunds,
+          'insufficient available funds taking into consideration active liens and overdraft limits',
+          { error_code: 'ACC005' },
+        );
+      }
+    }
   }
 
   private async generateAccountNumber(
@@ -707,6 +795,103 @@ export class AccountService {
     }
 
     return accountNumber;
+  }
+
+  /**
+   * validates processing fee caps, calculation types, gl account requirements,
+   * and net disbursement thresholds across loan creation and details updates
+   */
+  validateLoanChargeDetails({
+    principalAmount,
+    chargeValue,
+    chargeCalculationType,
+    chargeTime,
+    feeGlCodeOrId,
+  }: {
+    principalAmount: string;
+    chargeValue?: string;
+    chargeCalculationType?: ChargeCalculationType;
+    chargeTime?: ChargeTime;
+    feeGlCodeOrId?: string | null;
+  }) {
+    // skip validation if no charge value is provided or charge is 0
+    if (!chargeValue || !this.calc.isGreaterThan(chargeValue, '0')) {
+      return;
+    }
+
+    const chargeType = chargeCalculationType ?? ChargeCalculationType.Fixed;
+    const time = chargeTime ?? ChargeTime.Upfront;
+
+    // require feeGlCode or existing feeIncomeGlAccountId whenever a non-zero charge is configured...
+    if (!feeGlCodeOrId) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'feeGlCode is required when a processing charge is specified',
+        { error_code: 'VLC000' },
+      );
+    }
+
+    // compute the evaluated fee amount in major currency units based on calculation type...
+    let evaluatedFeeAmount: string;
+
+    if (chargeType === ChargeCalculationType.Percentage) {
+      // validate percentage rate bounds (0% to 100%)
+      if (!this.calc.isWithinRange(chargeValue, '0', '100')) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          'charge percentage rate must be between 0% and 100%',
+          { error_code: 'VLC001' },
+        );
+      }
+
+      // evaluatedFee = principalAmount * (chargeValue / 100)...
+      const feeDecimalRate = this.calc.divide(chargeValue, '100');
+      evaluatedFeeAmount = this.calc.multiply(principalAmount, feeDecimalRate);
+    } else {
+      // Fixed amount in major currency
+      evaluatedFeeAmount = chargeValue;
+    }
+
+    // ensure total fee is strictly less than principal...
+    if (this.calc.isGreaterThanOrEqual(evaluatedFeeAmount, principalAmount)) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'processing fee cannot be equal to or exceed the loan principal amount',
+        { error_code: 'VLC002' },
+      );
+    }
+
+    // cap fee at a maximum percentage limit (e.g., 10% of principal)...
+    const MAX_FEE_PERCENTAGE = '0.1'; // 10%
+    const maxAllowedFee = this.calc.multiply(
+      principalAmount,
+      MAX_FEE_PERCENTAGE,
+    );
+
+    if (this.calc.isGreaterThan(evaluatedFeeAmount, maxAllowedFee)) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'processing fee cannot exceed 10% of the loan principal amount',
+        { error_code: 'VLC003' },
+      );
+    }
+
+    // chargeTime specific guards...
+    if (time === ChargeTime.Upfront) {
+      // verify net disbursement amount (principal - upfront fee) remains positive
+      const netDisbursement = this.calc.subtract(
+        principalAmount,
+        evaluatedFeeAmount,
+      );
+
+      if (this.calc.isLessThanOrEqual(netDisbursement, '0')) {
+        throw new ApiException(
+          ApiErrorCode.BadRequest,
+          'upfront fee reduces net disbursement proceeds to zero or below',
+          { error_code: 'VLC004' },
+        );
+      }
+    }
   }
 
   // async createSavingsAccount(dto: CreateAccountDto, user: CoreReqUser) {
