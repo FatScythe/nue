@@ -167,15 +167,15 @@ export class LienProcessor extends BaseWorkerHost {
       }
 
       // restore available balance (add back lien amount)...
-      const newAvailableBalance = this.calculator.add(
-        account.balance,
+      const restoredLienAmount = this.calculator.subtract(
+        account.lienAmount,
         lien.amount,
       );
 
       await tx
         .update(Accounts)
         .set({
-          balance: BigInt(newAvailableBalance),
+          lienAmount: BigInt(restoredLienAmount),
           updatedAt: new Date(),
         })
         .where(

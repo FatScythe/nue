@@ -47,9 +47,7 @@ export class LienService {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         `expiry date must be at least ${MIN_EXPIRATION_BUFFER_SECONDS} seconds in the future`,
-        {
-          error_code: 'PLI001',
-        },
+        { error_code: 'PLI001' },
       );
     }
 
@@ -61,9 +59,7 @@ export class LienService {
       throw new ApiException(
         ApiErrorCode.Conflict,
         'reference is already used',
-        {
-          error_code: 'PLI002',
-        },
+        { error_code: 'PLI002' },
       );
     }
 
@@ -77,50 +73,55 @@ export class LienService {
         .for('update');
 
       if (!account) {
-        throw new ApiException(ApiErrorCode.BadRequest, 'account not found', {
-          error_code: 'PLI003',
-        });
+        throw new ApiException(
+          ApiErrorCode.InvalidAccount,
+          'account not found',
+          {
+            error_code: 'PLI003',
+          },
+        );
       }
 
       if (account.status !== AccountStatus.Active) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
           'account is not active',
-          {
-            error_code: 'PLI004',
-          },
+          { error_code: 'PLI004' },
         );
       }
 
-      // convert incoming DTO amount (major units, e.g. "100.50") to minor units (bigint)...
-      const lienAmount = this.calc.round(dto.amount);
+      // convert incoming major currency (e.g. "100.50") to minor unit string...
+      const lienAmount = this.calc.toMinor(dto.amount);
 
-      // check available balance...
+      // calculate available balance: (bookBalance - lienAmount) + overdraftLimit....
+      const overdraftLimit = '0';
+      const availableBalance = this.calc.add(
+        this.calc.subtract(account.bookBalance, account.lienAmount),
+        overdraftLimit,
+      );
+
+      // check available balance against requested lien amount...
       const isInsufficientBalance = this.calc.isLessThan(
-        this.calc.toMajor(account.balance),
-        this.calc.toMajor(lienAmount),
+        availableBalance,
+        lienAmount,
       );
 
       if (isInsufficientBalance) {
         throw new ApiException(
-          ApiErrorCode.BadRequest,
+          ApiErrorCode.InsufficientFunds,
           'insufficient available balance to place lien',
-          {
-            error_code: 'PLI005',
-          },
+          { error_code: 'PLI005' },
         );
       }
 
-      // deduct lien amount ONLY from available balance (bookBalance stays untouched)...
-      const newAvailableBalance = this.calc.subtract(
-        this.calc.toMajor(account.balance),
-        this.calc.toMajor(lienAmount),
-      );
+      // aggregate total active holds on account...
+      const newLienAmount = this.calc.add(account.lienAmount, lienAmount);
 
+      // update account with BigInt cast for Drizzle bigint schema column...
       await tx
         .update(Accounts)
         .set({
-          balance: this.calc.toMinor(newAvailableBalance),
+          lienAmount: BigInt(newLienAmount),
           updatedAt: new Date(),
         })
         .where(
@@ -132,7 +133,7 @@ export class LienService {
           id: uuidv7(),
           tenantId: tenantId!,
           accountId: account.id,
-          amount: this.calc.toMinor(lienAmount),
+          amount: BigInt(lienAmount),
           reason: dto.reason,
           reference: dto.reference,
           status: LienStatus.Active,
@@ -146,23 +147,20 @@ export class LienService {
         throw new ApiException(
           ApiErrorCode.InternalServerError,
           'unable to place lien',
-          {
-            error_code: 'PLI006',
-          },
+          { error_code: 'PLI006' },
         );
       }
 
       return createdLien;
     });
 
-    const MAX_EXPIRATION_HOURS = LIEN_EXPIRATION_SWEEP_HOURS; // so it syncs w/ bkg job...
+    const MAX_EXPIRATION_HOURS = LIEN_EXPIRATION_SWEEP_HOURS;
 
     if (lien.expiresAt) {
       const now = moment();
       const expiresAt = moment(lien.expiresAt);
       const threshold = moment().add(MAX_EXPIRATION_HOURS, 'hours');
 
-      // check that lien expires in the future and within 2 hours from now...
       if (expiresAt.isAfter(now) && expiresAt.isBefore(threshold)) {
         const delayMs = expiresAt.diff(now);
 
@@ -248,21 +246,16 @@ export class LienService {
       }
 
       // restore available balance
-      const restoredBalance = this.calc.add(
-        this.calc.toMajor(account.balance),
-        this.calc.toMajor(lien.amount),
+      const restoredLienAmount = this.calc.subtract(
+        account.lienAmount,
+        lien.amount,
       );
 
-      // invariant validation: available balance cannot exceed book balance...
-      if (
-        this.calc.isGreaterThan(
-          restoredBalance,
-          this.calc.toMajor(account.bookBalance),
-        )
-      ) {
+      // invariant validation: restored lien not less than 0...
+      if (this.calc.isLessThan(restoredLienAmount, '0')) {
         throw new ApiException(
           ApiErrorCode.InternalServerError,
-          'releasing lien would cause available balance to exceed book balance',
+          'releasing lien would cause balance mismatch',
           {
             error_code: 'RLI004',
           },
@@ -272,7 +265,7 @@ export class LienService {
       await tx
         .update(Accounts)
         .set({
-          balance: this.calc.toMinor(restoredBalance),
+          lienAmount: BigInt(restoredLienAmount),
           updatedAt: transactionAt,
         })
         .where(
