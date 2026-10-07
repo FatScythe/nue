@@ -6,10 +6,11 @@ CREATE TYPE "public"."customer_gender" AS ENUM('male', 'female', 'n/a');--> stat
 CREATE TYPE "public"."customer_status" AS ENUM('pending_verification', 'under_review', 'active', 'suspended', 'frozen', 'deactivated', 'rejected');--> statement-breakpoint
 CREATE TYPE "public"."customer_tier" AS ENUM('0', '1', '2', '3');--> statement-breakpoint
 CREATE TYPE "public"."customer_type" AS ENUM('individual', 'corporate');--> statement-breakpoint
-CREATE TYPE "public"."account_status" AS ENUM('pending', 'active', 'suspended', 'frozen', 'pnc', 'pnd', 'closed', 'rejected');--> statement-breakpoint
+CREATE TYPE "public"."account_status" AS ENUM('pending', 'active', 'suspended', 'frozen', 'closed', 'rejected');--> statement-breakpoint
 CREATE TYPE "public"."account_type" AS ENUM('savings', 'loan');--> statement-breakpoint
 CREATE TYPE "public"."charge_type" AS ENUM('fixed', 'percentage');--> statement-breakpoint
 CREATE TYPE "public"."charge_time" AS ENUM('upfront', 'installment');--> statement-breakpoint
+CREATE TYPE "public"."interest_rate_type" AS ENUM('flat', 'declining_balance');--> statement-breakpoint
 CREATE TYPE "public"."loan_status" AS ENUM('active', 'pending', 'disbursed', 'paid_off', 'defaulted', 'written_off', 'approved', 'declined');--> statement-breakpoint
 CREATE TYPE "public"."moratorium_type" AS ENUM('none', 'principal_only', 'principal_and_interest');--> statement-breakpoint
 CREATE TYPE "public"."repayment_frequency" AS ENUM('daily', 'weekly', 'bi_weekly', 'quarterly', 'monthly', 'yearly');--> statement-breakpoint
@@ -123,11 +124,14 @@ CREATE TABLE "accounts" (
 	"status" "account_status" DEFAULT 'pending' NOT NULL,
 	"account_number" text NOT NULL,
 	"account_name" text NOT NULL,
+	"post_no_debit" boolean DEFAULT false NOT NULL,
+	"post_no_credit" boolean DEFAULT false NOT NULL,
+	"restriction_reason" text,
 	"reference" text,
 	"currency" "currency_type" DEFAULT 'ngn' NOT NULL,
 	"control_gl_account_id" varchar(36) NOT NULL,
-	"balance" bigint DEFAULT 0 NOT NULL,
 	"book_balance" bigint DEFAULT 0 NOT NULL,
+	"lien_amount" bigint DEFAULT 0 NOT NULL,
 	"created_by" varchar(36),
 	"approved_by" varchar(36),
 	"office_id" integer NOT NULL,
@@ -159,6 +163,7 @@ CREATE TABLE "loan_details" (
 	"tenor" integer NOT NULL,
 	"repayment_frequency" "repayment_frequency" DEFAULT 'monthly' NOT NULL,
 	"interest_rate" numeric(5, 2) DEFAULT '0.00' NOT NULL,
+	"interest_rate_type" "interest_rate_type" DEFAULT 'declining_balance' NOT NULL,
 	"status" "loan_status" DEFAULT 'active' NOT NULL,
 	"charge_calculation_type" charge_type DEFAULT 'fixed' NOT NULL,
 	"charge_time" charge_time DEFAULT 'upfront' NOT NULL,

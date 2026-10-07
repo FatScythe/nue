@@ -35,6 +35,12 @@ export enum LoanStatus {
   Declined = 'declined',
 }
 
+/** method used to calculate interest charges over the lifecycle of a loan. */
+export enum InterestRateType {
+  Flat = 'flat', // interest calculated on the initial principal for the entire loan duration...
+  DecliningBalance = 'declining_balance', // Interest calculated on the remaining unpaid principal balance for each period...
+}
+
 export enum ChargeCalculationType {
   Fixed = 'fixed',
   Percentage = 'percentage',

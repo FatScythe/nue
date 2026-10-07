@@ -14,6 +14,7 @@ import {
 import {
   ChargeCalculationType,
   ChargeTime,
+  InterestRateType,
   LoanRepaymentFrequency,
   LoanStatus,
   MoratoriumType,
@@ -26,6 +27,11 @@ import { GeneralLedgers } from './general_ledger';
 export const repaymentFrequencyEnum = pgEnum(
   'repayment_frequency',
   Object.values(LoanRepaymentFrequency) as [string, ...string[]],
+);
+
+export const interestRateTypeEnum = pgEnum(
+  'interest_rate_type',
+  Object.values(InterestRateType) as [string, ...string[]],
 );
 
 export const loanStatusEnum = pgEnum(
@@ -74,6 +80,10 @@ export const LoanDetails = pgTable(
       .notNull(),
     interestRate: numeric('interest_rate', { precision: 5, scale: 2 })
       .default('0.00')
+      .notNull(),
+    interestRateType: interestRateTypeEnum('interest_rate_type')
+      .default(InterestRateType.DecliningBalance)
+      .$type<InterestRateType>()
       .notNull(),
     status: loanStatusEnum('status')
       .default(LoanStatus.Active)

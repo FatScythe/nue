@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   index,
   integer,
   jsonb,
@@ -53,6 +54,16 @@ export const Accounts = pgTable(
       .default(AccountStatus.Pending),
     accountNumber: text('account_number').unique().notNull(),
     accountName: text('account_name').notNull(),
+
+    // restrictions & compliance...
+    // Post No Debit: account can receive money IN, but cannot send money OUT
+    // the most common restriction for expired IDs or unverified KYCs
+    postNoDebit: boolean('post_no_debit').notNull().default(false),
+    // Post No Credit: Account can send money OUT, but cannot receive money IN
+    // used for accounts being cleared out or restricted from receiving new deposits
+    postNoCredit: boolean('post_no_credit').notNull().default(false),
+    restrictionReason: text('restriction_reason'),
+
     reference: text('reference'),
     currency: dbCurrencyEnum('currency')
       .$type<Currency>()
@@ -61,12 +72,12 @@ export const Accounts = pgTable(
     controlGlAccountId: varchar('control_gl_account_id', { length: 36 })
       .notNull()
       .references(() => GeneralLedgers.id, { onDelete: 'restrict' }),
-    balance: bigint('balance', { mode: 'bigint' })
-      .default(sql`0`)
-      .notNull(),
     bookBalance: bigint('book_balance', { mode: 'bigint' })
       .default(sql`0`)
       .notNull(), // balance including pending transactions...
+    lienAmount: bigint('lien_amount', { mode: 'bigint' })
+      .notNull()
+      .default(sql`0`),
     createdBy: varchar('created_by', { length: 36 }).references(
       () => Users.id,
       {

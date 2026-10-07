@@ -1,5 +1,5 @@
 {
-  "id": "4351ce6b-0b7f-4ec2-9b80-d4145f90ccf3",
+  "id": "c70c1f90-2812-4d5b-aca8-d8b81d81a8de",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -990,6 +990,26 @@
           "primaryKey": false,
           "notNull": true
         },
+        "post_no_debit": {
+          "name": "post_no_debit",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "post_no_credit": {
+          "name": "post_no_credit",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "restriction_reason": {
+          "name": "restriction_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "reference": {
           "name": "reference",
           "type": "text",
@@ -1010,15 +1030,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "balance": {
-          "name": "balance",
+        "book_balance": {
+          "name": "book_balance",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
           "default": "0"
         },
-        "book_balance": {
-          "name": "book_balance",
+        "lien_amount": {
+          "name": "lien_amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
@@ -1407,6 +1427,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'0.00'"
+        },
+        "interest_rate_type": {
+          "name": "interest_rate_type",
+          "type": "interest_rate_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'declining_balance'"
         },
         "status": {
           "name": "status",
@@ -2925,8 +2953,6 @@
         "active",
         "suspended",
         "frozen",
-        "pnc",
-        "pnd",
         "closed",
         "rejected"
       ]
@@ -2953,6 +2979,14 @@
       "values": [
         "upfront",
         "installment"
+      ]
+    },
+    "public.interest_rate_type": {
+      "name": "interest_rate_type",
+      "schema": "public",
+      "values": [
+        "flat",
+        "declining_balance"
       ]
     },
     "public.loan_status": {

@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { and, eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { uuidv7 } from 'uuidv7';
 
@@ -150,24 +149,8 @@ export class AccountRepository extends BaseRepository<typeof Accounts> {
       id: uuidv7(),
       ...(accountName && { accountName: accountName.toUpperCase().trim() }),
       status: data.status || AccountStatus.Pending,
-      balance: data.balance || 0n,
+      lienAmount: data.lienAmount || 0n,
       bookBalance: data.bookBalance || 0n,
-    };
-  }
-
-  async getBalance(
-    { accountId, tenantId }: { accountId: string; tenantId: number },
-    tx?: DBTransaction,
-  ) {
-    const result = await this.getClient(tx)
-      .select({ balance: Accounts.balance, bookBalance: Accounts.bookBalance })
-      .from(Accounts)
-      .where(and(eq(Accounts.id, accountId), eq(Accounts.tenantId, tenantId)))
-      .limit(1);
-
-    return {
-      balance: result[0]?.balance ?? 0n,
-      bookBalance: result[0]?.balance ?? 0n,
     };
   }
 }

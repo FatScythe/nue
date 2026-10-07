@@ -71,6 +71,7 @@ export const validScopes = [
 
   // loan...
   `${Resources.Loan}:read`,
+  `${Resources.Loan}:update`,
   `${Resources.Loan}:approve`,
   `${Resources.Loan}:disburse`,
   `${Resources.Loan}:repay`,
