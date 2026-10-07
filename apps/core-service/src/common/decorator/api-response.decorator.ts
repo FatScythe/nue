@@ -7,6 +7,7 @@ export const ApiSuccessResponseData = <T extends Type<unknown>>(
   dto: T,
   options?: {
     status?: HttpStatus;
+    message?: string;
     description?: string;
   },
 ) => {
@@ -63,7 +64,8 @@ export const ApiSuccessResponseData = <T extends Type<unknown>>(
     dto.prototype,
     'message',
   );
-  const customMessageExample = messageMeta?.example ?? 'request successful';
+  const customMessageExample =
+    messageMeta?.example ?? options?.message ?? 'request successful';
 
   // collect all DTOs so Swagger registers them in components/schemas
   const extraModels: Function[] = [ApiResponseDto, dto];

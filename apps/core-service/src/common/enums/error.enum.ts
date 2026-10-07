@@ -1,6 +1,7 @@
 export enum ApiErrorCode {
   InternalServerError = 'INTERNAL_SERVER_ERROR',
   InvalidAuthKey = 'INVALID_AUTH_KEY',
+  InvalidAccount = 'INVALID_ACCOUNT',
   InsufficientFunds = 'INSUFFICIENT_FUNDS',
   ValidationError = 'VALIDATION_ERROR',
   BadRequest = 'BAD_REQUEST',
