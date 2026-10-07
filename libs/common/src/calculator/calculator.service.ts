@@ -166,6 +166,19 @@ export class Calculator {
     return new Big(num1).lte(num2);
   }
 
+  /** Checks if num is between min and max (default inclusive). */
+  isWithinRange(
+    num: BigSource,
+    min: BigSource,
+    max: BigSource,
+    inclusive = true,
+  ): boolean {
+    const val = new Big(num);
+    return inclusive
+      ? val.gte(min) && val.lte(max)
+      : val.gt(min) && val.lt(max);
+  }
+
   /** Checks if num1 is greater than or equal to num2. */
   isGreaterThanOrEqual(num1: BigSource, num2: BigSource): boolean {
     return new Big(num1).gte(num2);
