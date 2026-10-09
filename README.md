@@ -164,6 +164,38 @@ This automatically updates your root `tsconfig.json` path mappings:
 
 ```
 
+#### Step 3: Initialize Library `package.json` for pnpm Workspaces
+
+The Nest CLI generates libraries without a `package.json`. To enable `pnpm --filter` commands and isolate package scope, create a `package.json` file in `libs/<lib-name>/`:
+
+```json
+{
+  "name": "@lib/<lib-name>",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts"
+}
+```
+
+Then register the new workspace package by running:
+
+```bash
+pnpm install
+
+```
+
+> **Automated Alternative:** You can automate this step by adding a script to your root `package.json`:
+>
+> ```json
+> "scripts": {
+>   "g:lib": "bash -c 'pnpm exec nest g lib $0 && echo \"{\\\"name\\\": \\\"@lib/$0\\\", \\\"version\\\": \\\"0.0.1\\\", \\\"private\\\": true, \\\"main\\\": \\\"src/index.ts\\\"}\" > libs/$0/package.json && pnpm install'"
+> }
+>
+> ```
+>
+> Run it with: `pnpm run g:lib <lib-name>`
+
+````
 ---
 
 ## 🗄️ Database Migrations (Drizzle Kit)
@@ -186,7 +218,7 @@ Use **Drizzle Kit** for database schema management. Instead of calling the CLI d
 ```bash
 pnpm run db:generate --name add_office_to_users
 
-```
+````
 
 - **Apply pending migrations:**
 
@@ -201,7 +233,7 @@ pnpm run db:migrate
 
 Drizzle Kit operates on a **Forward-Only** philosophy.
 
-1. **Schema-First:** Always update your TypeScript schema files in `libs/database/src/lib/schema/` first.
+1. **Schema-First:** Always update your TypeScript schema files in `libs/database/src/drizzle/schemas/` first.
 2. **Type Safety:** The generator verifies that foreign key references match exact column types (e.g., `serial` to `integer` or `uuid` to `uuid`).
 3. **Environment Injection:** Connection settings are driven by `DATABASE_URL` (e.g., `postgresql://<user>:<pass>@127.0.0.1:5432/<db_name>`).
 
