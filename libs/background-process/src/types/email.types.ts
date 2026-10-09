@@ -3,7 +3,7 @@ import {
   SendLoginNotificationDto,
   SendWelcomeNotificationDto,
   SendWelcomeOrgNotificationDto,
-} from '@background-process/dto';
+} from '@libs/background-process';
 
 export enum EmailWorkerJobEnum {
   SendLoginNotification = 'login_notification',

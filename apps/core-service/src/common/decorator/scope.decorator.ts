@@ -1,7 +1,7 @@
 import { SetMetadata } from '@nestjs/common';
 
 // libs...
-import { Resources } from '@database';
+import { Resources } from '@libs/database';
 
 export const SCOPE_KEY = 'scopes_check';
 

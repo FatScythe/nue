@@ -1,13 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { BaseRepository } from '@libs/database/drizzle/base.repository';
+import { DATABASE_CONNECTION } from '@libs/database/drizzle/drizzle.provider';
+import * as schema from '@libs/database/drizzle/schemas';
+import { Roles, Users } from '@libs/database/drizzle/schemas';
+import { DBTransaction } from '@libs/database/drizzle/types';
 import { eq, SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-
-import { BaseRepository } from '@database/drizzle/base.repository';
-import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import * as schema from '@database/drizzle/schemas';
-import { Roles, Users } from '@database/drizzle/schemas';
-import { DBTransaction } from '@database/drizzle/types';
 
 @Injectable()
 export class UserRepository extends BaseRepository<typeof Users> {

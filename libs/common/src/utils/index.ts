@@ -1,11 +1,11 @@
 import { createHash, createHmac } from 'crypto';
 
+import { DEFAULT_PERMISSION, Resources } from '@libs/database';
+import { RolePermissions } from '@libs/database/drizzle/types';
 import { Request } from 'express';
 import { customAlphabet } from 'nanoid';
 
-import { PaginationMeta } from '@common/types';
-import { DEFAULT_PERMISSION, Resources } from '@database';
-import { RolePermissions } from '@database/drizzle/types';
+import { PaginationMeta } from '../types';
 
 export * from './gl.utils';
 export class MoneyTransformer {

@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 
 // libs...
-import { Calculator } from '@common';
-import { RedisModule } from '@database';
+import { Calculator } from '@libs/common';
+import { RedisModule } from '@libs/database';
 
 import { AccountModule } from './account/account.module';
 import { AccountingModule } from './accounting/accounting.module';

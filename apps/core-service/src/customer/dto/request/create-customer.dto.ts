@@ -2,6 +2,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { IsValidDate, IsValidReference } from '@lib/common/src/validators';
 import {
+  CustomerGender,
+  CustomerTier,
+  CustomerType,
+} from '@libs/database/drizzle/enums';
+import {
   IsBoolean,
   IsEmail,
   IsEnum,
@@ -14,12 +19,6 @@ import {
   ValidateIf,
 } from 'class-validator';
 import moment from 'moment';
-
-import {
-  CustomerGender,
-  CustomerTier,
-  CustomerType,
-} from '@database/drizzle/enums';
 
 export class CreateCustomerDto {
   @ApiProperty({

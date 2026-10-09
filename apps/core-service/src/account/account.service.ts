@@ -1,18 +1,12 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import type { CoreReqUser } from '@lib/common/src/types';
-// ext-libs...
-import { plainToInstance } from 'class-transformer';
-import { and, count, desc, eq, inArray, isNull, like } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
-
 import {
   calculatePaginationMeta,
   Calculator,
   DATE_FORMAT,
   isNumber,
-} from '@common';
+} from '@libs/common';
 // libs...
 import {
   AccountRepository,
@@ -29,15 +23,20 @@ import {
   GeneralLedgerRepository,
   LoanStatus,
   MoratoriumType,
-} from '@database';
-import * as schema from '@database/drizzle/schemas';
+} from '@libs/database';
+import * as schema from '@libs/database/drizzle/schemas';
 import {
   Accounts,
   Customers,
   GeneralLedgers,
   LoanDetails,
   SavingsDetails,
-} from '@database/drizzle/schemas';
+} from '@libs/database/drizzle/schemas';
+// ext-libs...
+import { plainToInstance } from 'class-transformer';
+import { and, count, desc, eq, inArray, isNull, like } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
 
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';

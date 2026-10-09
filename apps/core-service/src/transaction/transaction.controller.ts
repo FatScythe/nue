@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOperation } from '@nestjs/swagger';
 
 //libs...
-import type { CoreReqUser } from '@common';
+import type { CoreReqUser } from '@libs/common';
 
 import { ApiSuccessResponseData, GetUser } from '../common/decorator';
 import {

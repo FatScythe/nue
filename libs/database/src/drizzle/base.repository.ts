@@ -1,12 +1,11 @@
 import { Inject } from '@nestjs/common';
 
+import { DATABASE_CONNECTION } from '@libs/database/drizzle/drizzle.provider';
+import * as schema from '@libs/database/drizzle/schemas';
+import { DatabaseClient, DBTransaction } from '@libs/database/drizzle/types';
 import { sql, SQL } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { PgTable } from 'drizzle-orm/pg-core';
-
-import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import * as schema from '@database/drizzle/schemas';
-import { DatabaseClient, DBTransaction } from '@database/drizzle/types';
 
 // checks if it is drizzle col. extract the primitive type else return what was passed...
 type UnwrapColumn<T> = T extends { _: { data: infer D } } ? D : T;

@@ -4,7 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 
 // libs...
-import { DatabaseModule } from '@database';
+import { DatabaseModule } from '@libs/database';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';

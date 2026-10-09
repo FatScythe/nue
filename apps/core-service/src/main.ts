@@ -10,9 +10,8 @@ import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+import { DEFAULT_API_KEY } from '@libs/database';
 import helmet from 'helmet';
-
-import { DEFAULT_API_KEY } from '@database';
 
 import { configuration } from './config';
 import { CoreServiceModule } from './core-service.module';

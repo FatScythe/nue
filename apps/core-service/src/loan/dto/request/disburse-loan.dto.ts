@@ -1,9 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
+import { IsValidDate, IsValidReference } from '@libs/common';
+import { DEFAULT_MALE_ACCOUNT_ID } from '@libs/database';
 import { IsOptional, IsString, IsUUID, Length } from 'class-validator';
-
-import { IsValidDate, IsValidReference } from '@common';
-import { DEFAULT_MALE_ACCOUNT_ID } from '@database';
 
 export class DisburseLoanDto {
   @ApiPropertyOptional({

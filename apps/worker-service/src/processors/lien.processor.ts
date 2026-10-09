@@ -1,21 +1,26 @@
-import { InjectQueue, OnWorkerEvent, Processor } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor } from '@nestjs/bullmq';
 import { Inject, Logger } from '@nestjs/common';
-
-import { Job, Queue } from 'bullmq';
-import { and, eq, isNotNull, lte } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
 
 // libs...
 import {
+  BackgroundProcess,
   BULLMQ_DEFAULT_QUEUE_SETTING,
   BULLMQ_LIEN_QUEUE,
   LienWorkerEnum,
   ProcessLienExpirationDto,
-} from '@background-process';
-import { Calculator, LIEN_EXPIRATION_SWEEP_HOURS } from '@common';
-import { Accounts, DATABASE_CONNECTION, Liens, LienStatus } from '@database';
-import * as schema from '@database/drizzle/schemas';
+} from '@libs/background-process';
+import { Calculator, LIEN_EXPIRATION_SWEEP_HOURS } from '@libs/common';
+import {
+  Accounts,
+  DATABASE_CONNECTION,
+  Liens,
+  LienStatus,
+} from '@libs/database';
+import * as schema from '@libs/database/drizzle/schemas';
+import { Job } from 'bullmq';
+import { and, eq, isNotNull, lte } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
 
 import { BaseWorkerHost } from '../abstracts/base.abstract';
 
@@ -30,7 +35,7 @@ export class LienProcessor extends BaseWorkerHost {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly calculator: Calculator,
-    @InjectQueue(BULLMQ_LIEN_QUEUE) private readonly lienQueue: Queue,
+    private readonly backgroundProcess: BackgroundProcess,
   ) {
     super();
   }
@@ -102,7 +107,7 @@ export class LienProcessor extends BaseWorkerHost {
       const expiresAtMoment = moment(lien.expiresAt);
       const delayMs = Math.max(0, expiresAtMoment.diff(moment(now)));
 
-      await this.lienQueue.add(
+      await this.backgroundProcess.dispatchLien(
         LienWorkerEnum.ProcessLienExpiration,
         {
           lienId: lien.id,

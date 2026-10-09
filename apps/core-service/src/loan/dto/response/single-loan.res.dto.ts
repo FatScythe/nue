@@ -1,9 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { LoanDetailsRespDto } from '@app/core-service/src/account/dto';
+import { AccountStatus } from '@libs/database';
 import { Expose, Type } from 'class-transformer';
-
-import { AccountStatus } from '@database';
 
 export class RepaymentScheduleItemDto {
   @ApiProperty({ example: 1 })

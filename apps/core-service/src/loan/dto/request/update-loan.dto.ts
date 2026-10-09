@@ -1,5 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
+import { IsNumericString, IsValidReference } from '@libs/common';
+import {
+  ChargeCalculationType,
+  ChargeTime,
+  InterestRateType,
+  LoanRepaymentFrequency,
+  MoratoriumType,
+} from '@libs/database';
 import {
   IsEnum,
   IsInt,
@@ -11,15 +19,6 @@ import {
   Max,
   Min,
 } from 'class-validator';
-
-import { IsNumericString, IsValidReference } from '@common';
-import {
-  ChargeCalculationType,
-  ChargeTime,
-  InterestRateType,
-  LoanRepaymentFrequency,
-  MoratoriumType,
-} from '@database';
 
 export class UpdateLoanDetailsDto {
   @ApiPropertyOptional({

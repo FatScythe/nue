@@ -1,12 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import { Expose } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
-
 import {
   DEFAULT_FEMALE_ACCOUNT_ID,
   DEFAULT_FEMALE_CUSTOMER_ID,
-} from '@database';
+} from '@libs/database';
+import { Expose } from 'class-transformer';
+import { IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateCustomerRespDto {
   @ApiProperty({

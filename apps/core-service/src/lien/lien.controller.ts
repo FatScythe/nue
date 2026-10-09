@@ -15,8 +15,8 @@ import {
 } from '@nestjs/swagger';
 
 //libs...
-import { ParseUUID, type CoreReqUser } from '@common';
-import { Resources } from '@database';
+import { ParseUUID, type CoreReqUser } from '@libs/common';
+import { Resources } from '@libs/database';
 
 import { ApiSuccessResponseData, GetUser, Scope } from '../common/decorator';
 import { PlaceLienDto, PlaceLienRespDto } from './dto';

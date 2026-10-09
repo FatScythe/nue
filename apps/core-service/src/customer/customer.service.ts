@@ -1,16 +1,11 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { plainToInstance } from 'class-transformer';
-import { and, eq, ilike, inArray, isNull, or, SQL } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
-
 import {
   calculatePaginationMeta,
   Calculator,
   CoreReqUser,
   DATE_FORMAT,
-} from '@common';
+} from '@libs/common';
 import {
   // AccountProducts,
   // AccountProductStatus,
@@ -22,16 +17,20 @@ import {
   CustomerType,
   GeneralLedgerRepository,
   GeneralLedgers,
-} from '@database';
-import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import * as schema from '@database/drizzle/schemas';
+} from '@libs/database';
+import { DATABASE_CONNECTION } from '@libs/database/drizzle/drizzle.provider';
+import * as schema from '@libs/database/drizzle/schemas';
 import {
   Accounts,
   Customers,
   Offices,
   SavingsDetails,
   Users,
-} from '@database/drizzle/schemas';
+} from '@libs/database/drizzle/schemas';
+import { plainToInstance } from 'class-transformer';
+import { and, eq, ilike, inArray, isNull, or, SQL } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
 
 import { AccountService } from '../account/account.service';
 import { ApiErrorCode } from '../common/enums';

@@ -1,4 +1,4 @@
-import { Users } from '@database/drizzle/schemas';
+import { Users } from '@libs/database/drizzle/schemas';
 
 import { UserStatus, UserType } from '../../enums';
 

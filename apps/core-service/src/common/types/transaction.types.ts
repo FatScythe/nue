@@ -1,4 +1,4 @@
-import { Currency } from '@database';
+import { Currency } from '@libs/database';
 
 export type TransactionPayload = { amount: string } & (
   | { glAccountId: string }

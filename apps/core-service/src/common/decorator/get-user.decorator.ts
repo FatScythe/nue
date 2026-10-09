@@ -1,7 +1,7 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 // libs...
-import { CoreRequest } from '@common';
+import { CoreRequest } from '@libs/common';
 
 import { ApiErrorCode } from '../enums';
 import { ApiException } from '../exception';

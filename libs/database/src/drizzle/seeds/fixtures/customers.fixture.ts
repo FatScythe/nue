@@ -2,14 +2,14 @@ import {
   DEFAULT_BUSINESS_CUSTOMER_ID,
   DEFAULT_FEMALE_CUSTOMER_ID,
   DEFAULT_MALE_CUSTOMER_ID,
-} from '@database/drizzle/database.constant';
+} from '@libs/database/drizzle/database.constant';
 import {
   CustomerGender,
   CustomerStatus,
   CustomerTier,
   CustomerType,
-} from '@database/drizzle/enums';
-import { Customers } from '@database/drizzle/schemas';
+} from '@libs/database/drizzle/enums';
+import { Customers } from '@libs/database/drizzle/schemas';
 
 export const CUSTOMERS_FIXTURE: Omit<
   typeof Customers.$inferInsert,

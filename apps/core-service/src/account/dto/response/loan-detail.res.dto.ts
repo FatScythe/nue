@@ -1,15 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import { Expose } from 'class-transformer';
-import moment from 'moment';
-
 import {
   ChargeCalculationType,
   ChargeTime,
   LoanRepaymentFrequency,
   LoanStatus,
   MoratoriumType,
-} from '@database';
+} from '@libs/database';
+import { Expose } from 'class-transformer';
+import moment from 'moment';
 
 export class LoanDetailsRespDto {
   @ApiProperty({ example: '500000.00' })

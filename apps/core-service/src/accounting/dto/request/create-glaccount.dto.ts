@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { IsValidReference } from '@libs/common';
+import { GlCategory, GlNormalBalance } from '@libs/database';
 import {
   IsBoolean,
   IsEnum,
@@ -8,9 +10,6 @@ import {
   IsString,
   Length,
 } from 'class-validator';
-
-import { IsValidReference } from '@common';
-import { GlCategory, GlNormalBalance } from '@database';
 
 export class CreateGlAccountDto {
   @ApiProperty({

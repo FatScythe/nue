@@ -1,5 +1,5 @@
-import { UserType } from '@database/drizzle/enums';
-import { RolePermissions } from '@database/drizzle/types';
+import { UserType } from '@libs/database/drizzle/enums';
+import { RolePermissions } from '@libs/database/drizzle/types';
 
 export type PortalReqUser = {
   id: string;

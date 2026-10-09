@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 
 // libs...
-import { formatReponse, isObject, isString } from '@utils';
+import { formatReponse, isObject, isString } from '@libs/common';
 import { instanceToPlain } from 'class-transformer';
 // ext-libs...
 import { map, Observable } from 'rxjs';

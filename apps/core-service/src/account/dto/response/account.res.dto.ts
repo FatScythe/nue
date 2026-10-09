@@ -1,15 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-import { Expose, Type } from 'class-transformer';
-import moment from 'moment';
-
-import { PaginationMetaResponseDto } from '@common/dto/reponse.dto';
+import { PaginationMetaResponseDto } from '@libs/common/dto/reponse.dto';
 import {
   AccountStatus,
   AccountType,
   DEFAULT_BUSINESS_ACCOUNT_ID,
   DEFAULT_BUSINESS_CUSTOMER_ID,
-} from '@database';
+} from '@libs/database';
+import { Expose, Type } from 'class-transformer';
+import moment from 'moment';
 
 import { LoanDetailsRespDto } from './loan-detail.res.dto';
 import { SavingsDetailsRespDto } from './saving-detail.res.dto';

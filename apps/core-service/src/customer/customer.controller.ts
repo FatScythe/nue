@@ -10,9 +10,9 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
-import { ParseUUID, type CoreReqUser } from '@common';
+import { ParseUUID, type CoreReqUser } from '@libs/common';
 // libs...
-import { Resources } from '@database';
+import { Resources } from '@libs/database';
 
 import {
   ApiSuccessResponseData,

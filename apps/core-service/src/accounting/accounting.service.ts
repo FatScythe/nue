@@ -1,17 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { plainToInstance } from 'class-transformer';
-import { and, eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { uuidv7 } from 'uuidv7';
-
-import { CoreReqUser, getDefaultNormalBalance } from '@common';
+import { CoreReqUser, getDefaultNormalBalance } from '@libs/common';
 import {
   DATABASE_CONNECTION,
   GeneralLedgerRepository,
   GeneralLedgers,
-} from '@database';
-import * as schema from '@database/drizzle/schemas';
+} from '@libs/database';
+import * as schema from '@libs/database/drizzle/schemas';
+import { plainToInstance } from 'class-transformer';
+import { and, eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { uuidv7 } from 'uuidv7';
 
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';

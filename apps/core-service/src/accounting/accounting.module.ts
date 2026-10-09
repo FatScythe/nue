@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
 //libs...
-import { DatabaseModule } from '@database';
+import { DatabaseModule } from '@libs/database';
 
 import { AccountingController } from './accounting.controller';
 import { AccountingService } from './accounting.service';

@@ -1,7 +1,7 @@
 import { SetMetadata } from '@nestjs/common';
 
-import { Resources } from '@database/drizzle/enums';
-import { Permission } from '@database/drizzle/types';
+import { Resources } from '@libs/database/drizzle/enums';
+import { RolePermissions } from '@libs/database/drizzle/types';
 
 export const PERMISSION_CHECK_KEY = 'permission_check';
 
@@ -16,5 +16,5 @@ export type RequiredPermission = {
  */
 export const Authorize = <T extends Resources>(
   resource: T,
-  action: keyof Permission[T],
+  action: keyof RolePermissions[T],
 ) => SetMetadata(PERMISSION_CHECK_KEY, { resource, action });

@@ -1,5 +1,5 @@
-import { UserType } from '@database/drizzle/enums';
-import { ApiScope } from '@database/drizzle/types';
+import { UserType } from '@libs/database/drizzle/enums';
+import { ApiScope } from '@libs/database/drizzle/types';
 
 export type CoreReqUser = {
   id: string;

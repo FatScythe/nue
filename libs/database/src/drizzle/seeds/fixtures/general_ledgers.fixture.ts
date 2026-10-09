@@ -1,5 +1,5 @@
-import { DEFAULT_GL_DEPOSIT_CODE } from '@database/drizzle/database.constant';
-import { GeneralLedgers } from '@database/drizzle/schemas';
+import { DEFAULT_GL_DEPOSIT_CODE } from '@libs/database/drizzle/database.constant';
+import { GeneralLedgers } from '@libs/database/drizzle/schemas';
 
 import { GlCategory, GlNormalBalance } from '../../enums';
 

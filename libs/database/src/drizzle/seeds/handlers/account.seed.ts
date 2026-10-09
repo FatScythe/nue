@@ -1,6 +1,5 @@
+import { Accounts } from '@libs/database/drizzle/schemas';
 import { uuidv7 } from 'uuidv7';
-
-import { Accounts } from '@database/drizzle/schemas';
 
 import { ACCOUNTS_FIXTURE } from '../fixtures/accounts.fixture';
 

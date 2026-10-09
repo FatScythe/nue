@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 
 // libs...
-import { ApiScope } from '@database';
+import { ApiScope } from '@libs/database';
 
 import { PERMISSION_KEY, PermissionCondition } from '../../common/decorator';
 import { ApiErrorCode } from '../../common/enums';

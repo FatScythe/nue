@@ -1,4 +1,4 @@
-import { Customers } from '@database/drizzle/schemas';
+import { Customers } from '@libs/database/drizzle/schemas';
 
 import { CUSTOMERS_FIXTURE } from '../fixtures/customers.fixture';
 

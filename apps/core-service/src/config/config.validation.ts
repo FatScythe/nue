@@ -1,3 +1,4 @@
+import { IsMsDuration } from '@libs/common';
 import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
@@ -6,8 +7,6 @@ import {
   MinLength,
   validateSync,
 } from 'class-validator';
-
-import { IsMsDuration } from '@common';
 
 import { Environment } from './types';
 

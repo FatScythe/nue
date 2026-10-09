@@ -1,12 +1,6 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
-import { plainToInstance } from 'class-transformer';
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
-import { uuidv7 } from 'uuidv7';
-
-import { Calculator, CoreReqUser, DATE_FORMAT } from '@common';
+import { Calculator, CoreReqUser, DATE_FORMAT } from '@libs/common';
 import {
   AccountRepository,
   Accounts,
@@ -23,8 +17,13 @@ import {
   LoanScheduleStatus,
   LoanStatus,
   MoratoriumType,
-} from '@database';
-import * as schema from '@database/drizzle/schemas';
+} from '@libs/database';
+import * as schema from '@libs/database/drizzle/schemas';
+import { plainToInstance } from 'class-transformer';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
+import { uuidv7 } from 'uuidv7';
 
 import { AccountService } from '../account/account.service';
 import { CreateLoanAccountDto } from '../account/dto';

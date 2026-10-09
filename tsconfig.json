@@ -1,11 +1,11 @@
 {
   "compilerOptions": {
-    "module": "ESNext",                 // Modern standard for bundlers
-    "moduleResolution": "bundler",      // The replacement for "node" (node10)
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "target": "ES2023",
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": false, // Set to true only if noEmit is true
-    "resolvePackageJsonExports": true,   // Now valid with "bundler"
+    "allowImportingTsExtensions": false,
+    "resolvePackageJsonExports": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -22,33 +22,15 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "paths": {
-      "@app/*": [
-        "./apps/*"
-      ],
-      "@common": [
-        "./libs/common/src/index"
-      ],
-      "@common/*": [
-        "./libs/common/src/*"
-      ],
-      "@database": [
-        "./libs/database/src/index"
-      ],
-      "@database/*": [
-        "./libs/database/src/*"
-      ],
-      "@background-process": [
-        "libs/background-process/src/index"
-      ],
-      "@background-process/*": [
-        "libs/background-process/src/*"
-      ],
-      "@utils": [
-        "./libs/common/src/utils/index"
-      ],
-      "@utils/*": [
-        "./libs/common/src/utils/*"
-      ]
+      "@app/*": ["./apps/*"],
+      "@libs/common": ["./libs/common/src/index"],
+      "@libs/common/*": ["./libs/common/src/*"],
+      "@libs/database": ["./libs/database/src/index"],
+      "@libs/database/*": ["./libs/database/src/*"],
+      "@libs/background-process": ["libs/background-process/src/index"],
+      "@libs/background-process/*": ["libs/background-process/src/*"],
+      "@libs/ledger": ["libs/ledger/src"],
+      "@libs/ledger/*": ["libs/ledger/src/*"]
     },
     "baseUrl": "./"
   }

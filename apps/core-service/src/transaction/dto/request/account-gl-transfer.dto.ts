@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { IsNumericString, IsValidReference } from '@libs/common';
+import { DEFAULT_MALE_ACCOUNT_ID } from '@libs/database';
 import {
   IsEnum,
   IsNotEmpty,
@@ -8,9 +10,6 @@ import {
   IsUUID,
   Length,
 } from 'class-validator';
-
-import { IsNumericString, IsValidReference } from '@common';
-import { DEFAULT_MALE_ACCOUNT_ID } from '@database';
 
 export enum TransferDirection {
   AccountToGl = 'account_to_gl',

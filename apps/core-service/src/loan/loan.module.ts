@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { CalculatorModule } from '@common';
+import { CalculatorModule } from '@libs/common';
 
 import { AccountModule } from '../account/account.module';
 import { TransactionModule } from '../transaction/transaction.module';

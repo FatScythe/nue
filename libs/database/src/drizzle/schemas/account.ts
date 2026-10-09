@@ -1,3 +1,5 @@
+import { AccountStatus, AccountType } from '@libs/database/drizzle/enums';
+import { AccountLoopEntries } from '@libs/database/drizzle/types';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -11,9 +13,6 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
-
-import { AccountStatus, AccountType } from '@database/drizzle/enums';
-import { AccountLoopEntries } from '@database/drizzle/types';
 
 import { Businesses } from './business';
 import { Customers } from './customer';

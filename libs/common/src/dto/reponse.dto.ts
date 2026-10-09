@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 import { Expose } from 'class-transformer';
 
-import { PaginationMeta } from '@common/types';
+import { PaginationMeta } from '../types';
 
 export class PaginationMetaResponseDto implements PaginationMeta {
   @ApiProperty({ example: 50 })

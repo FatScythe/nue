@@ -6,13 +6,12 @@ import {
   OnApplicationBootstrap,
 } from '@nestjs/common';
 
+import { BULLMQ_DEFAULT_QUEUE } from '@libs/background-process';
+import { CronSchedules, DATABASE_CONNECTION } from '@libs/database';
+import * as schema from '@libs/database/drizzle/schemas';
 import { Queue } from 'bullmq';
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-
-import { BULLMQ_DEFAULT_QUEUE } from '@background-process';
-import { cronSchedules, DATABASE_CONNECTION } from '@database';
-import * as schema from '@database/drizzle/schemas';
 
 import { configuration } from './config';
 import { Environment } from './config/types';
@@ -54,8 +53,8 @@ export class WorkerServiceService implements OnApplicationBootstrap {
     try {
       const activeSchedules = await this.db
         .select()
-        .from(cronSchedules)
-        .where(eq(cronSchedules.isActive, true));
+        .from(CronSchedules)
+        .where(eq(CronSchedules.isActive, true));
 
       const activeJobNames = new Set(activeSchedules.map((s) => s.jobName));
 

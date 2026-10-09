@@ -6,10 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-// ext-libs...
-import { and, eq, SQL } from 'drizzle-orm';
-
-import { CoreRequest } from '@common';
+import { CoreRequest } from '@libs/common';
 // libs...
 import {
   ApiScope,
@@ -17,7 +14,9 @@ import {
   Users,
   UserStatus,
   UserType,
-} from '@database';
+} from '@libs/database';
+// ext-libs...
+import { and, eq, SQL } from 'drizzle-orm';
 
 import { IS_NON_TOKEN, IS_PUBLIC_KEY } from '../../common/decorator';
 import { ApiErrorCode } from '../../common/enums';

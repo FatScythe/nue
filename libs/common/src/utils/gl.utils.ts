@@ -1,4 +1,4 @@
-import { GlCategory, GlNormalBalance } from '@database';
+import { GlCategory, GlNormalBalance } from '@libs/database';
 
 /**
  * helper to auto-assign the correct default normal balance based on GL category.

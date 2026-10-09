@@ -7,12 +7,18 @@ import {
   BULLMQ_DEFAULT_QUEUE,
   BULLMQ_EMAIL_QUEUE,
   BULLMQ_LIEN_QUEUE,
-} from '@background-process';
-import { CalculatorModule } from '@common';
-import { DatabaseModule } from '@database';
+  BULLMQ_LOAN_QUEUE,
+} from '@libs/background-process';
+import { CalculatorModule } from '@libs/common';
+import { DatabaseModule } from '@libs/database';
 
 import { WConfigModule } from './config/config.module';
-import { DefaultProcessor, EmailProcessor, LienProcessor } from './processors';
+import {
+  DefaultProcessor,
+  EmailProcessor,
+  LienProcessor,
+  LoanProcessor,
+} from './processors';
 import { WorkerServiceController } from './worker-service.controller';
 import { WorkerServiceService } from './worker-service.service';
 
@@ -21,6 +27,7 @@ import { WorkerServiceService } from './worker-service.service';
     WConfigModule,
     DatabaseModule,
     CalculatorModule,
+    BackgroundProcessModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -43,6 +50,7 @@ import { WorkerServiceService } from './worker-service.service';
     BullModule.registerQueue(
       { name: BULLMQ_EMAIL_QUEUE },
       { name: BULLMQ_LIEN_QUEUE },
+      { name: BULLMQ_LOAN_QUEUE },
     ),
   ],
   controllers: [WorkerServiceController],
@@ -54,6 +62,7 @@ import { WorkerServiceService } from './worker-service.service';
     DefaultProcessor,
     EmailProcessor,
     LienProcessor,
+    LoanProcessor,
   ],
 })
 export class WorkerServiceModule {}

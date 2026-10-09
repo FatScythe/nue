@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { ICalculateLoanRepayment } from '@app/core-service/src/common/types';
+import { IsNumericString } from '@libs/common';
+import {
+  ChargeCalculationType,
+  ChargeTime,
+  InterestRateType,
+  LoanRepaymentFrequency,
+  MoratoriumType,
+} from '@libs/database';
 import {
   IsEnum,
   IsInt,
@@ -12,15 +20,6 @@ import {
   Max,
   Min,
 } from 'class-validator';
-
-import { IsNumericString } from '@common';
-import {
-  ChargeCalculationType,
-  ChargeTime,
-  InterestRateType,
-  LoanRepaymentFrequency,
-  MoratoriumType,
-} from '@database';
 
 export class CalculateLoanRepaymentDto implements ICalculateLoanRepayment {
   // @ApiPropertyOptional()

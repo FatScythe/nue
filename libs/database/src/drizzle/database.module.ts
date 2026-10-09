@@ -4,13 +4,13 @@ import { ConfigModule } from '@nestjs/config';
 import {
   DATABASE_CONNECTION,
   DrizzleProvider,
-} from '@database/drizzle/drizzle.provider';
+} from '@libs/database/drizzle/drizzle.provider';
 import {
   AccountRepository,
   GeneralLedgerRepository,
-} from '@database/drizzle/repository/account';
-import { CustomerRepository } from '@database/drizzle/repository/customer';
-import { UserRepository } from '@database/drizzle/repository/user';
+} from '@libs/database/drizzle/repository/account';
+import { CustomerRepository } from '@libs/database/drizzle/repository/customer';
+import { UserRepository } from '@libs/database/drizzle/repository/user';
 
 import {
   JournalEntryLineRepository,
@@ -19,7 +19,7 @@ import {
   TransactionRepository,
 } from './repository';
 
-// import { REDIS_CLIENT, RedisProvider } from '@database/drizzle/redis.provider';
+// import { REDIS_CLIENT, RedisProvider } from '@libs/database/drizzle/redis.provider';
 
 @Global()
 @Module({

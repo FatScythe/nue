@@ -1,4 +1,4 @@
-import { Businesses } from '@database/drizzle/schemas';
+import { Businesses } from '@libs/database/drizzle/schemas';
 
 export const CORE_BUSINESS_FIXTURE: typeof Businesses.$inferInsert = {
   name: 'Nue Core Banking Ltd',

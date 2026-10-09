@@ -1,5 +1,5 @@
-import { ProcessLienExpirationDto } from '@background-process/dto';
-import { CronJobName } from '@database';
+import { ProcessLienExpirationDto } from '@libs/background-process';
+import { CronJobName } from '@libs/database';
 
 export enum LienWorkerEnum {
   HandleLienExpiration = CronJobName.HandleLienExpiration,

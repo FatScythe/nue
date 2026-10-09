@@ -1,8 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { IsNumericString, IsValidReference } from '@libs/common';
 import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
-
-import { IsNumericString, IsValidReference } from '@common';
 
 export class AccountToAccountTransferDto {
   @ApiProperty({

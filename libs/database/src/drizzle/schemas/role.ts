@@ -1,3 +1,4 @@
+import { RolePermissions } from '@libs/database/drizzle/types';
 import {
   AnyPgColumn,
   index,
@@ -9,8 +10,6 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
-
-import { RolePermissions } from '@database/drizzle/types';
 
 import { Businesses } from './business';
 import { Users } from './user';

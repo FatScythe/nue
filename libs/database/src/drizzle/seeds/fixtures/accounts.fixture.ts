@@ -5,9 +5,9 @@ import {
   DEFAULT_FEMALE_CUSTOMER_ID,
   DEFAULT_MALE_ACCOUNT_ID,
   DEFAULT_MALE_CUSTOMER_ID,
-} from '@database/drizzle/database.constant';
-import { AccountStatus, AccountType } from '@database/drizzle/enums';
-import { Accounts, Currency } from '@database/drizzle/schemas';
+} from '@libs/database/drizzle/database.constant';
+import { AccountStatus, AccountType } from '@libs/database/drizzle/enums';
+import { Accounts, Currency } from '@libs/database/drizzle/schemas';
 
 import { CUSTOMERS_FIXTURE } from './customers.fixture';
 

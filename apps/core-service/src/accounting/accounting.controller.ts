@@ -6,8 +6,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import type { CoreReqUser } from '@common';
-import { Resources } from '@database';
+import type { CoreReqUser } from '@libs/common';
+import { Resources } from '@libs/database';
 
 import { ApiSuccessResponseData, GetUser, Scope } from '../common/decorator';
 import { TransferResp } from '../transaction/dto';

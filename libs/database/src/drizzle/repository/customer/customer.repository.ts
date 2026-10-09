@@ -1,13 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { BaseRepository } from '@libs/database/drizzle/base.repository';
+import { DATABASE_CONNECTION } from '@libs/database/drizzle/drizzle.provider';
+import { CustomerStatus, CustomerType } from '@libs/database/drizzle/enums';
+import * as schema from '@libs/database/drizzle/schemas';
+import { Customers } from '@libs/database/drizzle/schemas';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { uuidv7 } from 'uuidv7';
-
-import { BaseRepository } from '@database/drizzle/base.repository';
-import { DATABASE_CONNECTION } from '@database/drizzle/drizzle.provider';
-import { CustomerStatus, CustomerType } from '@database/drizzle/enums';
-import * as schema from '@database/drizzle/schemas';
-import { Customers } from '@database/drizzle/schemas';
 
 @Injectable()
 export class CustomerRepository extends BaseRepository<typeof Customers> {

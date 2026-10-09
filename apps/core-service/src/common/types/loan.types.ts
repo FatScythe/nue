@@ -4,7 +4,7 @@ import {
   InterestRateType,
   LoanRepaymentFrequency,
   MoratoriumType,
-} from '@database';
+} from '@libs/database';
 
 export interface ICalculateLoanRepayment {
   // productId?: string;
