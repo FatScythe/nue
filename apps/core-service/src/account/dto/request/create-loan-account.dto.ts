@@ -13,6 +13,7 @@ import {
   InterestRateType,
   LoanRepaymentFrequency,
   MoratoriumType,
+  RepaymentProcessingStrategy,
 } from '@libs/database';
 import {
   IsEnum,
@@ -101,6 +102,17 @@ export class CreateLoanAccountDto {
   @IsOptional()
   moratoriumType?: MoratoriumType = MoratoriumType.None;
 
+  @ApiPropertyOptional({
+    description:
+      'Order of waterfall allocation for loan repayments. Defines how incoming funds are prioritized across Principal (P), Charges/Fees (C), and Interest (I). Options include: PCI (Principal -> Charge -> Interest), CPI (Charge -> Principal -> Interest), CIP (Charge -> Interest -> Principal), ICP (Interest -> Charge -> Principal), IPC (Interest -> Principal -> Charge), and PIC (Principal -> Interest -> Charge).',
+    enum: RepaymentProcessingStrategy,
+    default: RepaymentProcessingStrategy.PCI,
+  })
+  @IsEnum(RepaymentProcessingStrategy)
+  @IsOptional()
+  repaymentProcessingStrategy?: RepaymentProcessingStrategy =
+    RepaymentProcessingStrategy.PCI;
+
   @ApiPropertyOptional({ description: 'Moratorium duration', default: 0 })
   @IsInt()
   @Min(0)
@@ -108,13 +120,13 @@ export class CreateLoanAccountDto {
   @IsOptional()
   moratoriumPeriod?: number;
 
-  @ApiPropertyOptional({
-    description: 'Activate account immediately upon creation',
-    default: false,
-    example: true,
-  })
-  @IsOptional()
-  activate?: boolean = false;
+  // @ApiPropertyOptional({
+  //   description: 'Activate account immediately upon creation',
+  //   default: false,
+  //   example: true,
+  // })
+  // @IsOptional()
+  // activate?: boolean = false;
 
   @ApiPropertyOptional({
     example: moment().format(DATE_FORMAT),

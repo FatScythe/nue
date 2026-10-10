@@ -17,6 +17,10 @@ import {
   LoanScheduleStatus,
   LoanStatus,
   MoratoriumType,
+  RepaymentProcessingStrategy,
+  TransactionCategory,
+  Transactions,
+  TransactionStatus,
 } from '@libs/database';
 import * as schema from '@libs/database/drizzle/schemas';
 import { plainToInstance } from 'class-transformer';
@@ -554,6 +558,16 @@ export class LoanService {
       );
     }
 
+    if (
+      this.calc.isGreaterThan(loanDetails.chargeValue, '0') &&
+      !loanDetails.feeIncomeGlAccountId
+    )
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        `please provide fee income gl account code`,
+        { error_code: 'APL004' },
+      );
+
     await this.db.transaction(async (tx) => {
       if (accountData.status === AccountStatus.Pending) {
         await this.accountRepo.update(
@@ -894,6 +908,11 @@ export class LoanService {
           ...(dto.moratoriumPeriod !== undefined && {
             moratoriumPeriod: dto.moratoriumPeriod,
           }),
+          ...(dto.repaymentProcessingStrategy !== undefined && {
+            repaymentProcessingStrategy:
+              dto.repaymentProcessingStrategy ||
+              RepaymentProcessingStrategy.PCI,
+          }),
           ...(dto.disbursementAccountId !== undefined && {
             disbursementAccountId: dto.disbursementAccountId || null,
           }),
@@ -1179,14 +1198,26 @@ export class LoanService {
       const loanFeeAmount = loanDetails.chargeValue;
       const loanPrincipalAmount = loanDetails.principalAmount;
       const principal = this.calc.toMajor(loanPrincipalAmount);
-      const fee = this.calc.toMajor(loanFeeAmount || '0');
 
-      const chargeIsUpfrontAndFixed =
-        loanDetails.chargeTime === ChargeTime.Upfront &&
-        loanDetails.chargeCalculationType === ChargeCalculationType.Fixed;
+      // calculate fee based on charge calculation type (fixed vs percentage)...
+      let fee = '0';
+      if (loanDetails.chargeTime === ChargeTime.Upfront && loanFeeAmount) {
+        if (
+          loanDetails.chargeCalculationType === ChargeCalculationType.Percentage
+        ) {
+          const feeRate = this.calc.divide(
+            this.calc.toMajor(loanFeeAmount),
+            '100',
+          );
+          fee = this.calc.multiply(principal, feeRate);
+        } else {
+          fee = this.calc.toMajorStr(loanFeeAmount, undefined);
+        }
+      }
 
       const isUpfrontFeeApplied =
-        chargeIsUpfrontAndFixed && this.calc.isGreaterThan(fee, '0');
+        loanDetails.chargeTime === ChargeTime.Upfront &&
+        this.calc.isGreaterThan(fee, '0');
 
       if (!loanGlId) {
         throw new ApiException(
@@ -1213,7 +1244,7 @@ export class LoanService {
       // delegate multi-leg journal posting, account balance updates, and transaction auditing...
       await this.transactionService.postMultiLegTransfer(
         {
-          comments: `disburse loan to disbursement account number ${disbursementAccount.accountNumber}`,
+          comments: `disburse loan to disbursement account id: ${effectiveDisbursementAccountId}, account number: ${disbursementAccount.accountNumber}`,
           credits: [
             {
               accountId: effectiveDisbursementAccountId,
@@ -1234,6 +1265,24 @@ export class LoanService {
         },
         { throwApiError: true, dbTrnx: tx },
       );
+
+      await tx.insert(Transactions).values({
+        id: uuidv7(),
+        tenantId: accountData.tenantId,
+        senderAccountId: accountLoanDetail.accountId,
+        receiverAccountId: effectiveDisbursementAccountId,
+        amount: this.calc.toMinor(netDisbursement),
+        fee:
+          isUpfrontFeeApplied && feeGlId ? this.calc.toMinor(fee) : BigInt('0'),
+        category: TransactionCategory.Withdrawal,
+        status: TransactionStatus.Successful,
+        reference: reference + '_DEB',
+        narration: `disburse loan to disbursement account id: ${effectiveDisbursementAccountId}, account number: ${disbursementAccount.accountNumber}`,
+        officeId: accountData.officeId,
+        createdBy: userId,
+        createdAt: transactionAt,
+        updatedAt: transactionAt,
+      });
 
       // mark loan as disbursed, update linked accounts if changed, and set disbursement date...
       await tx

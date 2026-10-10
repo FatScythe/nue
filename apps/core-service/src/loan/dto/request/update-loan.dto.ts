@@ -7,6 +7,7 @@ import {
   InterestRateType,
   LoanRepaymentFrequency,
   MoratoriumType,
+  RepaymentProcessingStrategy,
 } from '@libs/database';
 import {
   IsEnum,
@@ -107,6 +108,17 @@ export class UpdateLoanDetailsDto {
   @Max(100)
   @IsOptional()
   moratoriumPeriod?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Order of waterfall allocation for loan repayments. Defines how incoming funds are prioritized across Principal (P), Charges/Fees (C), and Interest (I). Options include: PCI (Principal -> Charge -> Interest), CPI (Charge -> Principal -> Interest), CIP (Charge -> Interest -> Principal), ICP (Interest -> Charge -> Principal), IPC (Interest -> Principal -> Charge), and PIC (Principal -> Interest -> Charge).',
+    enum: RepaymentProcessingStrategy,
+    default: RepaymentProcessingStrategy.PCI,
+  })
+  @IsEnum(RepaymentProcessingStrategy)
+  @IsOptional()
+  repaymentProcessingStrategy?: RepaymentProcessingStrategy =
+    RepaymentProcessingStrategy.PCI;
 
   @ApiPropertyOptional({
     description: 'Savings/Deposit Account ID to disburse loan funds into',

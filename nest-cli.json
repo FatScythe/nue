@@ -63,6 +63,15 @@
         "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
     },
+    "ledger": {
+      "type": "library",
+      "root": "libs/ledger",
+      "entryFile": "index",
+      "sourceRoot": "libs/ledger/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/ledger/tsconfig.lib.json"
+      }
+    },
     "portal-service": {
       "type": "application",
       "root": "apps/portal-service",

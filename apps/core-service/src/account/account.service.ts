@@ -23,6 +23,7 @@ import {
   GeneralLedgerRepository,
   LoanStatus,
   MoratoriumType,
+  RepaymentProcessingStrategy,
 } from '@libs/database';
 import * as schema from '@libs/database/drizzle/schemas';
 import {
@@ -356,7 +357,7 @@ export class AccountService {
           accountName,
           officeId: Number(customer.officeId),
           userId: user.id,
-          status: dto.activate ? AccountStatus.Active : AccountStatus.Pending,
+          status: AccountStatus.Pending,
           openingBalance: '0',
           ...(dto.createdDate && {
             createdAt: moment(dto.createdDate, DATE_FORMAT).toDate(),
@@ -384,6 +385,8 @@ export class AccountService {
           chargeTime: dto.chargeTime || ChargeTime.Upfront,
           chargeValue,
           moratoriumType: dto.moratoriumType || MoratoriumType.None,
+          repaymentProcessingStrategy:
+            dto.repaymentProcessingStrategy || RepaymentProcessingStrategy.PCI,
           moratoriumPeriod: dto.moratoriumPeriod || 0,
           incomeGlAccountId: incomeGlId,
           ...(feeGlCode && { feeIncomeGlAccountId: feeGlId }),
@@ -607,6 +610,8 @@ export class AccountService {
       createdAt?: Date;
       externalId?: string;
       openingBalance?: string;
+      pnd?: boolean;
+      pnc?: boolean;
     },
     tx?: DBTransaction,
   ) {
@@ -634,8 +639,8 @@ export class AccountService {
         accountNumber,
         officeId: data.officeId,
         lienAmount: BigInt('0'),
-        postNoCredit: false,
-        postNoDebit: false,
+        postNoCredit: data.pnc || false,
+        postNoDebit: data.pnc || false,
         bookBalance: balance,
         status: data.status || AccountStatus.Pending,
         approvedBy: data.userId,
@@ -687,6 +692,7 @@ export class AccountService {
       | 'restrictionReason'
       | 'bookBalance'
       | 'lienAmount'
+      | 'type'
     >;
     amount: string | bigint; // minor units
     entryType: 'debit' | 'credit';
@@ -707,6 +713,14 @@ export class AccountService {
       );
     }
 
+    if (account.type === AccountType.Loan) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'direct transfers to loan accounts are not permitted; use the loan repayment channel',
+        { error_code: 'ACC003' },
+      );
+    }
+
     // check post no credit (pnc) restriction...
     if (entryType === 'credit' && account.postNoCredit) {
       throw new ApiException(
@@ -714,7 +728,7 @@ export class AccountService {
         `account is restricted for credit transactions (PNC). reason: ${
           account.restrictionReason || 'none specified'
         }`,
-        { error_code: 'ACC003' },
+        { error_code: 'ACC004' },
       );
     }
 
@@ -725,7 +739,7 @@ export class AccountService {
         `account is restricted for debit transactions (PND). reason: ${
           account.restrictionReason || 'none specified'
         }`,
-        { error_code: 'ACC004' },
+        { error_code: 'ACC005' },
       );
     }
 
@@ -740,7 +754,7 @@ export class AccountService {
         throw new ApiException(
           ApiErrorCode.InsufficientFunds,
           'insufficient available funds taking into consideration active liens and overdraft limits',
-          { error_code: 'ACC005' },
+          { error_code: 'ACC006' },
         );
       }
     }
