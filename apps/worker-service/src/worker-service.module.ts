@@ -11,6 +11,7 @@ import {
 } from '@libs/background-process';
 import { CalculatorModule } from '@libs/common';
 import { DatabaseModule } from '@libs/database';
+import { GLedgerModule } from '@libs/ledger';
 
 import { WConfigModule } from './config/config.module';
 import {
@@ -28,6 +29,7 @@ import { WorkerServiceService } from './worker-service.service';
     DatabaseModule,
     CalculatorModule,
     BackgroundProcessModule,
+    GLedgerModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

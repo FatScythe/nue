@@ -6,6 +6,7 @@ import {
   BULLMQ_DEFAULT_QUEUE,
   BULLMQ_EMAIL_QUEUE,
   BULLMQ_LIEN_QUEUE,
+  BULLMQ_LOAN_QUEUE,
 } from './constants/queue.constants';
 
 @Module({
@@ -14,6 +15,7 @@ import {
       { name: BULLMQ_DEFAULT_QUEUE },
       { name: BULLMQ_EMAIL_QUEUE },
       { name: BULLMQ_LIEN_QUEUE },
+      { name: BULLMQ_LOAN_QUEUE },
     ),
   ],
   providers: [BackgroundProcess],
