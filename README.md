@@ -101,7 +101,7 @@ Always target specific packages when managing dependencies using the `--filter` 
 
 ```bash
 # Target by package name (defined in package.json)
-pnpm --filter @lib/background-process add @nestjs/bullmq bullmq
+pnpm --filter @libs/background-process add @nestjs/bullmq bullmq
 
 # Target by relative directory path
 pnpm --filter ./apps/worker-service add class-validator class-transformer

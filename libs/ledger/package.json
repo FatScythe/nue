@@ -1,0 +1,12 @@
+{
+  "name": "@libs/ledger",
+  "version": "0.0.1",
+  "private": true,
+  "main": "src/index.ts",
+  "dependencies": {
+    "@nestjs/common": "^12.1.2",
+    "drizzle-orm": "^0.45.2",
+    "moment": "^2.31.0",
+    "uuidv7": "^1.2.1"
+  }
+}
