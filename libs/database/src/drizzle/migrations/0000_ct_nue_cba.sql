@@ -14,6 +14,7 @@ CREATE TYPE "public"."interest_rate_type" AS ENUM('flat', 'declining_balance');-
 CREATE TYPE "public"."loan_status" AS ENUM('active', 'pending', 'disbursed', 'paid_off', 'defaulted', 'written_off', 'approved', 'declined');--> statement-breakpoint
 CREATE TYPE "public"."moratorium_type" AS ENUM('none', 'principal_only', 'principal_and_interest');--> statement-breakpoint
 CREATE TYPE "public"."repayment_frequency" AS ENUM('daily', 'weekly', 'bi_weekly', 'quarterly', 'monthly', 'yearly');--> statement-breakpoint
+CREATE TYPE "public"."repayment_processing_strategy" AS ENUM('principal_charge_interest', 'charge_principal_interest', 'charge_interest_principal', 'interest_charge_principal', 'interest_principal_charge', 'principal_interest_charge');--> statement-breakpoint
 CREATE TYPE "public"."loan_schedule_status" AS ENUM('scheduled', 'pending_approval', 'pending', 'paid', 'partially_paid', 'overdue', 'waived');--> statement-breakpoint
 CREATE TYPE "public"."lien_status" AS ENUM('active', 'released', 'voided', 'pending_approval');--> statement-breakpoint
 CREATE TYPE "public"."transaction_category" AS ENUM('transfer', 'deposit', 'withdrawal', 'fee', 'interest', 'refund', 'reversal');--> statement-breakpoint
@@ -170,6 +171,7 @@ CREATE TABLE "loan_details" (
 	"charge_value" bigint,
 	"moratorium_type" "moratorium_type" DEFAULT 'none' NOT NULL,
 	"moratorium_period" integer DEFAULT 0 NOT NULL,
+	"repayment_processing_strategy" "repayment_processing_strategy" DEFAULT 'principal_charge_interest',
 	"repayment_start_date" timestamp with time zone NOT NULL,
 	"disbursed_at" timestamp with time zone,
 	"closed_at" timestamp with time zone,

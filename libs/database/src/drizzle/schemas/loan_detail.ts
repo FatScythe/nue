@@ -5,6 +5,7 @@ import {
   LoanRepaymentFrequency,
   LoanStatus,
   MoratoriumType,
+  RepaymentProcessingStrategy,
 } from '@libs/database/drizzle/enums';
 import { sql } from 'drizzle-orm';
 import {
@@ -51,6 +52,10 @@ export const chargeCalculationTypeEnum = pgEnum(
 export const chargeTimeEnum = pgEnum(
   'charge_time',
   Object.values(ChargeTime) as [string, ...string[]],
+);
+export const repaymentProcessingStrategyEnum = pgEnum(
+  'repayment_processing_strategy',
+  Object.values(RepaymentProcessingStrategy) as [string, ...string[]],
 );
 
 export const LoanDetails = pgTable(
@@ -102,6 +107,11 @@ export const LoanDetails = pgTable(
       .default(MoratoriumType.None)
       .notNull(),
     moratoriumPeriod: integer('moratorium_period').default(0).notNull(),
+    repaymentProcessingStrategy: repaymentProcessingStrategyEnum(
+      'repayment_processing_strategy',
+    )
+      .$type<RepaymentProcessingStrategy>()
+      .default(RepaymentProcessingStrategy.PCI),
     repaymentStartDate: timestamp('repayment_start_date', {
       withTimezone: true,
     }).notNull(),

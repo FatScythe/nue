@@ -1,6 +1,6 @@
 {
-  "id": "eb567809-de3c-4d8e-bf8a-b3eb4ac3280e",
-  "prevId": "c70c1f90-2812-4d5b-aca8-d8b81d81a8de",
+  "id": "5efa1018-6fae-4f19-b729-fd65b77a0d16",
+  "prevId": "ee27dab6-0161-4131-8ef6-2e98e89abb65",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1576,6 +1576,14 @@
           "notNull": true,
           "default": 0
         },
+        "repayment_processing_strategy": {
+          "name": "repayment_processing_strategy",
+          "type": "repayment_processing_strategy",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'principal_charge_interest'"
+        },
         "repayment_start_date": {
           "name": "repayment_start_date",
           "type": "timestamp with time zone",
@@ -3117,6 +3125,18 @@
         "quarterly",
         "monthly",
         "yearly"
+      ]
+    },
+    "public.repayment_processing_strategy": {
+      "name": "repayment_processing_strategy",
+      "schema": "public",
+      "values": [
+        "principal_charge_interest",
+        "charge_principal_interest",
+        "charge_interest_principal",
+        "interest_charge_principal",
+        "interest_principal_charge",
+        "principal_interest_charge"
       ]
     },
     "public.loan_schedule_status": {

@@ -17,6 +17,15 @@ export enum LoanRepaymentFrequency {
   Yearly = 'yearly',
 }
 
+export enum RepaymentProcessingStrategy {
+  PCI = 'principal_charge_interest',
+  CPI = 'charge_principal_interest',
+  CIP = 'charge_interest_principal',
+  ICP = 'interest_charge_principal',
+  IPC = 'interest_principal_charge',
+  PIC = 'principal_interest_charge',
+}
+
 export enum MoratoriumType {
   None = 'none',
   PrincipalOnly = 'principal_only',
