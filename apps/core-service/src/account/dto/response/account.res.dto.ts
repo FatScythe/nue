@@ -38,6 +38,22 @@ export class AccountItemRespDto {
   @Expose()
   status: AccountStatus;
 
+  @ApiProperty({ example: false })
+  @Expose()
+  postNoDebit: boolean;
+
+  @ApiProperty({ example: false })
+  @Expose()
+  postNoCredit: boolean;
+
+  @ApiProperty({ example: 'suspicious activity from customers' })
+  @Expose()
+  restrictionReason: string | null;
+
+  @ApiProperty({ example: 'REF-091' })
+  @Expose()
+  reference: string | null;
+
   @ApiProperty({ example: '45000.00' })
   @Expose()
   availableBalance: string;

@@ -7,6 +7,7 @@ import {
   DATE_FORMAT,
   isNumber,
 } from '@libs/common';
+import { PlaceAccountRestrictionDto } from '@libs/common/dto';
 // libs...
 import {
   AccountRepository,
@@ -39,6 +40,7 @@ import { and, count, desc, eq, inArray, isNull, like } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import moment from 'moment';
 
+import { GenericRespDto } from '../common/dto';
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
 import {
@@ -524,6 +526,7 @@ export class AccountService {
           tenor,
           closedAt,
           disbursedAt,
+          repaymentProcessingStrategy,
         } = rawLoan;
 
         accLoanDetails = {
@@ -531,6 +534,8 @@ export class AccountService {
           moratoriumType,
           repaymentFrequency,
           repaymentStartDate,
+          repaymentProcessingStrategy:
+            repaymentProcessingStrategy || RepaymentProcessingStrategy.PCI,
           status,
           tenor,
           principalAmount: this.calc.toMajorStr(
@@ -589,6 +594,168 @@ export class AccountService {
     };
 
     return plainToInstance(AccountItemRespDto, result);
+  }
+
+  async blockDebitPosting({
+    accountId,
+    dto,
+    user,
+  }: {
+    accountId: string;
+    dto: PlaceAccountRestrictionDto;
+    user: CoreReqUser;
+  }) {
+    const { tenantId } = user;
+    const account = await this.accountRepo.findOne({
+      selectFn: (table) => ({
+        id: table.id,
+        status: table.status,
+        pnd: table.postNoDebit,
+      }),
+      where: and(eq(Accounts.id, accountId), eq(Accounts.tenantId, tenantId!)),
+    });
+    if (!account)
+      throw new ApiException(ApiErrorCode.InvalidAccount, 'invalid account', {
+        error_code: 'BDP001',
+      });
+
+    if (account.pnd) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'account already on post no debit',
+        {
+          error_code: 'BDP002',
+        },
+      );
+    }
+
+    await this.accountRepo.update(eq(Accounts.id, accountId), {
+      postNoDebit: true,
+      restrictionReason: dto.restrictionReason,
+    });
+
+    return plainToInstance(GenericRespDto, {
+      message: 'account sucessfully placed on post no debit (PnD)',
+    });
+  }
+
+  async unblockDebitPosting(accountId: string, user: CoreReqUser) {
+    const { tenantId } = user;
+    const account = await this.accountRepo.findOne({
+      selectFn: (table) => ({
+        id: table.id,
+        status: table.status,
+        pnd: table.postNoDebit,
+        pnc: table.postNoCredit,
+      }),
+      where: and(eq(Accounts.id, accountId), eq(Accounts.tenantId, tenantId!)),
+    });
+    if (!account)
+      throw new ApiException(ApiErrorCode.InvalidAccount, 'invalid account', {
+        error_code: 'UDP001',
+      });
+
+    if (!account.pnd) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'account does not have post no debit restriction',
+        {
+          error_code: 'UDP002',
+        },
+      );
+    }
+
+    await this.accountRepo.update(eq(Accounts.id, accountId), {
+      postNoDebit: false,
+      ...(!account.pnc && { restrictionReason: null }),
+    });
+
+    return plainToInstance(GenericRespDto, {
+      message: 'account successfully removed from post no debit (PnD)',
+    });
+  }
+
+  async blockCreditPosting({
+    accountId,
+    dto,
+    user,
+  }: {
+    accountId: string;
+    dto: PlaceAccountRestrictionDto;
+    user: CoreReqUser;
+  }) {
+    const { tenantId } = user;
+
+    const account = await this.accountRepo.findOne({
+      selectFn: (table) => ({
+        id: table.id,
+        status: table.status,
+        pnc: table.postNoCredit,
+      }),
+      where: and(eq(Accounts.id, accountId), eq(Accounts.tenantId, tenantId!)),
+    });
+
+    if (!account)
+      throw new ApiException(ApiErrorCode.InvalidAccount, 'invalid account', {
+        error_code: 'BCP001',
+      });
+
+    if (account.pnc) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'account already on post no credit',
+        {
+          error_code: 'BCP002',
+        },
+      );
+    }
+
+    await this.accountRepo.update(eq(Accounts.id, accountId), {
+      postNoCredit: true,
+      restrictionReason: dto.restrictionReason,
+    });
+
+    return plainToInstance(GenericRespDto, {
+      message: 'account sucessfully placed on post no credit (PnC)',
+    });
+  }
+
+  async unblockCreditPosting(accountId: string, user: CoreReqUser) {
+    const { tenantId } = user;
+
+    const account = await this.accountRepo.findOne({
+      selectFn: (table) => ({
+        id: table.id,
+        status: table.status,
+        pnd: table.postNoDebit,
+        pnc: table.postNoCredit,
+      }),
+      where: and(eq(Accounts.id, accountId), eq(Accounts.tenantId, tenantId!)),
+    });
+
+    if (!account)
+      throw new ApiException(ApiErrorCode.InvalidAccount, 'invalid account', {
+        error_code: 'UCP001',
+      });
+
+    if (!account.pnc) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'account does not have post no credit restriction',
+        {
+          error_code: 'UCP002',
+        },
+      );
+    }
+
+    await this.accountRepo.update(eq(Accounts.id, accountId), {
+      postNoCredit: false,
+      ...(!account.pnd && { restrictionReason: null }),
+    });
+
+    return plainToInstance(GenericRespDto, {
+      message: 'account successfully removed from post no credit (PnC)',
+    });
   }
 
   /**

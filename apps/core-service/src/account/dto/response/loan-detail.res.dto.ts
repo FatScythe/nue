@@ -6,6 +6,7 @@ import {
   LoanRepaymentFrequency,
   LoanStatus,
   MoratoriumType,
+  RepaymentProcessingStrategy,
 } from '@libs/database';
 import { Expose } from 'class-transformer';
 import moment from 'moment';
@@ -64,6 +65,13 @@ export class LoanDetailsRespDto {
   @ApiProperty({ example: moment().endOf('month').toISOString() })
   @Expose()
   repaymentStartDate: Date;
+
+  @ApiProperty({
+    enum: RepaymentProcessingStrategy,
+    example: RepaymentProcessingStrategy.PCI,
+  })
+  @Expose()
+  repaymentProcessingStrategy: RepaymentProcessingStrategy;
 
   @ApiPropertyOptional({ example: moment().startOf('month').toISOString() })
   @Expose()

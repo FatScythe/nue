@@ -13,6 +13,7 @@ import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 // libs...
 import { ParseUUID, type CoreReqUser } from '@libs/common';
+import { PlaceAccountRestrictionDto } from '@libs/common/dto';
 import { Resources } from '@libs/database';
 
 import {
@@ -21,6 +22,7 @@ import {
   Permissions,
   Scope,
 } from '../common/decorator';
+import { GenericRespDto } from '../common/dto';
 import { AccountService } from './account.service';
 import {
   AccountItemRespDto,
@@ -112,5 +114,67 @@ export class AccountController {
     @GetUser() user: CoreReqUser,
   ): Promise<ActivateAccountRespDto> {
     return this.accountService.activateAccount(accountId, dto, user);
+  }
+
+  @Permissions('account:update')
+  @Patch(':id/block-debit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Place an account on Post No Debit (PND)' })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Account successfully placed on post no debit (PnD)',
+  })
+  blockDebitPosting(
+    @Param('id') accountId: string,
+    @Body() dto: PlaceAccountRestrictionDto,
+    @GetUser() user: CoreReqUser,
+  ): Promise<GenericRespDto> {
+    return this.accountService.blockDebitPosting({ accountId, dto, user });
+  }
+
+  @Permissions('account:update')
+  @Patch(':id/unblock-debit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Remove Post No Debit (PND) restriction from an account',
+  })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Account successfully removed from post no debit (PnD)',
+  })
+  unblockDebitPosting(
+    @Param('id') accountId: string,
+    @GetUser() user: CoreReqUser,
+  ): Promise<GenericRespDto> {
+    return this.accountService.unblockDebitPosting(accountId, user);
+  }
+
+  @Permissions('account:update')
+  @Patch(':id/block-credit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Place an account on Post No Credit (PNC)' })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Account successfully placed on post no credit (PnC)',
+  })
+  blockCreditPosting(
+    @Param('id') accountId: string,
+    @Body() dto: PlaceAccountRestrictionDto,
+    @GetUser() user: CoreReqUser,
+  ): Promise<GenericRespDto> {
+    return this.accountService.blockCreditPosting({ accountId, dto, user });
+  }
+
+  @Permissions('account:update')
+  @Patch(':id/unblock-credit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Remove Post No Credit (PNC) restriction from an account',
+  })
+  @ApiSuccessResponseData(GenericRespDto, {
+    message: 'Account successfully removed from post no credit (PnC)',
+  })
+  unblockCreditPosting(
+    @Param('id') accountId: string,
+    @GetUser() user: CoreReqUser,
+  ): Promise<GenericRespDto> {
+    return this.accountService.unblockCreditPosting(accountId, user);
   }
 }
