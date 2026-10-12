@@ -11,4 +11,6 @@ export * from './response/create-loan-account.res.dto';
 export * from './response/account.res.dto';
 export * from './response/loan-detail.res.dto';
 export * from './response/activate-account.res.dto';
+export * from './response/saving-detail.res.dto';
+
 // export * from './response/update-account.res.dto';

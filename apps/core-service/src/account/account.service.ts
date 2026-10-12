@@ -1,6 +1,13 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import type { CoreReqUser } from '@lib/common/src/types';
+// ext-libs...
+import { plainToInstance } from 'class-transformer';
+import { and, count, desc, eq, inArray, isNull, like } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
+import { uuidv7 } from 'uuidv7';
+
 import {
   calculatePaginationMeta,
   Calculator,
@@ -22,9 +29,12 @@ import {
   DATABASE_CONNECTION,
   DBTransaction,
   GeneralLedgerRepository,
+  LoanRepaymentFrequency,
   LoanStatus,
   MoratoriumType,
   RepaymentProcessingStrategy,
+  TransactionCategory,
+  TransactionStatus,
 } from '@libs/database';
 import * as schema from '@libs/database/drizzle/schemas';
 import {
@@ -33,16 +43,14 @@ import {
   GeneralLedgers,
   LoanDetails,
   SavingsDetails,
+  Transactions,
 } from '@libs/database/drizzle/schemas';
-// ext-libs...
-import { plainToInstance } from 'class-transformer';
-import { and, count, desc, eq, inArray, isNull, like } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
+import { GAccountService } from '@libs/modules';
 
 import { GenericRespDto } from '../common/dto';
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
+import { TransactionService } from '../transaction/transaction.service';
 import {
   AccountItemRespDto,
   ActivateAccountDto,
@@ -54,8 +62,8 @@ import {
   GetAccountsQueryDto,
   LoanDetailsRespDto,
   PaginatedAccountsRespDto,
+  SavingsDetailsRespDto,
 } from './dto';
-import { SavingsDetailsRespDto } from './dto/response/saving-detail.res.dto';
 
 @Injectable()
 export class AccountService {
@@ -68,6 +76,8 @@ export class AccountService {
     @Inject(DATABASE_CONNECTION)
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly calc: Calculator,
+    private readonly transactionService: TransactionService,
+    private readonly gAccountService: GAccountService,
   ) {}
 
   async createSavingsAccount(dto: CreateSavingsAccountDto, user: CoreReqUser) {
@@ -94,7 +104,7 @@ export class AccountService {
       });
     }
 
-    const glCodes = [dto.depositGlCode, dto.feeGlCode].filter(
+    const glCodes = [dto.depositGlCode, dto.feeGlCode, dto.cashGlCode].filter(
       Boolean,
     ) as string[];
 
@@ -117,6 +127,9 @@ export class AccountService {
     const feeGlId = feeGlCode
       ? (glAccounts.find((acc) => acc.code === feeGlCode)?.id ?? null)
       : null;
+    const cashGlId = dto.cashGlCode
+      ? (glAccounts.find((acc) => acc.code === dto.cashGlCode)?.id ?? null)
+      : null;
 
     if (!depositGlId)
       throw new ApiException(
@@ -132,23 +145,40 @@ export class AccountService {
         error_code: 'CSA003',
       });
 
+    const openingBalanceMajor = dto.openingBalance ?? '0';
+    const hasOpeningBalance = this.calc.isGreaterThan(openingBalanceMajor, '0');
+
+    if (hasOpeningBalance && !cashGlId) {
+      throw new ApiException(
+        ApiErrorCode.BadRequest,
+        'cash gl code is required when opening balance is provided',
+        {
+          error_code: 'CSA004',
+        },
+      );
+    }
+
     return await this.db.transaction(async (tx) => {
+      const transactionAt = dto.createdDate
+        ? moment(dto.createdDate, DATE_FORMAT).toDate()
+        : new Date();
+
       const createdAccount = await this.createAccountRecord(
         {
           accountName:
             dto.accountName ||
-            `${customer.firstName} ${customer.lastName}${customer.middleName ? ' ' + customer.middleName : ''}`,
+            `${customer.firstName} ${customer.lastName}${
+              customer.middleName ? ' ' + customer.middleName : ''
+            }`,
           customerId: String(customer.id),
           officeId: Number(customer.officeId),
           tenantId: user.tenantId!,
           controlGlAccountId: depositGlId,
           userId: user.id,
           type: AccountType.Savings,
-          openingBalance: dto.openingBalance,
+          openingBalance: openingBalanceMajor,
           status: dto.activate ? AccountStatus.Active : AccountStatus.Pending,
-          ...(dto.createdDate && {
-            createdAt: moment(dto.createdDate, DATE_FORMAT).toDate(),
-          }),
+          createdAt: transactionAt,
         },
         tx,
       );
@@ -174,6 +204,65 @@ export class AccountService {
         },
         tx,
       );
+
+      // handle opening balance posting via multi-leg ledger transfer...
+      if (hasOpeningBalance && cashGlId && dto.activate) {
+        const reference =
+          dto.reference || `OPEN_BAL_${createdAccount.accountNumber}`;
+
+        await this.transactionService.postMultiLegTransfer(
+          {
+            comments: `Initial opening balance deposit for account ${createdAccount.accountNumber}`,
+            credits: [
+              {
+                accountId: createdAccount.accountId,
+                amountMajor: openingBalanceMajor,
+              },
+            ],
+            debits: [
+              {
+                glAccountId: cashGlId,
+                amountMajor: openingBalanceMajor,
+              },
+            ],
+            referenceNumber: reference,
+            transactionDate: moment(transactionAt).format(DATE_FORMAT),
+          },
+          {
+            officeId: Number(customer.officeId),
+            tenantId: user.tenantId!,
+            userId: user.id,
+          },
+          { throwApiError: true, dbTrnx: tx },
+        );
+
+        // update customer account book balance with the opening deposit...
+        await tx
+          .update(Accounts)
+          .set({
+            bookBalance: this.calc.toMinor(openingBalanceMajor),
+            updatedAt: new Date(),
+          })
+          .where(eq(Accounts.id, createdAccount.accountId));
+
+        // insert transaction audit record...
+        await tx.insert(Transactions).values({
+          id: uuidv7(),
+          tenantId: user.tenantId!,
+          senderAccountId: null,
+          receiverAccountId: createdAccount.accountId,
+          amount: this.calc.toMinor(openingBalanceMajor),
+          fee: 0n,
+          category: TransactionCategory.Deposit,
+          status: TransactionStatus.Successful,
+          reference: reference,
+          narration: `Initial opening deposit for account ${createdAccount.accountNumber}`,
+          officeId: Number(customer.officeId),
+          createdBy: user.id,
+          createdAt: transactionAt,
+          updatedAt: transactionAt,
+        });
+      }
 
       return plainToInstance(CreateSavingsAcctRespDto, {
         accountId: createdAccount.accountId,
@@ -369,7 +458,8 @@ export class AccountService {
       );
 
       const principalMinor = this.calc.toMinor(dto.principalAmount);
-      const chargeValue = this.calc.toMinor(dto.chargeValue || '0');
+      const chargeValueMajor = this.calc.round(dto.chargeValue || '0', 4);
+
       await this.accountRepo.createLoanDetails(
         {
           accountId: createdAccount.accountId,
@@ -385,14 +475,17 @@ export class AccountService {
           chargeCalculationType:
             dto.chargeCalculationType || ChargeCalculationType.Fixed,
           chargeTime: dto.chargeTime || ChargeTime.Upfront,
-          chargeValue,
+          chargeValue: chargeValueMajor,
           moratoriumType: dto.moratoriumType || MoratoriumType.None,
           repaymentProcessingStrategy:
             dto.repaymentProcessingStrategy || RepaymentProcessingStrategy.PCI,
           moratoriumPeriod: dto.moratoriumPeriod || 0,
           incomeGlAccountId: incomeGlId,
           ...(feeGlCode && { feeIncomeGlAccountId: feeGlId }),
-          repaymentStartDate: moment().endOf('month').toDate(), // TODO: this will depend on tenor and repayment freq...
+          repaymentStartDate: this.calculateRepaymentNextDate(
+            moment(dto.createdDate),
+            dto.repaymentFrequency,
+          ).toDate(),
         },
         tx,
       );
@@ -785,7 +878,7 @@ export class AccountService {
     const dbClient = (tx || this.db) as typeof this.db;
 
     // generate the deterministic account number...
-    const accountNumber = await this.generateAccountNumber(
+    const accountNumber = await this.gAccountService.generateAccountNumber(
       data.tenantId,
       data.officeId,
       dbClient,
@@ -830,151 +923,25 @@ export class AccountService {
     return { accountId: account.id, accountNumber: account.accountNumber };
   }
 
-  /**
-   * Validates account existence, active status, restriction flags (PND/PNC),
-   * and available balance prior to executing posting operations.
-   *
-   * @param options.account - The customer or internal account entity to validate
-   * @param options.amount - The posting transaction amount in minor units
-   * @param options.entryType - The accounting direction ('debit' or 'credit')
-   * @param options.overdraftLimit - Approved overdraft limit in minor units (defaults to 0n)
-   *
-   * @throws {ApiException} ACC001 - Account is null or undefined
-   * @throws {ApiException} ACC002 - Account status is not Active
-   * @throws {ApiException} ACC003 - Credit transaction requested on Post No Credit (PNC) account
-   * @throws {ApiException} ACC004 - Debit transaction requested on Post No Debit (PND) account
-   * @throws {ApiException} ACC005 - Insufficient available balance (bookBalance - lienAmount + overdraftLimit)
-   */
-  assertPostingAllowed({
-    account,
-    amount,
-    entryType,
-    overdraftLimit = 0n,
-  }: {
-    account?: Pick<
-      typeof Accounts.$inferSelect,
-      | 'status'
-      | 'postNoCredit'
-      | 'postNoDebit'
-      | 'restrictionReason'
-      | 'bookBalance'
-      | 'lienAmount'
-      | 'type'
-    >;
-    amount: string | bigint; // minor units
-    entryType: 'debit' | 'credit';
-    overdraftLimit?: string | bigint; // optional overdraft limit in minor units
-  }) {
-    if (!account) {
-      throw new ApiException(ApiErrorCode.InvalidAccount, 'invalid account', {
-        error_code: 'ACC001',
-      });
+  calculateRepaymentNextDate(
+    date: moment.Moment,
+    frequency: LoanRepaymentFrequency,
+  ): moment.Moment {
+    const nextDate = date.clone();
+    switch (frequency) {
+      case LoanRepaymentFrequency.Weekly:
+        return nextDate.add(1, 'week');
+      case LoanRepaymentFrequency.BiWeekly:
+        return nextDate.add(2, 'weeks');
+      case LoanRepaymentFrequency.Monthly:
+        return nextDate.add(1, 'month');
+      case LoanRepaymentFrequency.Quarterly:
+        return nextDate.add(3, 'months');
+      case LoanRepaymentFrequency.Yearly:
+        return nextDate.add(1, 'year');
+      default:
+        return nextDate.add(1, 'month');
     }
-
-    // check account active status...
-    if (account.status !== AccountStatus.Active) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        `account is not active. current status: ${account.status}`,
-        { error_code: 'ACC002' },
-      );
-    }
-
-    if (account.type === AccountType.Loan) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        'direct transfers to loan accounts are not permitted; use the loan repayment channel',
-        { error_code: 'ACC003' },
-      );
-    }
-
-    // check post no credit (pnc) restriction...
-    if (entryType === 'credit' && account.postNoCredit) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        `account is restricted for credit transactions (PNC). reason: ${
-          account.restrictionReason || 'none specified'
-        }`,
-        { error_code: 'ACC004' },
-      );
-    }
-
-    // check post no debit (pnd) restriction...
-    if (entryType === 'debit' && account.postNoDebit) {
-      throw new ApiException(
-        ApiErrorCode.BadRequest,
-        `account is restricted for debit transactions (PND). reason: ${
-          account.restrictionReason || 'none specified'
-        }`,
-        { error_code: 'ACC005' },
-      );
-    }
-
-    // validate available balance for debits: available = (bookBalance - lienAmount) + overdraftLimit...
-    if (entryType === 'debit') {
-      const availableBalance = this.calc.add(
-        this.calc.subtract(account.bookBalance, account.lienAmount),
-        overdraftLimit,
-      );
-
-      if (this.calc.isLessThan(availableBalance, amount)) {
-        throw new ApiException(
-          ApiErrorCode.InsufficientFunds,
-          'insufficient available funds taking into consideration active liens and overdraft limits',
-          { error_code: 'ACC006' },
-        );
-      }
-    }
-  }
-
-  private async generateAccountNumber(
-    tenantId: number,
-    officeId: number,
-    tx: NodePgDatabase<typeof schema>,
-  ): Promise<string> {
-    let attempts = 0;
-    let accountNumber = '';
-    let isUnique = false;
-
-    while (attempts < 3 && !isUnique) {
-      // get count (current count + attempts to offset if a collision is found)...
-      const result = await tx
-        .select({ count: count() })
-        .from(Accounts)
-        .where(
-          and(eq(Accounts.tenantId, tenantId), eq(Accounts.officeId, officeId)),
-        );
-
-      const nextSequence = Number(result[0].count) + 1 + attempts;
-
-      // format to 10 digits...
-      const branchPrefix = officeId.toString().padStart(3, '0').slice(-3);
-      const sequence = nextSequence.toString().padStart(7, '0').slice(-7);
-      accountNumber = `${branchPrefix}${sequence}`;
-
-      //  check if this specific account number exists...
-      const existing = await tx.query.Accounts.findFirst({
-        where: and(eq(Accounts.accountNumber, accountNumber)),
-        columns: { id: true },
-      });
-
-      if (!existing) {
-        isUnique = true;
-      } else {
-        attempts++;
-      }
-    }
-
-    if (!isUnique) {
-      throw new ApiException(
-        ApiErrorCode.Conflict,
-        'could not generate a unique account number',
-        { error_code: 'GAN001' },
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    return accountNumber;
   }
 
   /**

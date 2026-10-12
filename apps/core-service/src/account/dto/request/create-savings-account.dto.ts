@@ -57,15 +57,6 @@ export class CreateSavingsAccountDto {
   @IsString()
   accountName?: string;
 
-  // @ApiPropertyOptional({
-  //   description: 'Account type',
-  //   enum: AccountType,
-  //   example: AccountType.Savings,
-  // })
-  // @IsEnum(AccountType)
-  // @IsString()
-  // type: AccountType;
-
   // @ApiProperty({
   //   description:
   //     'Identifier of the savings product associated with this account',
@@ -93,6 +84,15 @@ export class CreateSavingsAccountDto {
     maxDecimalPlaces: 2,
   })
   openingBalance?: string;
+
+  @ApiPropertyOptional({
+    example: '10101',
+    description: 'Cash / Vault GL code to debit for opening balance funding',
+  })
+  @IsValidReference()
+  @Length(1, 10)
+  @IsOptional()
+  cashGlCode?: string;
 
   @ApiPropertyOptional({
     description: 'Target amount for target savings in major units',
