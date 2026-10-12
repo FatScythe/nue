@@ -147,7 +147,7 @@ pnpm exec nest g lib <lib-name>
 
 ```
 
-When prompted for the library prefix, enter **`@lib`**:
+When prompted for the library prefix, enter **`@libs`**:
 
 ```text
 ? What prefix would you like to use for the library? @lib
