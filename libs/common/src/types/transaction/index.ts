@@ -1,6 +1,6 @@
 import { Currency } from '@libs/database';
 
-export type TransactionPayload = { amount: string } & (
+export type TransactionPayload = { amountMajor: string } & (
   | { glAccountId: string }
   | { accountId: string }
   | { glAccountId: string; accountId: string }
@@ -10,7 +10,7 @@ export type TransferPayload = {
   referenceNumber: string;
   comments: string;
   currencyCode?: Currency.Ngn;
-  fee?: { glId: string; amount: string };
+  fee?: { glId: string; amountMajor: string };
   transactionDate?: string;
 } & (
   | { debits: TransactionPayload[]; credits: TransactionPayload[] }

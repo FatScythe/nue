@@ -9,15 +9,6 @@
     "tsConfigPath": "tsconfig.json"
   },
   "projects": {
-    "auth": {
-      "type": "library",
-      "root": "libs/auth",
-      "entryFile": "index",
-      "sourceRoot": "libs/auth/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/auth/tsconfig.lib.json"
-      }
-    },
     "background-process": {
       "type": "library",
       "root": "libs/background-process",
@@ -63,13 +54,13 @@
         "tsConfigPath": "libs/database/tsconfig.lib.json"
       }
     },
-    "ledger": {
+    "modules": {
       "type": "library",
-      "root": "libs/ledger",
+      "root": "libs/modules",
       "entryFile": "index",
-      "sourceRoot": "libs/ledger/src",
+      "sourceRoot": "libs/modules/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/ledger/tsconfig.lib.json"
+        "tsConfigPath": "libs/modules/tsconfig.lib.json"
       }
     },
     "portal-service": {

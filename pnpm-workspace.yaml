@@ -3,6 +3,7 @@ packages:
   - 'libs/*'
 allowBuilds:
   '@nestjs/core': true
+  '@parcel/watcher': set this to true or false
   '@scarf/scarf': true
   esbuild: true
   msgpackr-extract: true

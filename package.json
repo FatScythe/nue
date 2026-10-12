@@ -73,10 +73,10 @@
       "<rootDir>/apps/"
     ],
     "moduleNameMapper": {
-      "^@libs/database(|/.*)$": "<rootDir>/libs/database/src/$1",
-      "^@libs/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@lib/background-process(|/.*)$": "<rootDir>/libs/background-process/src/$1",
-      "^@libs/ledger(|/.*)$": "<rootDir>/libs/ledger/src/$1"
+      "^@libs/common(|/.*)$": "<rootDir>/libs/common/src/$1",
+      "^@libs/database(|/.*)$": "<rootDir>/libs/database/src/$1",
+      "^@libs/modules(|/.*)$": "<rootDir>/libs/modules/src/$1"
     }
   },
   "allowScripts": {
