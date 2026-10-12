@@ -168,7 +168,7 @@ CREATE TABLE "loan_details" (
 	"status" "loan_status" DEFAULT 'active' NOT NULL,
 	"charge_calculation_type" charge_type DEFAULT 'fixed' NOT NULL,
 	"charge_time" charge_time DEFAULT 'upfront' NOT NULL,
-	"charge_value" bigint,
+	"charge_value" numeric(12, 4) NOT NULL,
 	"moratorium_type" "moratorium_type" DEFAULT 'none' NOT NULL,
 	"moratorium_period" integer DEFAULT 0 NOT NULL,
 	"repayment_processing_strategy" "repayment_processing_strategy" DEFAULT 'principal_charge_interest',

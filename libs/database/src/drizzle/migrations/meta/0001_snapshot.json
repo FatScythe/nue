@@ -1,6 +1,6 @@
 {
-  "id": "5efa1018-6fae-4f19-b729-fd65b77a0d16",
-  "prevId": "ee27dab6-0161-4131-8ef6-2e98e89abb65",
+  "id": "9f4edd8f-787b-43f0-8af7-95e4b1b5f314",
+  "prevId": "705fe5bd-b179-49c7-a231-9c86fc57051a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1557,9 +1557,9 @@
         },
         "charge_value": {
           "name": "charge_value",
-          "type": "bigint",
+          "type": "numeric(12, 4)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "moratorium_type": {
           "name": "moratorium_type",

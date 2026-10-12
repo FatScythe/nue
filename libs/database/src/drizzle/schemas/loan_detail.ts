@@ -10,6 +10,7 @@ import {
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  decimal,
   index,
   integer,
   numeric,
@@ -101,7 +102,7 @@ export const LoanDetails = pgTable(
       .$type<ChargeTime>()
       .default(ChargeTime.Upfront)
       .notNull(),
-    chargeValue: bigint('charge_value', { mode: 'bigint' }),
+    chargeValue: decimal('charge_value', { precision: 12, scale: 4 }).notNull(),
     moratoriumType: moratoriumTypeEnum('moratorium_type')
       .$type<MoratoriumType>()
       .default(MoratoriumType.None)
