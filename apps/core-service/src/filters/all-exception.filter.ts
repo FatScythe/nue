@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 
+import { CoreException } from '@libs/common';
 import { ValidationError } from 'class-validator';
 import { Request, Response } from 'express';
 
@@ -42,6 +43,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       errorCode = res.errorCode;
       message = res.message;
       meta = res.meta || {};
+    } else if (exception instanceof CoreException) {
+      httpStatus = exception.httpStatus;
+      errorCode = exception.code;
+      message = exception.message;
+      meta = exception.details || {};
     }
     // handle the specific case where exception is an Array of ValidationErrors
     else if (
