@@ -1,5 +1,12 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
+import { plainToInstance } from 'class-transformer';
+import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
+import { uuidv7 } from 'uuidv7';
+
+// libs...
 import { Calculator, CoreReqUser, DATE_FORMAT } from '@libs/common';
 import {
   AccountRepository,
@@ -23,11 +30,7 @@ import {
   TransactionStatus,
 } from '@libs/database';
 import * as schema from '@libs/database/drizzle/schemas';
-import { plainToInstance } from 'class-transformer';
-import { and, asc, eq, inArray, isNull, or } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
-import { uuidv7 } from 'uuidv7';
+import { GAccountService } from '@libs/modules';
 
 import { AccountService } from '../account/account.service';
 import { CreateLoanAccountDto } from '../account/dto';
@@ -58,6 +61,7 @@ export class LoanService {
     private readonly accountRepo: AccountRepository,
     private readonly calc: Calculator,
     private readonly transactionService: TransactionService,
+    private readonly gAccountService: GAccountService,
   ) {}
 
   async createLoanAccount(dto: CreateLoanAccountDto, user: CoreReqUser) {
@@ -103,10 +107,12 @@ export class LoanService {
       );
     }
 
-    const { principalAmount, outstandingBalance, chargeValue } = loanDetails;
+    const { principalAmount, outstandingBalance, chargeValue, interestRate } =
+      loanDetails;
 
     const formattedLoanDetails = {
       ...loanDetails,
+      interestRate: +this.calc.toMajorStr(interestRate, this.DP),
       principalAmount: this.calc.toMajorStr(principalAmount, this.DP),
       outstandingBalance: this.calc.toMajorStr(outstandingBalance, this.DP),
       chargeValue: this.calc.toMajorStr(chargeValue, this.DP),
@@ -323,7 +329,6 @@ export class LoanService {
    */
   calculateLoanRepayment(dto: ICalculateLoanRepayment) {
     const {
-      principalAmount,
       tenor,
       repaymentFrequency,
       repaymentStartDate,
@@ -333,11 +338,13 @@ export class LoanService {
       moratoriumPeriod = 0,
       chargeCalculationType = ChargeCalculationType.Fixed,
       chargeTime = ChargeTime.Upfront,
-      chargeValue = '0',
     } = dto;
 
+    const principalMajor = dto.principalAmount;
+    const chargeValue = dto?.chargeValue || '0';
+
     const periodsPerYear = this.getPeriodsPerYear(repaymentFrequency);
-    const periodicRate = this.calc.divideMany(
+    const periodicRateMajor = this.calc.divideMany(
       interestRate,
       100,
       periodsPerYear,
@@ -345,7 +352,7 @@ export class LoanService {
 
     const activeTenor = this.calc.subtract(tenor, moratoriumPeriod);
 
-    if (this.calc.isLessThanOrEqual(activeTenor, 0)) {
+    if (this.calc.isLessThanOrEqual(activeTenor, '0')) {
       throw new ApiException(
         ApiErrorCode.BadRequest,
         'tenor must be greater than moratorium period',
@@ -373,7 +380,7 @@ export class LoanService {
       if (chargeCalculationType === ChargeCalculationType.Percentage) {
         // for percent charge, we take the percent from the principal...
         chargeAmount = this.calc.multiply(
-          principalAmount,
+          principalMajor,
           this.calc.divide(chargeValue, '100'),
         );
       } else {
@@ -396,24 +403,24 @@ export class LoanService {
     let emi = '0';
 
     // when there is not interest...
-    if (this.calc.isEqual(periodicRate, 0)) {
-      emi = this.calc.divide(principalAmount, activeTenor);
+    if (this.calc.isEqual(periodicRateMajor, '0')) {
+      emi = this.calc.divide(principalMajor, activeTenor);
     } else if (interestRateType === InterestRateType.Flat) {
       // principal portion (P / activeTenor) + interest portion (P * periodicRate)...
-      const principalPerPeriod = this.calc.divide(principalAmount, activeTenor);
+      const principalPerPeriod = this.calc.divide(principalMajor, activeTenor);
       const flatInterestPerPeriod = this.calc.multiply(
-        principalAmount,
-        periodicRate,
+        principalMajor,
+        periodicRateMajor,
       );
       emi = this.calc.add(principalPerPeriod, flatInterestPerPeriod);
     } else if (interestRateType === InterestRateType.DecliningBalance) {
       // emi formula: p * r * (1 + r)^n / ((1 + r)^n - 1)
-      const onePlusR = this.calc.add(1, periodicRate);
+      const onePlusR = this.calc.add(1, periodicRateMajor);
       const ratePow = this.calc.pow(onePlusR, activeTenor);
 
       const numerator = this.calc.multiplyMany(
-        principalAmount,
-        periodicRate,
+        principalMajor,
+        periodicRateMajor,
         ratePow,
       );
       const denominator = this.calc.subtract(ratePow, 1);
@@ -429,7 +436,7 @@ export class LoanService {
       );
     }
 
-    let balance = principalAmount;
+    let balance = principalMajor;
     let totalInterest = '0';
     const schedules: RepaymentScheduleItemDto[] = [];
     let currentDate = repaymentStartDate
@@ -443,8 +450,8 @@ export class LoanService {
       // calculate interest for current balance or flat rate
       let interestComponent =
         interestRateType === InterestRateType.Flat
-          ? this.calc.multiply(principalAmount, periodicRate)
-          : this.calc.multiply(balance, periodicRate);
+          ? this.calc.multiply(principalMajor, periodicRateMajor)
+          : this.calc.multiply(balance, periodicRateMajor);
 
       let principalComponent = '0';
       let installmentAmount = '0';
@@ -464,7 +471,7 @@ export class LoanService {
         currentCharge = emiCharge;
 
         if (interestRateType === InterestRateType.Flat) {
-          principalComponent = this.calc.divide(principalAmount, activeTenor);
+          principalComponent = this.calc.divide(principalMajor, activeTenor);
           installmentAmount = emi;
         } else {
           installmentAmount = emi;
@@ -501,19 +508,19 @@ export class LoanService {
         chargePaid: '0',
       });
 
-      currentDate = this.incrementDateByFrequency(
+      currentDate = this.accountService.calculateRepaymentNextDate(
         currentDate,
         repaymentFrequency,
       );
     }
 
     const totalRepayment = this.calc.add(
-      principalAmount,
+      principalMajor,
       this.calc.add(totalInterest, totalChargeAmount),
     );
 
     return {
-      totalPrincipal: principalAmount,
+      totalPrincipal: principalMajor,
       totalInterest,
       totalChargeAmount,
       totalRepayment,
@@ -877,8 +884,8 @@ export class LoanService {
       const principalMinor = dto.principalAmount
         ? this.calc.toMinor(dto.principalAmount)
         : undefined;
-      const chargeValueMinor = dto.chargeValue
-        ? this.calc.toMinor(dto.chargeValue)
+      const chargeValueMajor = dto.chargeValue
+        ? this.calc.round(dto.chargeValue, 4)
         : undefined;
 
       await tx
@@ -903,7 +910,7 @@ export class LoanService {
             chargeCalculationType: dto.chargeCalculationType,
           }),
           ...(dto.chargeTime && { chargeTime: dto.chargeTime }),
-          ...(chargeValueMinor && { chargeValue: chargeValueMinor }),
+          ...(chargeValueMajor && { chargeValue: chargeValueMajor }),
           ...(dto.moratoriumType && { moratoriumType: dto.moratoriumType }),
           ...(dto.moratoriumPeriod !== undefined && {
             moratoriumPeriod: dto.moratoriumPeriod,
@@ -1032,6 +1039,28 @@ export class LoanService {
       );
     }
 
+    // pre-calculate principal and upfront fee values for validation & disbursement posting...
+    const principalMinor = loanDetails.principalAmount;
+    const principalMajor = this.calc.toMajorStr(principalMinor, undefined);
+    const chargeValue = loanDetails.chargeValue;
+
+    let feeMajor = '0';
+    if (loanDetails.chargeTime === ChargeTime.Upfront && chargeValue) {
+      if (
+        loanDetails.chargeCalculationType === ChargeCalculationType.Percentage
+      ) {
+        const feeRate = this.calc.divide(chargeValue, '100');
+        feeMajor = this.calc.multiply(principalMajor, feeRate);
+      } else {
+        feeMajor = chargeValue;
+      }
+    }
+
+    const isUpfrontFeeApplied =
+      loanDetails.chargeTime === ChargeTime.Upfront &&
+      this.calc.isGreaterThan(feeMajor, '0');
+    const feeMinor = isUpfrontFeeApplied ? this.calc.toMinor(feeMajor) : 0n;
+
     // validate ownership and account type...
     for (const targetAcc of targetAccounts) {
       if (targetAcc.customerId !== accountData.customerId) {
@@ -1052,9 +1081,9 @@ export class LoanService {
 
       if (targetAcc.id === effectiveDisbursementAccountId) {
         // validates AccountStatus.Active AND postNoCredit (PNC)
-        this.accountService.assertPostingAllowed({
+        this.gAccountService.assertPostingAllowed({
           account: targetAcc,
-          amount: loanDetails.principalAmount, // or minor unit disbursement amount
+          amountMinor: 0n,
           entryType: 'credit',
         });
 
@@ -1071,23 +1100,12 @@ export class LoanService {
           );
         }
 
-        if (targetAcc.postNoDebit) {
-          throw new ApiException(
-            ApiErrorCode.BadRequest,
-            `repayment account is restricted for debit transactions (PND). reason: ${
-              targetAcc.restrictionReason || 'none specified'
-            }`,
-            { error_code: 'DBL011' },
-          );
-        }
-
-        // NB: If collecting an upfront fee from the repayment account immediately during disbursement,
-        // call assertPostingAllowed with 'debit' here instead:
-        // this.accountService.assertPostingAllowed({
-        //   account: targetAcc,
-        //   amount: upfrontFeeAmount,
-        //   entryType: 'debit',
-        // });
+        // incase we are collecting an upfront fee from the repayment account immediately during disbursement...
+        this.gAccountService.assertPostingAllowed({
+          account: targetAcc,
+          amountMinor: feeMinor,
+          entryType: 'debit',
+        });
 
         repaymentAccount = targetAcc;
       }
@@ -1137,14 +1155,14 @@ export class LoanService {
 
     // calculate amortization schedule...
     const repaymentCalculation = this.calculateLoanRepayment({
-      principalAmount: this.calc.round(loanDetails.principalAmount),
+      principalAmount: principalMajor,
       interestRate: Number(loanDetails.interestRate),
       tenor: loanDetails.tenor,
       repaymentFrequency: loanDetails.repaymentFrequency,
       repaymentStartDate: moment(disbursedAt).format(DATE_FORMAT),
       moratoriumType: loanDetails.moratoriumType,
       moratoriumPeriod: loanDetails.moratoriumPeriod,
-      chargeValue: this.calc.toMajorStr(loanDetails.chargeValue, undefined),
+      chargeValue: loanDetails.chargeValue,
       chargeTime: loanDetails.chargeTime,
       chargeCalculationType: loanDetails.chargeCalculationType,
     });
@@ -1195,30 +1213,6 @@ export class LoanService {
 
       const loanGlId = accountData.controlGlAccountId;
 
-      const loanFeeAmount = loanDetails.chargeValue;
-      const loanPrincipalAmount = loanDetails.principalAmount;
-      const principal = this.calc.toMajor(loanPrincipalAmount);
-
-      // calculate fee based on charge calculation type (fixed vs percentage)...
-      let fee = '0';
-      if (loanDetails.chargeTime === ChargeTime.Upfront && loanFeeAmount) {
-        if (
-          loanDetails.chargeCalculationType === ChargeCalculationType.Percentage
-        ) {
-          const feeRate = this.calc.divide(
-            this.calc.toMajor(loanFeeAmount),
-            '100',
-          );
-          fee = this.calc.multiply(principal, feeRate);
-        } else {
-          fee = this.calc.toMajorStr(loanFeeAmount, undefined);
-        }
-      }
-
-      const isUpfrontFeeApplied =
-        loanDetails.chargeTime === ChargeTime.Upfront &&
-        this.calc.isGreaterThan(fee, '0');
-
       if (!loanGlId) {
         throw new ApiException(
           ApiErrorCode.BadRequest,
@@ -1235,9 +1229,9 @@ export class LoanService {
         );
       }
 
-      const netDisbursement = isUpfrontFeeApplied
-        ? this.calc.subtract(principal, fee)
-        : principal;
+      const netDisbursementMajor = isUpfrontFeeApplied
+        ? this.calc.subtract(principalMajor, feeMajor)
+        : principalMajor;
 
       const reference = `LOAN-${accountData.id}`;
 
@@ -1248,13 +1242,13 @@ export class LoanService {
           credits: [
             {
               accountId: effectiveDisbursementAccountId,
-              amount: String(netDisbursement),
+              amountMajor: netDisbursementMajor,
             },
             ...(isUpfrontFeeApplied && feeGlId
-              ? [{ glAccountId: feeGlId, amount: String(fee) }]
+              ? [{ glAccountId: feeGlId, amountMajor: feeMajor }]
               : []),
           ],
-          debits: [{ glAccountId: loanGlId, amount: String(principal) }],
+          debits: [{ glAccountId: loanGlId, amountMajor: principalMajor }],
           referenceNumber: reference,
           transactionDate: moment(disbursedAt).format(DATE_FORMAT),
         },
@@ -1271,9 +1265,8 @@ export class LoanService {
         tenantId: accountData.tenantId,
         senderAccountId: accountLoanDetail.accountId,
         receiverAccountId: effectiveDisbursementAccountId,
-        amount: this.calc.toMinor(netDisbursement),
-        fee:
-          isUpfrontFeeApplied && feeGlId ? this.calc.toMinor(fee) : BigInt('0'),
+        amount: this.calc.toMinor(netDisbursementMajor),
+        fee: isUpfrontFeeApplied && feeGlId ? feeMinor : BigInt('0'),
         category: TransactionCategory.Withdrawal,
         status: TransactionStatus.Successful,
         reference: reference + '_DEB',
@@ -1301,7 +1294,9 @@ export class LoanService {
         .update(Accounts)
         .set({
           status: AccountStatus.Active,
-          bookBalance: this.calc.toMinor(this.calc.multiply(principal, '-1')),
+          bookBalance: this.calc.toMinor(
+            this.calc.multiply(principalMajor, '-1'),
+          ),
           updatedAt: transactionAt,
         })
         .where(eq(Accounts.id, accountId));
@@ -1330,27 +1325,6 @@ export class LoanService {
         return 1;
       default:
         return 12;
-    }
-  }
-
-  private incrementDateByFrequency(
-    date: moment.Moment,
-    frequency: LoanRepaymentFrequency,
-  ): moment.Moment {
-    const nextDate = date.clone();
-    switch (frequency) {
-      case LoanRepaymentFrequency.Weekly:
-        return nextDate.add(1, 'week');
-      case LoanRepaymentFrequency.BiWeekly:
-        return nextDate.add(2, 'weeks');
-      case LoanRepaymentFrequency.Monthly:
-        return nextDate.add(1, 'month');
-      case LoanRepaymentFrequency.Quarterly:
-        return nextDate.add(3, 'months');
-      case LoanRepaymentFrequency.Yearly:
-        return nextDate.add(1, 'year');
-      default:
-        return nextDate.add(1, 'month');
     }
   }
 }
