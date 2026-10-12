@@ -1,12 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { plainToInstance } from 'class-transformer';
+import { and, eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
+import { uuidv7 } from 'uuidv7';
+
+//libs...
 import { BackgroundProcess, LienWorkerEnum } from '@libs/background-process';
 import {
   Calculator,
   CoreReqUser,
   LIEN_EXPIRATION_SWEEP_HOURS,
 } from '@libs/common';
-//libs...
 import {
   Accounts,
   AccountStatus,
@@ -16,11 +22,6 @@ import {
   LienStatus,
 } from '@libs/database';
 import * as schema from '@libs/database/drizzle/schemas';
-import { plainToInstance } from 'class-transformer';
-import { and, eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
-import { uuidv7 } from 'uuidv7';
 
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
@@ -38,6 +39,8 @@ export class LienService {
 
   async placeLien(dto: PlaceLienDto, user: CoreReqUser) {
     const { id: userId, tenantId } = user;
+
+    const lienAmountMajor = dto.amount;
 
     const MIN_EXPIRATION_BUFFER_SECONDS = 10;
 
@@ -94,10 +97,10 @@ export class LienService {
       }
 
       // convert incoming major currency (e.g. "100.50") to minor unit string...
-      const lienAmount = this.calc.toMinor(dto.amount);
+      const lienAmountMinor = this.calc.toMinor(lienAmountMajor);
 
       // calculate available balance: (bookBalance - lienAmount) + overdraftLimit....
-      const overdraftLimit = '0';
+      const overdraftLimit = 0n;
       const availableBalance = this.calc.add(
         this.calc.subtract(account.bookBalance, account.lienAmount),
         overdraftLimit,
@@ -106,7 +109,7 @@ export class LienService {
       // check available balance against requested lien amount...
       const isInsufficientBalance = this.calc.isLessThan(
         availableBalance,
-        lienAmount,
+        lienAmountMinor,
       );
 
       if (isInsufficientBalance) {
@@ -118,7 +121,7 @@ export class LienService {
       }
 
       // aggregate total active holds on account...
-      const newLienAmount = this.calc.add(account.lienAmount, lienAmount);
+      const newLienAmount = this.calc.add(account.lienAmount, lienAmountMinor);
 
       // update account with BigInt cast for Drizzle bigint schema column...
       await tx
@@ -136,7 +139,7 @@ export class LienService {
           id: uuidv7(),
           tenantId: tenantId!,
           accountId: account.id,
-          amount: BigInt(lienAmount),
+          amount: lienAmountMinor,
           reason: dto.reason,
           reference: dto.reference,
           status: LienStatus.Active,
@@ -249,13 +252,13 @@ export class LienService {
       }
 
       // restore available balance
-      const restoredLienAmount = this.calc.subtract(
+      const restoredLienAmountMinor = this.calc.subtract(
         account.lienAmount,
         lien.amount,
       );
 
       // invariant validation: restored lien not less than 0...
-      if (this.calc.isLessThan(restoredLienAmount, '0')) {
+      if (this.calc.isLessThan(restoredLienAmountMinor, '0')) {
         throw new ApiException(
           ApiErrorCode.InternalServerError,
           'releasing lien would cause balance mismatch',
@@ -268,7 +271,7 @@ export class LienService {
       await tx
         .update(Accounts)
         .set({
-          lienAmount: BigInt(restoredLienAmount),
+          lienAmount: BigInt(restoredLienAmountMinor),
           updatedAt: transactionAt,
         })
         .where(
