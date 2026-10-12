@@ -1,7 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { Calculator, TransferPayload, type CoreReqUser } from '@libs/common';
+import { plainToInstance } from 'class-transformer';
+import { and, eq } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 //libs...
+import { Calculator, TransferPayload, type CoreReqUser } from '@libs/common';
 import {
   Accounts,
   AccountType,
@@ -13,12 +17,8 @@ import {
   TransactionRepository,
 } from '@libs/database';
 import * as schema from '@libs/database/drizzle/schemas';
-import { GLedgerService } from '@libs/ledger';
-import { plainToInstance } from 'class-transformer';
-import { and, eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { GAccountService, GLedgerService } from '@libs/modules';
 
-import { AccountService } from '../account/account.service';
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
 import {
@@ -38,16 +38,22 @@ export class TransactionService {
     private readonly transactionRepo: TransactionRepository,
     private readonly generalLedgerRepo: GeneralLedgerRepository,
     private readonly calc: Calculator,
-    private readonly accountService: AccountService,
-    private readonly ledgerService: GLedgerService,
+    private readonly gLedgerService: GLedgerService,
+    private readonly gAccountService: GAccountService,
   ) {}
+
+  /**
+   * Executes a multi-leg double-entry general ledger and account transfer.
+   * Validates payload item limits, balanced debit/credit sums, account existence,
+   * direct GL booking permissions, and sufficient available balances with row-level locking.
+   * */
 
   async postMultiLegTransfer(
     payload: TransferPayload,
     context: { userId: string; officeId: number; tenantId: number },
     opts?: { throwApiError?: boolean; dbTrnx?: NodePgDatabase<typeof schema> },
   ) {
-    const response = await this.ledgerService.postMultiLegTransfer(
+    const response = await this.gLedgerService.postMultiLegTransfer(
       payload,
       context,
       opts,
@@ -93,8 +99,9 @@ export class TransactionService {
     });
 
     // balance pre-check against total deduction (transfer amount + fee)
-    const feeAmount = dto.fee || '0';
-    const totalDeduction = this.calc.add(dto.amount, feeAmount);
+    const feeAmountMajor = dto.fee || '0';
+    const amountMajor = dto.amount;
+    const totalDeductionMajor = this.calc.add(amountMajor, feeAmountMajor);
 
     if (!senderAcc) {
       throw new ApiException(
@@ -105,16 +112,16 @@ export class TransactionService {
     }
 
     // validates existence, status, PND restriction, and available balance against total deduction
-    this.accountService.assertPostingAllowed({
+    this.gAccountService.assertPostingAllowed({
       account: senderAcc,
-      amount: totalDeduction,
+      amountMinor: this.calc.toMinor(totalDeductionMajor),
       entryType: 'debit',
     });
 
     // conditionally query details table ONLY if a fee is applied
     let feeGlId;
 
-    if (this.calc.isGreaterThan(feeAmount, '0')) {
+    if (this.calc.isGreaterThan(feeAmountMajor, '0')) {
       if (senderAcc.type === AccountType.Savings) {
         const details = await this.db.query.SavingsDetails.findFirst({
           columns: { feeIncomeGlAccountId: true },
@@ -149,11 +156,11 @@ export class TransactionService {
         comments:
           dto.narration ||
           `fund transfer from accountId ${dto.senderAccountId} to ${dto.receiverAccountId}`,
-        credits: [{ accountId: dto.receiverAccountId, amount: dto.amount }],
-        debits: [{ accountId: dto.senderAccountId, amount: dto.amount }],
+        credits: [{ accountId: dto.receiverAccountId, amountMajor }],
+        debits: [{ accountId: dto.senderAccountId, amountMajor }],
         operationType: 'debit',
         referenceNumber: dto.reference,
-        ...(feeGlId && { fee: { amount: feeAmount, glId: feeGlId } }),
+        ...(feeGlId && { fee: { amountMajor: feeAmountMajor, glId: feeGlId } }),
       },
       { officeId: senderAcc.officeId, tenantId: senderAcc.tenantId, userId },
       { throwApiError: true },
@@ -174,6 +181,7 @@ export class TransactionService {
   ) {
     const { tenantId, id: userId } = user;
     const isAccountToGl = dto.direction === TransferDirection.AccountToGl;
+    const amountMajor = dto.amount;
 
     // validate target GL account existence and direct booking permission...
     const targetGl = await this.generalLedgerRepo.findOne({
@@ -234,9 +242,9 @@ export class TransactionService {
     // balance check if debiting customer account...
     if (isAccountToGl) {
       // validates existence, status, PND restriction, and available balance against total deduction...
-      this.accountService.assertPostingAllowed({
+      this.gAccountService.assertPostingAllowed({
         account,
-        amount: this.calc.toMinor(dto.amount),
+        amountMinor: this.calc.toMinor(amountMajor),
         entryType: 'debit',
       });
     }
@@ -250,12 +258,12 @@ export class TransactionService {
       {
         comments,
         credits: isAccountToGl
-          ? [{ glAccountId: targetGl.id, amount: dto.amount }]
+          ? [{ glAccountId: targetGl.id, amountMajor }]
           : [],
         debits: isAccountToGl
           ? []
-          : [{ glAccountId: targetGl.id, amount: dto.amount }],
-        customerAccounts: [{ accountId: account.id, amount: dto.amount }],
+          : [{ glAccountId: targetGl.id, amountMajor }],
+        customerAccounts: [{ accountId: account.id, amountMajor }],
         operationType: isAccountToGl ? 'debit' : 'credit',
         referenceNumber: dto.reference,
       },
