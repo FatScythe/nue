@@ -16,6 +16,7 @@ import {
   JournalEntryLineRepository,
   JournalEntryRepository,
   LienRepository,
+  RoleRepository,
   TransactionRepository,
 } from './repository';
 
@@ -35,6 +36,7 @@ import {
     JournalEntryRepository,
     TransactionRepository,
     JournalEntryLineRepository,
+    RoleRepository,
   ],
   exports: [
     DATABASE_CONNECTION,
@@ -47,6 +49,7 @@ import {
     JournalEntryRepository,
     TransactionRepository,
     JournalEntryLineRepository,
+    RoleRepository,
   ],
 })
 export class DatabaseModule implements OnApplicationShutdown {

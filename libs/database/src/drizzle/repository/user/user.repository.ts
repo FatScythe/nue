@@ -1,12 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { eq, SQL } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { uuidv7 } from 'uuidv7';
+
 import { BaseRepository } from '@libs/database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@libs/database/drizzle/drizzle.provider';
 import * as schema from '@libs/database/drizzle/schemas';
 import { Roles, Users } from '@libs/database/drizzle/schemas';
 import { DBTransaction } from '@libs/database/drizzle/types';
-import { eq, SQL } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
+import { UserStatus } from '../../enums';
 
 @Injectable()
 export class UserRepository extends BaseRepository<typeof Users> {
@@ -20,7 +24,27 @@ export class UserRepository extends BaseRepository<typeof Users> {
   async transformAndValidate(
     data: typeof Users.$inferInsert,
   ): Promise<typeof Users.$inferInsert> {
-    return data;
+    const { id = '', tenantId } = data;
+
+    const errOpt = {
+      cause: {
+        code: 'VALIDATION_FAILED',
+        layer: 'REPOSITORY',
+        module: 'USER',
+      },
+    };
+
+    if (!tenantId)
+      throw new Error('tenant id is required to create a new user', errOpt);
+
+    return {
+      ...data,
+      id: id || uuidv7(),
+      status: data.status || UserStatus.Pending,
+      firstName: data.firstName?.toUpperCase(),
+      lastName: data.lastName?.toUpperCase(),
+      otherNames: data.otherNames?.toUpperCase(),
+    };
   }
 
   async findOneWithRole(where: SQL | undefined, tx?: DBTransaction) {
@@ -72,10 +96,17 @@ export class UserRepository extends BaseRepository<typeof Users> {
   /**
    * create a new user
    */
-  async create(data: typeof Users.$inferInsert, tx?: DBTransaction) {
+  async create(
+    data: Omit<typeof Users.$inferInsert, 'id'>,
+    tx?: DBTransaction,
+  ) {
+    const transformedData = await this.transformAndValidate({
+      ...data,
+      id: '',
+    });
     const result = await this.getClient(tx)
       .insert(Users)
-      .values(data)
+      .values(transformedData)
       .returning();
     return result[0];
   }

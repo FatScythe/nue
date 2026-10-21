@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { uuidv7 } from 'uuidv7';
+
 import { BaseRepository } from '@libs/database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@libs/database/drizzle/drizzle.provider';
 import { TransactionStatus } from '@libs/database/drizzle/enums';
 import * as schema from '@libs/database/drizzle/schemas';
 import { Transactions } from '@libs/database/drizzle/schemas';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { uuidv7 } from 'uuidv7';
 
 @Injectable()
 export class TransactionRepository extends BaseRepository<typeof Transactions> {
@@ -20,7 +21,7 @@ export class TransactionRepository extends BaseRepository<typeof Transactions> {
   async transformAndValidate(
     data: typeof Transactions.$inferInsert,
   ): Promise<typeof Transactions.$inferInsert> {
-    const { tenantId, createdBy } = data;
+    const { id, tenantId, createdBy } = data;
 
     const errOpt = {
       cause: {
@@ -37,7 +38,7 @@ export class TransactionRepository extends BaseRepository<typeof Transactions> {
 
     return {
       ...data,
-      id: uuidv7(),
+      id: id || uuidv7(),
       status: data.status || TransactionStatus.PendingApproval,
     };
   }
