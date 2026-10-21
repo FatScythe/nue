@@ -1,8 +1,4 @@
-export enum Environment {
-  Development = 'development',
-  Production = 'production',
-  Test = 'test',
-}
+import { Environment } from '@libs/common/types';
 
 export interface AppConfig {
   nodeEnv: Environment;

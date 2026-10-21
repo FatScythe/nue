@@ -1,4 +1,3 @@
-import { IsMsDuration } from '@libs/common';
 import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
@@ -8,7 +7,7 @@ import {
   validateSync,
 } from 'class-validator';
 
-import { Environment } from './types';
+import { Environment, IsMsDuration } from '@libs/common';
 
 class RequiredEnvironmentVariables {
   @IsEnum(Environment)
