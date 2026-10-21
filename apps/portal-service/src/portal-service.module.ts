@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 
 import { PortalServiceController } from './portal-service.controller';
-import { PortalServiceService } from './portal-service.service';
+import { PortalService } from './portal-service.service';
+import { UserModule } from './user/user.module';
+import { PConfigModule } from './config/config.module';
 
 @Module({
-  imports: [],
+  imports: [PConfigModule, UserModule],
   controllers: [PortalServiceController],
-  providers: [PortalServiceService],
+  providers: [PortalService],
 })
 export class PortalServiceModule {}

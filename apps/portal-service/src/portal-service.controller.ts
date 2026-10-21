@@ -1,13 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 
-import { PortalServiceService } from './portal-service.service';
+import { PortalService } from './portal-service.service';
 
 @Controller()
 export class PortalServiceController {
-  constructor(private readonly portalServiceService: PortalServiceService) {}
+  constructor(private readonly portalService: PortalService) {}
 
   @Get()
   getHello(): string {
-    return this.portalServiceService.getHello();
+    return this.portalService.getHello();
   }
 }
