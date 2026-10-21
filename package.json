@@ -1,4 +1,7 @@
 {
+  "dependencies": {
+    "@nestjs/mapped-types": "*"
+  },
   "name": "nue",
   "version": "0.0.1",
   "description": "core banking application",
@@ -52,6 +55,17 @@
     "typescript-eslint": "^8.20.0",
     "webpack-node-externals": "^3.0.0"
   },
+  "pnpm": {
+    "overrides": {
+      "drizzle-orm": "0.45.2",
+      "class-transformer": "0.5.1",
+      "class-validator": "0.15.1",
+      "@nestjs/common": "11.1.19",
+      "@nestjs/config": "11.1.19",
+      "@nestjs/core": "11.1.19",
+      "@nestjs/jwt": "11.0.2"
+    }
+  },
   "jest": {
     "moduleFileExtensions": [
       "js",
@@ -76,7 +90,8 @@
       "^@lib/background-process(|/.*)$": "<rootDir>/libs/background-process/src/$1",
       "^@libs/common(|/.*)$": "<rootDir>/libs/common/src/$1",
       "^@libs/database(|/.*)$": "<rootDir>/libs/database/src/$1",
-      "^@libs/modules(|/.*)$": "<rootDir>/libs/modules/src/$1"
+      "^@libs/modules(|/.*)$": "<rootDir>/libs/modules/src/$1",
+      "^@libs/token(|/.*)$": "<rootDir>/libs/token/src/$1"
     }
   },
   "allowScripts": {
