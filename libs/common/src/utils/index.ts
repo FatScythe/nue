@@ -1,9 +1,10 @@
 import { createHash, createHmac } from 'crypto';
 
-import { DEFAULT_PERMISSION, Resources } from '@libs/database';
-import { RolePermissions } from '@libs/database/drizzle/types';
 import { Request } from 'express';
 import { customAlphabet } from 'nanoid';
+
+import { DEFAULT_PERMISSION, Resources } from '@libs/database';
+import { RolePermissions } from '@libs/database/drizzle/types';
 
 import { PaginationMeta } from '../types';
 
@@ -24,6 +25,19 @@ export class MoneyTransformer {
     return BigInt(Math.round(Number(amount) * 100));
   }
 }
+
+export const randomHash = (length: number): string => {
+  let result = '';
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const charsLen = chars.length;
+
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * charsLen));
+  }
+
+  return result;
+};
 
 export const containsSpecialChars = (str) => {
   const re = /[ `!@#$%^&*()+\=\[\]{};':"\\|,.<>\/?~]/;
