@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
-import { CalculatorModule } from '@libs/common';
 import { DatabaseModule } from '@libs/database';
+import { CalculatorModule } from '@libs/common';
 
 import { GLedgerService } from './ledger.service';
 

@@ -1,12 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { uuidv7 } from 'uuidv7';
+
 import { BaseRepository } from '@libs/database/drizzle/base.repository';
 import { DATABASE_CONNECTION } from '@libs/database/drizzle/drizzle.provider';
 import { LienStatus } from '@libs/database/drizzle/enums';
 import * as schema from '@libs/database/drizzle/schemas';
 import { Liens } from '@libs/database/drizzle/schemas';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { uuidv7 } from 'uuidv7';
 
 @Injectable()
 export class LienRepository extends BaseRepository<typeof Liens> {

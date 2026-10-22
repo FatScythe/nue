@@ -1,12 +1,13 @@
 import { OnWorkerEvent, Processor } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 
+import { Job } from 'bullmq';
+
 import {
   BULLMQ_DEFAULT_QUEUE_SETTING,
   BULLMQ_EMAIL_QUEUE,
   EmailWorkerJobEnum,
 } from '@libs/background-process';
-import { Job } from 'bullmq';
 
 import { BaseWorkerHost } from '../abstracts/base.abstract';
 

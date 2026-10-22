@@ -1,6 +1,7 @@
+import { NodePgDatabase, NodePgTransaction } from 'drizzle-orm/node-postgres';
+
 import { Resources } from '@libs/database/drizzle/enums';
 import * as schema from '@libs/database/drizzle/schemas';
-import { NodePgDatabase, NodePgTransaction } from 'drizzle-orm/node-postgres';
 
 export type DBTransaction = NodePgTransaction<typeof schema, any>;
 

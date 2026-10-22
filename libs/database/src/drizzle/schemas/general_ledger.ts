@@ -1,4 +1,3 @@
-import { GlCategory, GlNormalBalance } from '@libs/database/drizzle/enums';
 import {
   AnyPgColumn,
   boolean,
@@ -11,6 +10,8 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+import { GlCategory, GlNormalBalance } from '@libs/database/drizzle/enums';
 
 import { Businesses } from './business';
 import { Users } from './user';

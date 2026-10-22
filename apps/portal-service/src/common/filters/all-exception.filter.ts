@@ -1,12 +1,13 @@
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+
 import { ValidationError } from 'class-validator';
 
 const isXML = (str) => /^\s*<[\s\S]*>/.test(str);

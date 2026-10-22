@@ -1,7 +1,3 @@
-import {
-  TransactionCategory,
-  TransactionStatus,
-} from '@libs/database/drizzle/enums';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -16,6 +12,11 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+import {
+  TransactionCategory,
+  TransactionStatus,
+} from '@libs/database/drizzle/enums';
 
 import { Accounts } from './account';
 import { Businesses } from './business';

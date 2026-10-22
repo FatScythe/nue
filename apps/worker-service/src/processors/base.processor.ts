@@ -1,8 +1,9 @@
 import { Processor } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 
-import { BULLMQ_DEFAULT_QUEUE, LienWorkerEnum } from '@libs/background-process';
 import { Job } from 'bullmq';
+
+import { BULLMQ_DEFAULT_QUEUE, LienWorkerEnum } from '@libs/background-process';
 
 import { BaseWorkerHost } from '../abstracts/base.abstract';
 import { LienProcessor } from './lien.processor';

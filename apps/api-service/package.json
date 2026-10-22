@@ -1,0 +1,35 @@
+{
+  "name": "api-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.30.3",
+  "dependencies": {
+    "@lib/common": "workspace:*",
+    "@lib/database": "workspace:*",
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/config": "^12.0.0",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/mapped-types": "*",
+    "@nestjs/platform-express": "^11.1.19",
+    "@nestjs/swagger": "^11.4.6",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "drizzle-orm": "^0.45.2",
+    "helmet": "^8.1.0",
+    "ioredis": "^5.10.1",
+    "moment": "^2.30.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "swagger-ui-dist": "^5.32.11",
+    "swagger-ui-express": "^5.0.1",
+    "uuidv7": "^1.2.1"
+  }
+}

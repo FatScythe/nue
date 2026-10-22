@@ -16,7 +16,7 @@
 Nue follows a clean, domain-driven structure to separate concerns across banking operations:
 
 - **Apps:**
-- `core-service`: The engine for primary banking logic, ledgers, and transactions.
+- `api-service`: The API service engine for primary banking logic, ledgers, and transactions.
 - `portal-service`: Dedicated API for administrative tasks and staff management.
 - `worker-service`: Background worker for asynchronous tasks like notifications and transaction processing.
 
@@ -82,7 +82,7 @@ To prepare the application for a production environment:
 # Build all services
 pnpm run build
 
-# Run the production build for the core service
+# Run the production build for the api service
 pnpm run start:prod
 
 ```

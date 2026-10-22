@@ -3,7 +3,7 @@ import path from 'path';
 import * as dotenv from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
-dotenv.config({ path: path.resolve(__dirname, '../../../../_env/core.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../../../_env/api.env') });
 
 // pnpm run db:generate --name ct_business
 

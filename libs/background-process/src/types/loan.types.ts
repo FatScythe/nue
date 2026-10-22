@@ -1,5 +1,5 @@
-import { ProcessLoanRepaymentDto } from '@libs/background-process';
 import { CronJobName } from '@libs/database';
+import { ProcessLoanRepaymentDto } from '@libs/background-process';
 
 export enum LoanWorkerEnum {
   HandleLoanRepayment = CronJobName.HandleLoanRepayment,

@@ -1,4 +1,3 @@
-import { JournalEntryStatus } from '@libs/database/drizzle/enums';
 import {
   index,
   integer,
@@ -8,6 +7,8 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+import { JournalEntryStatus } from '@libs/database/drizzle/enums';
 
 import { Businesses } from './business';
 import { Offices } from './office';

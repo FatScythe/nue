@@ -91,7 +91,7 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
 
-  apps/core-service:
+  apps/api-service:
     dependencies:
       '@lib/common':
         specifier: workspace:*

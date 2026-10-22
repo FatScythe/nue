@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+
 import {
   AppTokenDocument,
   AppTokenSchema,
@@ -16,8 +17,7 @@ import {
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         // automatically pulls from your app's environment or config structure...
-        uri:
-          configService.getOrThrow<string>('MONGODB_URI')
+        uri: configService.getOrThrow<string>('MONGODB_URI'),
       }),
     }),
     MongooseModule.forFeature([

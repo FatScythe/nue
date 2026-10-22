@@ -14,7 +14,7 @@ import { seedCoreRoles } from './handlers/role.seed';
 import { seedSystemAdmin } from './handlers/system_admin.seed';
 import { seedBusinessUsers } from './handlers/user.seed';
 
-dotenv.config({ path: '../../_env/core.env' });
+dotenv.config({ path: '../../_env/api.env' });
 
 const connectionString = process.env.DATABASE_URL!;
 const dbName = process.env.DATABASE_NAME!;

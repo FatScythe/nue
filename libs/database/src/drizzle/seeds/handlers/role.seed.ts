@@ -1,5 +1,6 @@
-import { rebuildPermission } from '@libs/common';
 import { uuidv7 } from 'uuidv7';
+
+import { rebuildPermission } from '@libs/common';
 
 import * as schema from '../../schemas';
 

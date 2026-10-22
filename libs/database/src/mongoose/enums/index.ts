@@ -1,2 +1,2 @@
-export * from './token.enum'
-export * from './cron.enum'
+export * from './token.enum';
+export * from './cron.enum';

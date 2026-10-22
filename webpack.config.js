@@ -8,7 +8,7 @@ module.exports = function (options) {
     externals: [
       ...(Array.isArray(options.externals) ? options.externals : []),
       nodeExternals({
-        modulesDir: path.resolve(__dirname, 'apps/core-service/node_modules'),
+        modulesDir: path.resolve(__dirname, 'apps/api-service/node_modules'),
         additionalModuleDirs: [path.resolve(__dirname, 'node_modules')],
         allowlist: [/^@lib\//], // bundle internal workspace libs, don't externalize them
       }),

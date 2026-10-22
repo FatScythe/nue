@@ -1,11 +1,4 @@
 import {
-  CustomerGender,
-  CustomerStatus,
-  CustomerTier,
-  CustomerType,
-} from '@libs/database/drizzle/enums';
-import { CustomerLoopEntries } from '@libs/database/drizzle/types';
-import {
   date,
   index,
   integer,
@@ -17,6 +10,14 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+import {
+  CustomerGender,
+  CustomerStatus,
+  CustomerTier,
+  CustomerType,
+} from '@libs/database/drizzle/enums';
+import { CustomerLoopEntries } from '@libs/database/drizzle/types';
 
 import { Businesses } from './business';
 import { Offices } from './office';

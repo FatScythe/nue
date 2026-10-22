@@ -1,5 +1,3 @@
-import { Resources, UserStatus, UserType } from '@libs/database/drizzle/enums';
-import { ApiScope } from '@libs/database/drizzle/types';
 import {
   AnyPgColumn,
   boolean,
@@ -12,6 +10,9 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+import { Resources, UserStatus, UserType } from '@libs/database/drizzle/enums';
+import { ApiScope } from '@libs/database/drizzle/types';
 
 import { Businesses } from './business';
 import { Offices } from './office';

@@ -5,7 +5,7 @@ import { Response } from 'express';
 import { CoreException } from '../exceptions/core.exception';
 
 @Catch(CoreException)
-export class CoreExceptionFilter implements ExceptionFilter {
+export class ApiExceptionFilter implements ExceptionFilter {
   catch(exception: CoreException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();

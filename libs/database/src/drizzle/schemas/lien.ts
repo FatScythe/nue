@@ -1,4 +1,3 @@
-import { LienStatus } from '@libs/database/drizzle/enums';
 import {
   bigint,
   index,
@@ -10,6 +9,8 @@ import {
   uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+import { LienStatus } from '@libs/database/drizzle/enums';
 
 import { Accounts, Businesses, Users } from '.';
 

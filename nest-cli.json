@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "apps/core-service/src",
+  "sourceRoot": "apps/api-service/src",
   "monorepo": true,
   "compilerOptions": {
     "deleteOutDir": true,
@@ -27,19 +27,19 @@
         "tsConfigPath": "libs/common/tsconfig.lib.json"
       }
     },
-    "core-service": {
+    "api-service": {
       "type": "application",
-      "root": "apps/core-service",
+      "root": "apps/api-service",
       "entryFile": "main",
-      "sourceRoot": "apps/core-service/src",
+      "sourceRoot": "apps/api-service/src",
       "compilerOptions": {
         "webpack": true,
         "webpackConfigPath": "webpack.config.js",
-        "tsConfigPath": "apps/core-service/tsconfig.app.json",
+        "tsConfigPath": "apps/api-service/tsconfig.app.json",
         "assets": [
           {
-            "include": "../../_env/core.env",
-            "outDir": "dist/apps/core-service",
+            "include": "../../_env/api.env",
+            "outDir": "dist/apps/api-service",
             "watchMode": true
           }
         ]

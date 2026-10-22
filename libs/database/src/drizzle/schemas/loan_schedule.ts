@@ -1,4 +1,3 @@
-import { LoanScheduleStatus } from '@libs/database/drizzle/enums';
 import { sql } from 'drizzle-orm';
 import {
   bigint,
@@ -9,6 +8,8 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core';
+
+import { LoanScheduleStatus } from '@libs/database/drizzle/enums';
 
 import { Accounts } from './account';
 import { Businesses } from './business';
