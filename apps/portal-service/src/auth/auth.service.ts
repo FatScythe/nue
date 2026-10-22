@@ -64,6 +64,7 @@ export class AuthService {
           status: table.status,
           firstName: table.firstName,
           lastName: table.lastName,
+          middleName: table.otherNames,
           emailAddress: table.emailAddress,
           hashedPassword: table.hashedPassword,
           otpKey: table.otpKey,
@@ -191,7 +192,7 @@ export class AuthService {
       // delete otp code...
       await this.redisService.delete(cacheKey);
 
-      // TODO: Attach cookies to response...
+      // attach cookies to response...
       await this.attachCookiesToResponse({ res, user: reqUser, rememberMe });
 
       // TODO: Send login success email in bkg...
@@ -199,7 +200,14 @@ export class AuthService {
       return {
         message: 'User logged in successfully',
         data: {
-          user,
+          user: {
+            id: user.id,
+            status: user.status,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            ...(user.middleName && { middleName: user.middleName }),
+            emailAddress: user.emailAddress,
+          },
         },
       };
     }
