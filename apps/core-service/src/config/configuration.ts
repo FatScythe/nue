@@ -1,4 +1,6 @@
-import { AppConfig, Environment } from './types';
+import { Environment } from '@libs/common';
+
+import { AppConfig } from './types';
 
 export const configuration = (): AppConfig => ({
   nodeEnv: (process.env.NODE_ENV || Environment.Development) as Environment,
