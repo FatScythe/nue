@@ -65,8 +65,7 @@ async function bootstrap() {
   // trusted ip for reverse proxy e.g nginx
   // reverse proxy will always come from 127.0.0.1
   app.set('trust proxy', '127.0.0.1');
-
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('portal');
 
   app.enableVersioning({
     type: VersioningType.URI,
@@ -97,6 +96,6 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  Logger.warn(`🚀 LAAS is running on: http://localhost:${port}/api/v1`);
+  Logger.warn(`🚀 LAAS is running on: http://localhost:${port}/portal/v1`);
 }
 bootstrap();
