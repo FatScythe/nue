@@ -3,9 +3,9 @@ packages:
   - 'libs/*'
 allowBuilds:
   '@nestjs/core': true
-  '@parcel/watcher': set this to true or false
+  '@parcel/watcher': false
   '@scarf/scarf': true
-  argon2: set this to true or false
+  argon2: true
   esbuild: true
   msgpackr-extract: true
   unrs-resolver: true

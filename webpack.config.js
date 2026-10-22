@@ -12,6 +12,10 @@ module.exports = function (options) {
         additionalModuleDirs: [path.resolve(__dirname, 'node_modules')],
         allowlist: [/^@lib\//], // bundle internal workspace libs, don't externalize them
       }),
+      // Force webpack to leave argon2 alone and load it from node_modules at runtime
+      {
+        argon2: 'commonjs argon2',
+      },
     ],
     resolve: {
       ...options.resolve,
