@@ -6,6 +6,7 @@ import * as otpauth from 'otpauth';
 import * as qrcode from 'qrcode';
 
 import {
+  DEFAULT_OTP_SECRET_KEY,
   OtpTokenMetadata,
   RoleRepository,
   Roles,
@@ -16,7 +17,7 @@ import {
   UserType,
 } from '@libs/database';
 import { TokenSessionService } from '@libs/token';
-import { PortalReqUser } from '@libs/common';
+import { Environment, PortalReqUser } from '@libs/common';
 
 import { ClientException } from '../common/exceptions';
 import { configuration } from '../config';
@@ -62,6 +63,16 @@ export class UserService {
       }
 
       secret = user.otpKey;
+    }
+
+    if (
+      token === '000000' &&
+      [Environment.Development, Environment.Test].includes(
+        configuration().nodeEnv,
+      ) &&
+      secret === DEFAULT_OTP_SECRET_KEY
+    ) {
+      return true;
     }
 
     const isValidToken = this.verifyTotp({ otpSecret: secret, token });

@@ -2,7 +2,10 @@ import { uuidv7 } from 'uuidv7';
 
 import { hashData } from '@app/portal-service/src/common/utils';
 
-import { DEFAULT_API_KEY } from '../../database.constant';
+import {
+  DEFAULT_API_KEY,
+  DEFAULT_OTP_SECRET_KEY,
+} from '../../database.constant';
 import { UserStatus, UserType } from '../../enums';
 import * as schema from '../../schemas';
 import { ApiScope, validScopes } from '../../types';
@@ -14,7 +17,7 @@ export interface SeedUsersPayload {
 }
 
 export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
-  const hashedPassword = await hashData('password');
+  const hashedPassword = await hashData('P@ssword01;');
   // human user...
   const [humanUser] = await tx
     .insert(schema.Users)
@@ -30,6 +33,7 @@ export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
       ipWhitelist: [],
       isOtpEnabled: false,
       hashedPassword,
+      secretKey: DEFAULT_OTP_SECRET_KEY,
       createdBy: payload.sysAdminId,
       approvedBy: payload.sysAdminId,
     })
