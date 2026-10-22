@@ -2,6 +2,9 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
+import { DatabaseModule, MongoDatabaseModule } from '@libs/database';
+import { CalculatorModule } from '@libs/common';
+import { GLedgerModule } from '@libs/modules';
 import {
   BackgroundProcessModule,
   BULLMQ_DEFAULT_QUEUE,
@@ -9,9 +12,6 @@ import {
   BULLMQ_LIEN_QUEUE,
   BULLMQ_LOAN_QUEUE,
 } from '@libs/background-process';
-import { CalculatorModule } from '@libs/common';
-import { DatabaseModule } from '@libs/database';
-import { GLedgerModule } from '@libs/ledger';
 
 import { WConfigModule } from './config/config.module';
 import {
@@ -21,12 +21,13 @@ import {
   LoanProcessor,
 } from './processors';
 import { WorkerServiceController } from './worker-service.controller';
-import { WorkerServiceService } from './worker-service.service';
+import { WorkerService } from './worker-service.service';
 
 @Module({
   imports: [
     WConfigModule,
     DatabaseModule,
+    MongoDatabaseModule,
     CalculatorModule,
     BackgroundProcessModule,
     GLedgerModule,
@@ -57,7 +58,7 @@ import { WorkerServiceService } from './worker-service.service';
   ],
   controllers: [WorkerServiceController],
   providers: [
-    WorkerServiceService,
+    WorkerService,
 
     BackgroundProcessModule,
     // processors...

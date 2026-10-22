@@ -1,28 +1,23 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import {
-  Inject,
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-} from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
 
-import { BULLMQ_DEFAULT_QUEUE } from '@libs/background-process';
-import { CronSchedules, DATABASE_CONNECTION } from '@libs/database';
-import * as schema from '@libs/database/drizzle/schemas';
 import { Queue } from 'bullmq';
-import { eq } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Model } from 'mongoose';
+
+import { CronScheduleDocument } from '@libs/database';
+import { BULLMQ_DEFAULT_QUEUE } from '@libs/background-process';
 
 import { configuration } from './config';
 import { Environment } from './config/types';
 
 @Injectable()
-export class WorkerServiceService implements OnApplicationBootstrap {
-  private readonly logger = new Logger(WorkerServiceService.name);
+export class WorkerService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(WorkerService.name);
 
   constructor(
-    @Inject(DATABASE_CONNECTION)
-    private readonly db: NodePgDatabase<typeof schema>,
+    @InjectModel(CronScheduleDocument.name)
+    private readonly cronScheduleModel: Model<CronScheduleDocument>,
     @InjectQueue(BULLMQ_DEFAULT_QUEUE) private readonly defaultQueue: Queue,
   ) {}
 
@@ -51,10 +46,9 @@ export class WorkerServiceService implements OnApplicationBootstrap {
     );
 
     try {
-      const activeSchedules = await this.db
-        .select()
-        .from(CronSchedules)
-        .where(eq(CronSchedules.isActive, true));
+      const activeSchedules = await this.cronScheduleModel.find({
+        isActive: true,
+      });
 
       const activeJobNames = new Set(activeSchedules.map((s) => s.jobName));
 

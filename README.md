@@ -210,6 +210,8 @@ Use **Drizzle Kit** for database schema management. Instead of calling the CLI d
 | **Migrate**  | `pnpm run db:migrate`                | Applies all pending `.sql` migrations to the local PostgreSQL database.      |
 | **Studio**   | `pnpm run db:studio`                 | Opens a browser GUI to view and edit database rows.                          |
 | **Seed**     | `pnpm run db:seed`                   | Populates initial required system data (e.g., offices, roles, seed users).   |
+| **Seed PG**  | `pnpm run db:seed:pg`                | Populates postgres sql db.                                                   |
+|**Seed Mongo**| `pnpm run db:seed:mongo`             | Populates mongo db.                                                          |
 
 ### Usage Examples
 

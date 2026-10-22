@@ -1,5 +1,7 @@
 import { uuidv7 } from 'uuidv7';
 
+import { hashData } from '@app/portal-service/src/common/utils';
+
 import { DEFAULT_API_KEY } from '../../database.constant';
 import { UserStatus, UserType } from '../../enums';
 import * as schema from '../../schemas';
@@ -12,6 +14,7 @@ export interface SeedUsersPayload {
 }
 
 export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
+  const hashedPassword = await hashData('password');
   // human user...
   const [humanUser] = await tx
     .insert(schema.Users)
@@ -22,10 +25,11 @@ export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
       status: UserStatus.Active,
       firstName: 'Core',
       lastName: 'Human',
-      emailAddress: 'human@nuecore.com',
+      emailAddress: 'holadhayo28@nuecore.com',
       roleId: payload.roleId,
       ipWhitelist: [],
       isOtpEnabled: false,
+      hashedPassword,
       createdBy: payload.sysAdminId,
       approvedBy: payload.sysAdminId,
     })

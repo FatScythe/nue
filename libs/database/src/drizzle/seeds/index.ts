@@ -2,18 +2,17 @@ import * as dotenv from 'dotenv';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
+import { runSeedTask } from '../../seed.runner';
 import { DEFAULT_GL_DEPOSIT_CODE } from '../database.constant';
 import * as schema from '../schemas';
 import { seedAccounts } from './handlers/account.seed';
 import { seedBusinessTenant } from './handlers/business.seed';
-import { seedCrons } from './handlers/cron.seed';
 import { seedCustomers } from './handlers/customer.seed';
 import { seedGeneralLedgers } from './handlers/general_ledger.seed';
 import { seedOffices } from './handlers/office.seed';
 import { seedCoreRoles } from './handlers/role.seed';
 import { seedSystemAdmin } from './handlers/system_admin.seed';
 import { seedBusinessUsers } from './handlers/user.seed';
-import { runSeedTask } from './seed.runner';
 
 dotenv.config({ path: '../../_env/core.env' });
 
@@ -32,27 +31,22 @@ async function runSeeds() {
 
   try {
     await db.transaction(async (tx) => {
-      // Step 1: Cron Schedules
-      const cronSchedules = await runSeedTask('Cron Schedules', () =>
-        seedCrons(tx),
-      );
-
-      // Step 2: System Admin
+      // Step 1: System Admin
       const sysAdmin = await runSeedTask('System Admin', () =>
         seedSystemAdmin(tx),
       );
 
-      // Step 3: Business Tenant
+      // Step 2: Business Tenant
       const business = await runSeedTask('Business Tenant', () =>
         seedBusinessTenant(tx),
       );
 
-      // Step 4: Core Roles (Requires sysAdmin.id)
+      // Step 3: Core Roles (Requires sysAdmin.id)
       const coreRole = await runSeedTask('Core Admin Role', () =>
         seedCoreRoles(tx, { sysAdminId: sysAdmin.id }),
       );
 
-      // Step 5: Business Users (Requires business.id, sysAdmin.id, coreRole.id)
+      // Step 4: Business Users (Requires business.id, sysAdmin.id, coreRole.id)
       await runSeedTask('Business Users (Human & API)', () =>
         seedBusinessUsers(tx, {
           businessId: business.id,
@@ -61,7 +55,7 @@ async function runSeeds() {
         }),
       );
 
-      // Step 6: General Ledgers (Requires business.id, sysAdmin.id)
+      // Step 5: General Ledgers (Requires business.id, sysAdmin.id)
       const genLedger = await runSeedTask('General Ledgers', () =>
         seedGeneralLedgers(tx, {
           businessId: business.id,
@@ -69,14 +63,14 @@ async function runSeeds() {
         }),
       );
 
-      // Step 7: Offices (Requires business.id)
+      // Step 6: Offices (Requires business.id)
       const office = await runSeedTask('Head Office', () =>
         seedOffices(tx, {
           businessId: business.id,
         }),
       );
 
-      // Step 8: Customers
+      // Step 7: Customers
       const customers = await runSeedTask('Customers', () =>
         seedCustomers(tx, {
           tenantId: business.id,
@@ -84,7 +78,7 @@ async function runSeeds() {
         }),
       );
 
-      // Step 9: Accounts
+      // Step 8: Accounts
       const accounts = await runSeedTask('Accounts', () =>
         seedAccounts(tx, {
           tenantId: business.id,

@@ -11,4 +11,5 @@ export interface AppConfig {
   dbName: string;
   poolSize: number;
   redisUrl: string;
+  mongoUrl: string;
 }

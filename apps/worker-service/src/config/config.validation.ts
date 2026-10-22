@@ -27,6 +27,10 @@ class RequiredEnvironmentVariables {
   @IsNotEmpty()
   @IsString()
   DATABASE_NAME: string;
+
+  @IsNotEmpty()
+  @IsString()
+  MONGODB_URI: string;
 }
 
 export function validate<T = Record<string, any>>(

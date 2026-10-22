@@ -1,14 +1,13 @@
-import { InjectQueue, OnWorkerEvent, Processor } from '@nestjs/bullmq';
+import { OnWorkerEvent, Processor } from '@nestjs/bullmq';
 import { Inject, Logger } from '@nestjs/common';
 
-import {
-  BackgroundProcess,
-  BULLMQ_DEFAULT_QUEUE_SETTING,
-  BULLMQ_LOAN_QUEUE,
-  LoanWorkerEnum,
-  ProcessLoanRepaymentDto,
-} from '@libs/background-process';
-import { Calculator, DATE_FORMAT } from '@libs/common';
+import { Job } from 'bullmq';
+import { and, asc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import moment from 'moment';
+import { uuidv7 } from 'uuidv7';
+
+import * as schema from '@libs/database';
 import {
   Accounts,
   AccountStatus,
@@ -22,13 +21,15 @@ import {
   Transactions,
   TransactionStatus,
 } from '@libs/database';
-import * as schema from '@libs/database';
-import { GLedgerService } from '@libs/ledger';
-import { Job } from 'bullmq';
-import { and, asc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import moment from 'moment';
-import { uuidv7 } from 'uuidv7';
+import { Calculator, DATE_FORMAT } from '@libs/common';
+import { GLedgerService } from '@libs/modules';
+import {
+  BackgroundProcess,
+  BULLMQ_DEFAULT_QUEUE_SETTING,
+  BULLMQ_LOAN_QUEUE,
+  LoanWorkerEnum,
+  ProcessLoanRepaymentDto,
+} from '@libs/background-process';
 
 import { BaseWorkerHost } from '../abstracts/base.abstract';
 
@@ -383,13 +384,16 @@ export class LoanProcessor extends BaseWorkerHost {
 
       // debit repayment account and update loan balance...
       if (this.calc.isGreaterThan(totalCollectedFromAccount, '0')) {
-        const credits: Array<{ glAccountId: string; amount: string }> = [];
+        const credits: Array<{ glAccountId: string; amountMajor: string }> = [];
 
         // credit Loan Control GL for principal portion recovered...
         if (this.calc.isGreaterThan(totalPrincipalCollected, '0')) {
           credits.push({
             glAccountId: accountDetail.controlGlAccountId,
-            amount: this.calc.toMajorStr(totalPrincipalCollected, undefined),
+            amountMajor: this.calc.toMajorStr(
+              totalPrincipalCollected,
+              undefined,
+            ),
           });
         }
 
@@ -397,7 +401,10 @@ export class LoanProcessor extends BaseWorkerHost {
         if (this.calc.isGreaterThan(totalInterestCollected, '0')) {
           credits.push({
             glAccountId: loanDetail.incomeGlAccountId,
-            amount: this.calc.toMajorStr(totalInterestCollected, undefined),
+            amountMajor: this.calc.toMajorStr(
+              totalInterestCollected,
+              undefined,
+            ),
           });
         }
 
@@ -409,7 +416,7 @@ export class LoanProcessor extends BaseWorkerHost {
         if (debitLoanCharge) {
           credits.push({
             glAccountId: loanDetail.feeIncomeGlAccountId!,
-            amount: this.calc.toMajorStr(totalChargeCollected, undefined),
+            amountMajor: this.calc.toMajorStr(totalChargeCollected, undefined),
           });
         }
 
@@ -422,7 +429,7 @@ export class LoanProcessor extends BaseWorkerHost {
             customerAccounts: [
               {
                 accountId: repaymentAccount.id,
-                amount: this.calc.toMajorStr(
+                amountMajor: this.calc.toMajorStr(
                   totalCollectedFromAccount,
                   undefined,
                 ),

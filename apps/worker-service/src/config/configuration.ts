@@ -7,4 +7,5 @@ export const configuration = (): AppConfig => ({
   dbName: process.env.DATABASE_NAME || 'nue',
   poolSize: parseInt(process.env.POOL_SIZE!, 10) || 2,
   redisUrl: process.env.REDIS_URL || '',
+  mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/nue',
 });
