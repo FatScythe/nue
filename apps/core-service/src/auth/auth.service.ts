@@ -1,15 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-import { CoreReqUser } from '@libs/common';
-import { RedisService } from '@libs/database';
 // libs...
 import { plainToInstance } from 'class-transformer';
+
+import { RedisService } from '@libs/database';
+import { CoreReqUser, Environment } from '@libs/common';
 
 import { ApiErrorCode } from '../common/enums';
 import { ApiException } from '../common/exception';
 import { configuration } from '../config';
-import { Environment } from '../config/types';
 import { GetAccessRespDto } from './dto';
 
 const isDev = configuration().nodeEnv === Environment.Development;
