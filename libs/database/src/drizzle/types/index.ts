@@ -11,23 +11,38 @@ export type RolePermissions = {
   [Resources.Customer]: {
     view: boolean;
     create: boolean;
+    edit: boolean;
+    deactivate: boolean;
+  };
+  [Resources.Product]: {
+    view: boolean;
+    create: boolean;
+    edit: boolean;
+    deactivate: boolean;
   };
   [Resources.Account]: {
     view: boolean;
     create: boolean;
+    edit: boolean;
+    deactivate: boolean;
   };
   [Resources.Transaction]: {
     view: boolean;
-    transfer: boolean;
-    deposit: boolean;
+    create: boolean;
+    edit: boolean;
+    deactivate: boolean;
   };
   [Resources.Lien]: {
     view: boolean;
     create: boolean;
-    release: boolean;
+    edit: boolean;
+    deactivate: boolean;
   };
   [Resources.Loan]: {
     view: boolean;
+    create: boolean;
+    edit: boolean;
+    deactivate: boolean;
     disburse: boolean;
     repay: boolean;
     approve: boolean;
@@ -35,10 +50,31 @@ export type RolePermissions = {
   [Resources.Ledger]: {
     view: boolean;
     create: boolean;
+    edit: boolean;
+    deactivate: boolean;
   };
   [Resources.Office]: {
     view: boolean;
     create: boolean;
+    edit: boolean;
+  };
+  [Resources.Team]: {
+    view: boolean;
+    create: boolean;
+    edit: boolean;
+    deactivate: boolean;
+  };
+  [Resources.Api]: {
+    view: boolean;
+    create: boolean;
+    deactivate: boolean;
+    edit: boolean;
+  };
+  [Resources.Configuration]: {
+    view: boolean;
+    create: boolean;
+    deactivate: boolean;
+    edit: boolean;
   };
 };
 
@@ -53,6 +89,12 @@ export const validScopes = [
   `${Resources.Customer}:read`,
   `${Resources.Customer}:create`,
   `${Resources.Customer}:update`,
+
+  // product...
+  `${Resources.Product}:read`,
+  `${Resources.Product}:create`,
+  `${Resources.Product}:update`,
+  `${Resources.Product}:deactivate`,
 
   // account...
   `${Resources.Account}:read`,

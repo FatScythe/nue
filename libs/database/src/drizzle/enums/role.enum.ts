@@ -6,4 +6,10 @@ export enum Resources {
   Lien = 'lien',
   Loan = 'loan',
   Ledger = 'ledger',
+  Product = 'product',
+
+  // portal specific
+  Team = 'team',
+  Api = 'api',
+  Configuration = 'configuration',
 }

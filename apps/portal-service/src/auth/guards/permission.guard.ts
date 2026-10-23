@@ -6,14 +6,19 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
-import { DEFAULT_PERMISSION } from '@libs/database';
-import { Environment } from '@libs/common';
+import { eq } from 'drizzle-orm';
+
+import { DEFAULT_PERMISSION, UserRepository, Users } from '@libs/database';
+import { Environment, PortalReqUser } from '@libs/common';
 
 import { PERMISSION_CHECK_KEY, RequiredPermission } from '../decorator';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    private readonly userRepo: UserRepository,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const authorization = this.reflector.getAllAndOverride<RequiredPermission>(
@@ -23,22 +28,31 @@ export class PermissionGuard implements CanActivate {
 
     if (!authorization) return true;
 
-    const { user } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest() as Request & {
+      user: PortalReqUser;
+    };
+
+    const user = request.user;
 
     const { resource, action } = authorization;
-    const userPermissions = user?.role?.permissions;
+    const dbUser = await this.userRepo.findOneWithRole(eq(Users.id, user.sub));
+
+    if (!dbUser)
+      throw new ForbiddenException(
+        'Invalid user, access to resource is forbidden',
+      );
+
+    const userPermissions = dbUser?.role?.permissions;
 
     if (!userPermissions) {
-      throw new ForbiddenException('access to resource is forbidden');
+      throw new ForbiddenException('Access to resource is forbidden');
     }
 
     // development check for missing keys in the permission object
     if (process.env.NODE_ENV === Environment.Development) {
-      if (
-        typeof (DEFAULT_PERMISSION as any)?.[resource]?.[action] === 'undefined'
-      ) {
+      if (typeof DEFAULT_PERMISSION?.[resource]?.[action] === 'undefined') {
         throw new ForbiddenException(
-          `invalid authorization resource: ${resource}, does not have an action: ${action}`,
+          `Invalid authorization resource: ${resource}, does not have an action: ${action}`,
         );
       }
     }
@@ -48,9 +62,19 @@ export class PermissionGuard implements CanActivate {
 
     if (!hasPermission) {
       throw new ForbiddenException(
-        `insufficient privilege: required ${authorization.action} on ${authorization.resource}`,
+        `Insufficient privilege: required ${authorization.action} on ${authorization.resource}`,
       );
     }
+
+    request['user'] = {
+      ...user,
+      status: dbUser.status,
+      emailAddress: dbUser.emailAddress,
+      firstName: dbUser.firstName,
+      lastName: dbUser.lastName,
+      middleName: dbUser.middleName,
+      otpKey: dbUser.otpKey,
+    };
 
     return true;
   }
