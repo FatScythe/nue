@@ -5,6 +5,7 @@ export enum UserType {
 
 export enum UserStatus {
   Active = 'active',
+  Locked = 'locked',
   Blocked = 'blocked',
   Pending = 'pending',
   Inactive = 'inactive',
