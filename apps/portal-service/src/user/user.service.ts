@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 
 import { and, eq, isNull, or } from 'drizzle-orm';
 import momenttz from 'moment-timezone';
@@ -30,6 +30,34 @@ export class UserService {
     private readonly roleRepo: RoleRepository,
     private readonly tokenService: TokenSessionService,
   ) {}
+
+  async getCurrentUser(user: PortalReqUser) {
+    const dbUser = await this.userRepo.findOneWithRole(eq(Users.id, user.sub));
+
+    if (!dbUser)
+      throw new ClientException(
+        'Invalid Credentials',
+        'GCU001',
+        undefined,
+        HttpStatus.UNAUTHORIZED,
+      );
+
+    const role = dbUser.role;
+
+    return {
+      id: dbUser.id,
+      status: dbUser.status,
+      firstName: dbUser.firstName,
+      lastName: dbUser.lastName,
+      ...(dbUser.middleName && { middleName: dbUser.middleName }),
+      emailAddress: dbUser.emailAddress,
+      role: {
+        id: role.id,
+        name: role.name,
+        permissions: role.permissions,
+      },
+    };
+  }
 
   async validateTotp({
     emailAddress,
@@ -190,7 +218,11 @@ export class UserService {
     return { message: 'Invite sent sucessfully' };
   }
 
-  async resetUserOtp(adminUser: PortalReqUser, userId: string) {
+  async resetUserOtp(userId: string, adminUser: PortalReqUser) {
+    if (userId === adminUser.sub) {
+      throw new ClientException('Unable to perform action on self', 'UR001');
+    }
+
     // verify target user belongs to the same tenant and exists...
     const user = await this.userRepo.findOne({
       selectFn: (record) => ({
@@ -205,7 +237,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new ClientException('User not found or unauthorized', 'UR_001');
+      throw new ClientException('User not found or unauthorized', 'UR002');
     }
 
     // clear otpKey and disable OTP flag...
@@ -241,6 +273,94 @@ export class UserService {
     return {
       message:
         'User OTP has been successfully reset. Setup instructions sent via email.',
+    };
+  }
+
+  async blockUser(userId: string, adminUser: PortalReqUser) {
+    if (userId === adminUser.sub) {
+      throw new ClientException('Unable to perform action on self', 'BU001');
+    }
+
+    // verify target user belongs to the same tenant and exists...
+    const user = await this.userRepo.findOne({
+      selectFn: (record) => ({
+        id: record.id,
+        status: record.status,
+      }),
+      where: and(
+        eq(Users.id, userId),
+        eq(Users.tenantId, adminUser.tenantId!),
+        isNull(Users.deletedAt),
+      ),
+    });
+
+    if (!user) {
+      throw new ClientException('User not found or unauthorized', 'BU002');
+    }
+
+    const message = 'User account blocked successfully.';
+    if (user.status === UserStatus.Blocked) {
+      return { message };
+    }
+
+    if (user.status !== UserStatus.Active) {
+      throw new ClientException(
+        'Invalid user account. Cannot perform action for this user',
+        'BU003',
+      );
+    }
+
+    // block user's account...
+    await this.userRepo.update(eq(Users.id, user.id), {
+      status: UserStatus.Blocked,
+    });
+
+    return {
+      message,
+    };
+  }
+
+  async unblockUser(userId: string, adminUser: PortalReqUser) {
+    if (userId === adminUser.sub) {
+      throw new ClientException('Unable to perform action on self', 'UBU01');
+    }
+
+    // verify target user belongs to the same tenant and exists...
+    const user = await this.userRepo.findOne({
+      selectFn: (record) => ({
+        id: record.id,
+        status: record.status,
+      }),
+      where: and(
+        eq(Users.id, userId),
+        eq(Users.tenantId, adminUser.tenantId!),
+        isNull(Users.deletedAt),
+      ),
+    });
+
+    if (!user) {
+      throw new ClientException('User not found or unauthorized', 'UBU02');
+    }
+
+    const message = 'User account activated successfully.';
+    if (user.status === UserStatus.Active) {
+      return { message };
+    }
+
+    if (user.status !== UserStatus.Blocked) {
+      throw new ClientException(
+        'Invalid user account. Cannot perform action for this user',
+        'BU003',
+      );
+    }
+
+    // activate user's account...
+    await this.userRepo.update(eq(Users.id, user.id), {
+      status: UserStatus.Active,
+    });
+
+    return {
+      message,
     };
   }
 
