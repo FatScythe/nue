@@ -53,8 +53,14 @@ export class UserRepository extends BaseRepository<typeof Users> {
     const result = await client
       .select({
         id: Users.id,
+        firstName: Users.firstName,
+        lastName: Users.lastName,
+        middleName: Users.otherNames,
+        hashedPassword: Users.hashedPassword,
+        otpKey: Users.otpKey,
         emailAddress: Users.emailAddress,
         type: Users.type,
+        status: Users.status,
         role: {
           id: Roles.id,
           name: Roles.name,
