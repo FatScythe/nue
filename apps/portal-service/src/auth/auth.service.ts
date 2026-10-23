@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 import { and, eq, isNull } from 'drizzle-orm';
@@ -9,7 +9,6 @@ import ms, { StringValue } from 'ms';
 import {
   OtpTokenMetadata,
   RedisService,
-  Roles,
   TokenType,
   UserRepository,
   Users,
@@ -52,67 +51,61 @@ export class AuthService {
     { emailAddress, otp = '', password = '', rememberMe = false }: LoginDto,
     res: Response,
   ) {
-    const userRole = await this.userRepo.findOne({
-      where: and(
+    const userRole = await this.userRepo.findOneWithRole(
+      and(
         eq(Users.emailAddress, emailAddress),
         eq(Users.type, UserType.Human),
         eq(Users.deletedAt, isNull(Users.deletedAt)),
       ),
-      selectFn: (table) => ({
-        user: {
-          id: table.id,
-          status: table.status,
-          firstName: table.firstName,
-          lastName: table.lastName,
-          middleName: table.otherNames,
-          emailAddress: table.emailAddress,
-          hashedPassword: table.hashedPassword,
-          otpKey: table.otpKey,
-          tenantId: table.tenantId,
-        },
-        role: {
-          id: Roles.id,
-          name: Roles.name,
-          permissions: Roles.permissions,
-        },
-      }),
-      joinFn: (query) =>
-        query.leftJoin(
-          Roles,
-          and(eq(Roles.id, Users.roleId), isNull(Roles.deletedAt)),
-        ),
-    });
+    );
 
-    const user = userRole?.user;
-    const role = userRole?.role;
+    if (!userRole)
+      throw new ClientException(
+        'Invalid Credentials',
+        'LU000',
+        undefined,
+        HttpStatus.UNAUTHORIZED,
+      );
 
-    if (!user) throw new ClientException('Invalid Credentials');
+    const role = userRole.role;
 
-    if (!user.otpKey || !user.hashedPassword) {
+    if (!userRole.otpKey || !userRole.hashedPassword) {
       // TODO: Send Email
       throw new ClientException(
         'Account setup incomplete. Please check your email to set up your password and OTP.',
         'LU_SETUP_REQUIRED',
         {
-          setUpPassword: !user.hashedPassword,
-          setUpOtp: !user.otpKey,
+          setUpPassword: !userRole.hashedPassword,
+          setUpOtp: !userRole.otpKey,
         },
+        HttpStatus.UNAUTHORIZED,
       );
     }
 
-    if (user.status !== UserStatus.Active)
-      throw new ClientException('User status is not active', 'LU001');
+    if (userRole.status !== UserStatus.Active)
+      throw new ClientException(
+        'User status is not active',
+        'LU001',
+        undefined,
+        HttpStatus.UNAUTHORIZED,
+      );
 
     if (!role || !role?.permissions)
-      throw new ClientException('Invalid user role', 'LU002');
+      throw new ClientException(
+        'Invalid user role',
+        'LU002',
+        undefined,
+        HttpStatus.UNAUTHORIZED,
+      );
 
     const cacheKey = `${this.LOGIN_KEY}_${emailAddress}`;
 
     const reqUser: PortalReqUser = {
-      sub: user.id,
-      emailAddress: user.emailAddress,
+      sub: userRole.id,
+      status: userRole.status,
+      emailAddress: userRole.emailAddress,
       role,
-      tenantId: user.tenantId,
+      tenantId: userRole.tenantId,
       jti: null,
     };
 
@@ -124,7 +117,7 @@ export class AuthService {
       if (otp) throw new ClientException('Invalid Request', 'LU003');
 
       const isCorrectPassword = await verifyHashData(
-        user.hashedPassword,
+        userRole.hashedPassword,
         password,
       );
 
@@ -134,7 +127,7 @@ export class AuthService {
         const RETRY_CACHE_KEY_PREFIX = 'password_retry_';
         const retryTimes =
           (await this.redisService.get(
-            `${RETRY_CACHE_KEY_PREFIX}_${user.id}`,
+            `${RETRY_CACHE_KEY_PREFIX}_${userRole.id}`,
           )) || '1';
 
         let retryCount = Number(retryTimes);
@@ -143,7 +136,7 @@ export class AuthService {
         // check how many times its been retried...
         // If retry times exceeds limit (key: [number] ---> INVALID_PASSWORD_RETRY_LIMIT), lock account...
         if (retryCount >= this.INVALID_PASSWORD_RETRY_LIMIT) {
-          await this.userRepo.update(eq(Users.id, user.id), {
+          await this.userRepo.update(eq(Users.id, userRole.id), {
             status: UserStatus.Blocked,
           });
 
@@ -155,9 +148,9 @@ export class AuthService {
 
         retryCount++;
 
-        // store retrial times in Redis with expiry of 2 hour for the user...
+        // store retrial times in Redis with expiry of 2 hour for the userRole...
         await this.redisService.setEx(
-          `${RETRY_CACHE_KEY_PREFIX}_${user.id}`,
+          `${RETRY_CACHE_KEY_PREFIX}_${userRole.id}`,
           this.RETRY_CACHE_EXPIRY,
           String(retryCount),
         );
@@ -185,7 +178,7 @@ export class AuthService {
 
       await this.userService.validateTotp({
         emailAddress,
-        otpSecret: user.otpKey,
+        otpSecret: userRole.otpKey,
         token: otp,
       });
 
@@ -201,12 +194,17 @@ export class AuthService {
         message: 'User logged in successfully',
         data: {
           user: {
-            id: user.id,
-            status: user.status,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            ...(user.middleName && { middleName: user.middleName }),
-            emailAddress: user.emailAddress,
+            id: userRole.id,
+            status: userRole.status,
+            firstName: userRole.firstName,
+            lastName: userRole.lastName,
+            ...(userRole.middleName && { middleName: userRole.middleName }),
+            emailAddress: userRole.emailAddress,
+            role: {
+              id: role.id,
+              name: role.name,
+              permissions: role.permissions,
+            },
           },
         },
       };
@@ -471,8 +469,9 @@ export class AuthService {
       customToken: randomHash(40),
     });
 
-    const payload: PortalReqUser = {
+    const payload: Omit<PortalReqUser, 'otpKey'> = {
       sub: user.sub,
+      status: user.status,
       emailAddress: user.emailAddress,
       tenantId: user.tenantId,
       role: user.role,
