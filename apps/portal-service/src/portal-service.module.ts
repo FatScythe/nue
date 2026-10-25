@@ -5,9 +5,10 @@ import { PConfigModule } from './config/config.module';
 import { PortalServiceController } from './portal-service.controller';
 import { PortalService } from './portal-service.service';
 import { UserModule } from './user/user.module';
+import { RoleModule } from './role/role.module';
 
 @Module({
-  imports: [PConfigModule, AuthModule, UserModule],
+  imports: [PConfigModule, AuthModule, UserModule, RoleModule],
   controllers: [PortalServiceController],
   providers: [PortalService],
 })
