@@ -4,7 +4,7 @@ import {
   ValidationPipe,
   VersioningType,
 } from '@nestjs/common';
-// import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
+import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
@@ -45,7 +45,7 @@ async function bootstrap() {
         ];
 
   // cors option
-  const corsOptions: any = {
+  const corsOptions: CorsOptions = {
     credentials: true,
     origin: (origin, callback) => {
       // `!origin` allows server-to-server requests (ie, localhost requests)
@@ -96,6 +96,8 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  Logger.warn(`🚀 LAAS is running on: http://localhost:${port}/portal/v1`);
+  Logger.warn(
+    `🚀 CBA Portal Service is running on: http://localhost:${port}/portal/v1`,
+  );
 }
 bootstrap();

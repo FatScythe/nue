@@ -94,8 +94,12 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  Logger.warn(`🚀 Api Service docs on: http://localhost:${port}/api/v1/docs`);
-  Logger.warn(`🚀 Api Service is running on: http://localhost:${port}/api/v1`);
+  Logger.warn(
+    `🚀 CBA Api Service docs on: http://localhost:${port}/api/v1/docs`,
+  );
+  Logger.warn(
+    `🚀 CBA Api Service is running on: http://localhost:${port}/api/v1`,
+  );
 }
 
 bootstrap();
