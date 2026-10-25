@@ -26,6 +26,15 @@ export class UserController {
     return this.userService.inviteTeamMember(dto, user);
   }
 
+  @Post(':userId/resend-invite')
+  @Authorize(Resources.Team, 'create')
+  async resendInvite(
+    @Param('userId', ParseUUID) userId: string,
+    @GetUser() adminUser: PortalReqUser,
+  ) {
+    return this.userService.resendInviteMember(userId, adminUser);
+  }
+
   @Post(':userId/reset-otp')
   @Authorize(Resources.Team, 'edit')
   async resetUserOtp(

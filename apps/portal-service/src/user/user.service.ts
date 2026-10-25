@@ -1,11 +1,16 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 
 import { and, eq, isNull, or } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import momenttz from 'moment-timezone';
+import ms from 'ms';
 import * as otpauth from 'otpauth';
 import * as qrcode from 'qrcode';
+import { uuidv7 } from 'uuidv7';
 
 import {
+  Businesses,
+  DATABASE_CONNECTION,
   DEFAULT_OTP_SECRET_KEY,
   OtpTokenMetadata,
   RoleRepository,
@@ -16,8 +21,13 @@ import {
   UserStatus,
   UserType,
 } from '@libs/database';
+import * as schema from '@libs/database/drizzle/schemas';
 import { TokenSessionService } from '@libs/token';
-import { Environment, PortalReqUser } from '@libs/common';
+import { Environment, getCacheTimeBucket, PortalReqUser } from '@libs/common';
+import {
+  BackgroundProcess,
+  EmailWorkerJobEnum,
+} from '@libs/background-process';
 
 import { ClientException } from '../common/exceptions';
 import { configuration } from '../config';
@@ -26,9 +36,12 @@ import { InviteUserDto } from './dto';
 @Injectable()
 export class UserService {
   constructor(
+    @Inject(DATABASE_CONNECTION)
+    private readonly db: NodePgDatabase<typeof schema>,
     private readonly userRepo: UserRepository,
     private readonly roleRepo: RoleRepository,
     private readonly tokenService: TokenSessionService,
+    private readonly backgroundProcess: BackgroundProcess,
   ) {}
 
   async getCurrentUser(user: PortalReqUser) {
@@ -172,11 +185,7 @@ export class UserService {
       and(
         eq(Roles.id, dto.roleId),
         isNull(Roles.deletedAt),
-        or(
-          Roles.tenantId,
-          eq(Roles.tenantId, adminUser.tenantId!),
-          isNull(Roles.tenantId),
-        ),
+        or(eq(Roles.tenantId, adminUser.tenantId!), isNull(Roles.tenantId)),
       ),
     );
 
@@ -184,8 +193,11 @@ export class UserService {
       throw new ClientException('Invalid role', 'ITM002');
     }
 
-    // insert user with null password & null otpKey,,,
-    const user = await this.userRepo.create({
+    const newUserId = uuidv7();
+
+    // insert new user with null password & null otpKey
+    await this.userRepo.create({
+      id: newUserId,
       type: UserType.Human,
       tenantId: adminUser.tenantId!,
       emailAddress: dto.emailAddress,
@@ -197,25 +209,123 @@ export class UserService {
       createdBy: adminUser.sub,
     });
 
-    // temporary invitation token...
-    const tokenExpiryTime = 48 * 60 * 60 * 1000; // 48hrs in ms
-    const invitationToken = await this.tokenService.createToken({
-      userId: user.id,
-      type: TokenType.Invite,
-      expiresIn: tokenExpiryTime,
-      metadata: { tenantId: adminUser.tenantId, roleId: dto.roleId },
+    // process token and dispatch email via shared helper
+    return this.processAndDispatchInvite({
+      userId: newUserId,
+      emailAddress: dto.emailAddress,
+      firstName: dto.firstName,
+      roleId: dto.roleId,
+      adminUser,
+      isResend: false,
+    });
+  }
+
+  async resendInviteMember(userId: string, adminUser: PortalReqUser) {
+    // ensure the pending invitation user exists within this tenant...
+    const existingUser = await this.userRepo.findOne({
+      where: and(
+        eq(Users.id, userId),
+        eq(Users.tenantId, adminUser.tenantId!),
+        eq(Users.status, UserStatus.Pending),
+        isNull(Users.deletedAt),
+      ),
     });
 
-    // send email with setup link containing the invitationToken...
-    const setupUrl = this.setUpAccountLink(invitationToken);
-    const expiryTime = momenttz(momenttz.now() + tokenExpiryTime)
+    if (!existingUser) {
+      throw new ClientException(
+        'No pending invitation found for this user',
+        'ITM003',
+      );
+    }
+
+    // invalidate any old unused invite tokens for this user...
+    await this.tokenService.deleteTokensByUser(existingUser.id, [
+      TokenType.Invite,
+    ]);
+
+    return this.processAndDispatchInvite({
+      userId: existingUser.id,
+      emailAddress: existingUser.emailAddress!,
+      firstName: existingUser.firstName,
+      roleId: existingUser.roleId!,
+      adminUser,
+      isResend: true,
+    });
+  }
+
+  /**
+   * helper to handle token generation, link creation, and background job dispatch with a jobId lock.
+   */
+  private async processAndDispatchInvite(params: {
+    userId: string;
+    emailAddress: string;
+    firstName: string;
+    roleId: string;
+    adminUser: PortalReqUser;
+    isResend?: boolean;
+  }) {
+    const { userId, emailAddress, firstName, roleId, adminUser, isResend } =
+      params;
+
+    // fetch admin details and tenant name in a single query...
+    const adminWithTenant = await this.userRepo.findOne({
+      where: eq(Users.id, adminUser.sub),
+      selectFn: (users) => ({
+        firstName: users.firstName,
+        lastName: users.lastName,
+        tenantName: Businesses.name,
+      }),
+      joinFn: (query) =>
+        query.innerJoin(Businesses, eq(Users.tenantId, Businesses.id)),
+    });
+
+    const adminFullName = adminWithTenant
+      ? `${adminWithTenant.firstName} ${adminWithTenant.lastName}`
+      : 'An administrator';
+    const organizationName = adminWithTenant?.tenantName || 'Nue CBA';
+
+    // generate temporary invitation token (48h expiry)...
+    const tokenExpiryTime = '48h';
+    const invitationToken = await this.tokenService.createToken({
+      userId,
+      type: TokenType.Invite,
+      expiresIn: tokenExpiryTime,
+      metadata: { tenantId: adminUser.tenantId, roleId },
+    });
+
+    const setupLink = this.setUpAccountLink(invitationToken);
+
+    // format expiration time for the email template...
+    const expiryMs = ms(tokenExpiryTime);
+    const expiryTime = momenttz(Date.now() + expiryMs)
       .tz('Africa/Lagos')
-      .format('MMMM DD, YYYY hh:mm A');
+      .format('MMMM DD, YYYY [at] hh:mm A');
 
-    // TODO: Send Email
-    // await this.emailService.sendInvitationEmail(dto.emailAddress, setupUrl, expiryTime);
+    // Using a deterministic jobId prevents duplicate emails if clicked rapidly or retried
+    // getCacheTimeBucket prevent deduplication over a time window (e.g., prevent spamming within 5 mins):
+    const jobId = `invite:${emailAddress}:${getCacheTimeBucket()}`;
 
-    return { message: 'Invite sent sucessfully' };
+    await this.backgroundProcess.dispatchEmail(
+      EmailWorkerJobEnum.InviteUserEmailNotification,
+      {
+        emailAddress,
+        firstName,
+        organizationName,
+        invitedBy: adminFullName,
+        setupLink,
+        validityTime: expiryTime,
+      },
+      {
+        jobId,
+        removeOnComplete: true,
+      },
+    );
+
+    return {
+      message: isResend
+        ? 'Invitation resent successfully'
+        : 'Invite sent successfully',
+    };
   }
 
   async resetUserOtp(userId: string, adminUser: PortalReqUser) {
