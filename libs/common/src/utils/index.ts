@@ -1,6 +1,7 @@
 import { createHash, createHmac } from 'crypto';
 
 import { Request } from 'express';
+import moment from 'moment';
 import { customAlphabet } from 'nanoid';
 
 import { DEFAULT_PERMISSION, Resources } from '@libs/database';
@@ -9,21 +10,37 @@ import { RolePermissions } from '@libs/database/drizzle/types';
 import { PaginationMeta } from '../types';
 
 export * from './gl.utils';
-export class MoneyTransformer {
-  private static readonly SCALE = 100n;
 
-  // convert DB BigInt to human string: 5000n -> "50.00"
-  static toDecimalString(minorAmount: bigint): string {
-    const major = minorAmount / this.SCALE;
-    const minor = minorAmount % this.SCALE;
-    // padStart ensures 5005n becomes "50.05" and not "50.5"
-    return `${major}.${minor.toString().padStart(2, '0')}`;
-  }
+/**
+ * generates a time-bucketed string based on a minute interval...
+ * used for api call caching for flexible time, requestId with minute intervals...
+ *
+ * @param intervalMinutes The size of the time window in minutes (e.g., 5, 10, 15)
+ * @param timeDelimiter the separator used between date-time segments (defaults to '_')
+ * @returns A formatted date string suffix (e.g., "DD_MM_YY_HH_mm")
+ */
+export function getCacheTimeBucket(
+  intervalMinutes: number = 5,
+  timeDelimiter: '_' | '-' = '_',
+): string {
+  const currentMoment = moment();
 
-  // convert human input to DB BigInt: "50.00" -> 5000n
-  static toMinorUnit(amount: number | string): bigint {
-    return BigInt(Math.round(Number(amount) * 100));
-  }
+  // convert the interval from minutes to milliseconds...
+  const intervalMs = intervalMinutes * 60 * 1000;
+
+  // get the absolute UNIX timestamp in milliseconds...
+  const currentMs = currentMoment.valueOf();
+
+  // Math.floor the absolute time into stable, sequential buckets...
+  const bucketMs = Math.floor(currentMs / intervalMs) * intervalMs;
+
+  // create a stable moment object from that bucketed timestamp...
+  const bucketMoment = moment(bucketMs);
+
+  // format it using standard date-time blocks...
+  // result format: 23_06_26_11_50 (This will bridge hour/day boundaries flawlessly)....
+  const formatPattern = `DD${timeDelimiter}MM${timeDelimiter}YY${timeDelimiter}HH${timeDelimiter}mm`;
+  return bucketMoment.format(formatPattern);
 }
 
 export const randomHash = (length: number): string => {
@@ -268,4 +285,10 @@ export const calculatePaginationMeta = (
     previous,
     next,
   };
+};
+
+export const isEmail = (variable: any): variable is string => {
+  if (!isDefined(variable)) return false;
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(variable);
 };

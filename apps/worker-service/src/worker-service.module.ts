@@ -12,6 +12,7 @@ import {
   BULLMQ_LIEN_QUEUE,
   BULLMQ_LOAN_QUEUE,
 } from '@libs/background-process';
+import { EmailModule } from '@libs/email';
 
 import { WConfigModule } from './config/config.module';
 import {
@@ -30,6 +31,7 @@ import { WorkerService } from './worker-service.service';
     MongoDatabaseModule,
     CalculatorModule,
     BackgroundProcessModule,
+    EmailModule,
     GLedgerModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],

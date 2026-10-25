@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Loan Profile Summary</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .header-panel {
+            margin-bottom: 25px;
+            border-bottom: 2px solid #E2E8F0;
+            padding-bottom: 10px;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1A202C;
+            text-transform: uppercase;
+            margin: 0 0 5px 0;
+        }
+        .meta-text {
+            font-size: 11px;
+            color: #718096;
+            margin: 0;
+        }
+        .stats-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+            border-collapse: separate;
+            border-spacing: 15px 8px;
+            background-color: #F8FAFC;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        .stats-row {
+            display: table-row;
+        }
+        .stats-cell {
+            display: table-cell;
+            width: 50%;
+        }
+        .label {
+            font-weight: 600;
+            color: #4A5568;
+            display: inline-block;
+            width: 150px;
+        }
+        .value {
+            color: #1A202C;
+        }
+        .table-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2D3748;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th {
+            background-color: #EDF2F7;
+            color: #2D3748;
+            font-weight: 600;
+            text-align: left;
+            padding: 8px 10px;
+            font-size: 11px;
+            border-bottom: 2px solid #CBD5E0;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #E2E8F0;
+            font-size: 11px;
+        }
+        tr:nth-child(even) {
+            background-color: #F8FAFC;
+        }
+        /* Prevents table row breaking awkwardly over multiple sheets */
+        tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-paid { background-color: #DEF7EC; color: #03543F; }
+        .badge-unpaid { background-color: #FDE8E8; color: #9B1C1C; }
+        .badge-overdue { background-color: #FEF3C7; color: #92400E; }
+        .text-right { text-align: right; }
+    </style>
+</head>
+<body>
+
+    <div class="header-panel">
+        <h1 class="title">Loan Profile Report</h1>
+        <p class="meta-text">Generated On: <%= generatedAt %></p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stats-row">
+            <div class="stats-cell"><span class="label">Product Title:</span> <span class="value"><%= stats.productTitle %></span></div>
+            <div class="stats-cell"><span class="label">Tenor:</span> <span class="value"><%= stats.tenor %> Months</span></div>
+        </div>
+        <div class="stats-row">
+            <div class="stats-cell"><span class="label">Loan Amount:</span> <span class="value">₦<%= Number(stats.loanAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) %></span></div>
+            <div class="stats-cell"><span class="label">Repayment Frequency:</span> <span class="value"><%= stats.repaymentFrequency %></span></div>
+        </div>
+        <div class="stats-row">
+            <div class="stats-cell"><span class="label">Total Repaid:</span> <span class="value">₦<%= Number(stats.repaymentAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) %></span></div>
+            <div class="stats-cell"><span class="label">Loan Status:</span> <span class="value"><%= stats.loanStatus %></span></div>
+        </div>
+        <div class="stats-row">
+            <div class="stats-cell"><span class="label">Collected By:</span> <span class="value"><%= stats.loanCollectedBy %></span></div>
+            <div class="stats-cell"><span class="label">Onboarded Partner:</span> <span class="value"><%= stats.onboardedBy %></span></div>
+        </div>
+    </div>
+
+    <div class="table-title">Repayment Installment Schedule</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Paid Date</th>
+                <th class="text-right">Principal Due</th>
+                <th class="text-right">Interest Due</th>
+                <th class="text-right">Loan Balance</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (rows && rows.length > 0) { %>
+                <% rows.forEach(function(row) { %>
+                    <tr>
+                        <td><%= row.startDate %></td>
+                        <td><%= row.endDate %></td>
+                        <td><%= row.paidDate %></td>
+                        <td class="text-right">₦<%= Number(row.principalDue).toLocaleString(undefined, {minimumFractionDigits: 2}) %></td>
+                        <td class="text-right">₦<%= Number(row.interestAmount).toLocaleString(undefined, {minimumFractionDigits: 2}) %></td>
+                        <td class="text-right">₦<%= Number(row.loanBalance).toLocaleString(undefined, {minimumFractionDigits: 2}) %></td>
+                        <td>
+                            <span class="badge badge-<%= String(row.status).toLowerCase() %>">
+                                <%= row.status %>
+                            </span>
+                        </td>
+                    </tr>
+                <% }); %>
+            <% } else { %>
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #a0aec0;">No repayment schedules linked to profile.</td>
+                </tr>
+            <% } %>
+        </tbody>
+    </table>
+
+</body>
+</html>

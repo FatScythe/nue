@@ -22,39 +22,19 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "paths": {
-      "@app/*": [
-        "./apps/*"
-      ],
-      "@libs/background-process": [
-        "./libs/background-process/src/index"
-      ],
-      "@libs/background-process/*": [
-        "./libs/background-process/src/*"
-      ],
-      "@libs/common": [
-        "./libs/common/src/index"
-      ],
-      "@libs/common/*": [
-        "./libs/common/src/*"
-      ],
-      "@libs/database": [
-        "./libs/database/src/index"
-      ],
-      "@libs/database/*": [
-        "./libs/database/src/*"
-      ],
-      "@libs/modules": [
-        "./libs/modules/src/index"
-      ],
-      "@libs/modules/*": [
-        "./libs/modules/src/*"
-      ],
-      "@libs/token": [
-        "./libs/token/src/index"
-      ],
-      "@libs/token/*": [
-        "./libs/token/src/*"
-      ]
+      "@app/*": ["./apps/*"],
+      "@libs/background-process": ["./libs/background-process/src/index"],
+      "@libs/background-process/*": ["./libs/background-process/src/*"],
+      "@libs/common": ["./libs/common/src/index"],
+      "@libs/common/*": ["./libs/common/src/*"],
+      "@libs/database": ["./libs/database/src/index"],
+      "@libs/database/*": ["./libs/database/src/*"],
+      "@libs/email": ["./libs/email/src"],
+      "@libs/email/*": ["./libs/email/src/*"],
+      "@libs/modules": ["./libs/modules/src/index"],
+      "@libs/modules/*": ["./libs/modules/src/*"],
+      "@libs/token": ["./libs/token/src/index"],
+      "@libs/token/*": ["./libs/token/src/*"]
     }
   }
 }

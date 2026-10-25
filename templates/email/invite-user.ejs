@@ -1,0 +1,327 @@
+<span
+  style="
+    color: transparent;
+    display: none;
+    height: 0;
+    max-height: 0;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    mso-hide: all;
+    visibility: hidden;
+    width: 0;
+  "
+  >Nue CBA</span
+>
+<%- include('./includes/header.ejs') %>
+
+<table
+  data-outer-table
+  border="0"
+  align="center"
+  cellpadding="0"
+  cellspacing="0"
+  class="outer-table row"
+  role="presentation"
+  width="640"
+  style="width: 640px; max-width: 640px"
+  data-module="colibri-basic-message-16"
+>
+  <!-- colibri-basic-message-16 -->
+  <tr>
+    <td align="center" bgcolor="#fafafa" data-bgcolor="BgColor">
+      <!-- Content -->
+      <table
+        data-inner-table
+        border="0"
+        align="center"
+        cellpadding="0"
+        cellspacing="0"
+        role="presentation"
+        class="inner-table row container-padding"
+        width="580"
+        style="width: 580px; max-width: 580px"
+      >
+        <tr>
+          <td
+            height="15"
+            style="font-size: 15px; line-height: 15px"
+            data-height="Spacing top"
+          >
+            &nbsp;
+          </td>
+        </tr>
+
+        <tr data-element="colibri-bm-headline" data-label="Headlines">
+          <td
+            height="30"
+            style="font-size: 15px; line-height: 15px"
+            data-height="Spacing under headline"
+          >
+            &nbsp;
+          </td>
+          <td
+            height="30"
+            style="font-size: 15px; line-height: 15px"
+            data-height="Spacing under headline"
+          >
+            &nbsp;
+          </td>
+        </tr>
+        <tr data-element="colibri-bm-paragraph" data-label="Paragraphs">
+          <td
+            class="center-text"
+            data-text-style="Paragraphs"
+            align="left"
+            style="
+              font-family: 'Poppins', Arial, Helvetica, sans-serif;
+              font-size: 14px;
+              line-height: 24px;
+              font-weight: 400;
+              font-style: normal;
+              color: #333333;
+              text-decoration: none;
+              letter-spacing: 0px;
+            "
+          >
+            <singleline>
+              <div style="margin: 5px 0px">
+                <h2
+                  style="
+                    font-size: 20px;
+                    color: #107ebc;
+                    margin: 0 0 10px 0;
+                    font-weight: 600;
+                  "
+                >
+                  Hello <%= first_name %>,
+                </h2>
+              </div>
+
+              <div style="margin: 15px 0px">
+                <p
+                  style="
+                    margin: 0 0 15px 0;
+                    font-size: 14px;
+                    line-height: 24px;
+                    color: #333333;
+                  "
+                >
+                  <strong> <%= invited_by %> </strong> has invited you to join
+                  the team at <strong> <%= organization_name %> </strong> on the
+                  <strong>Nue CBA</strong> Portal.
+                </p>
+                <p
+                  style="
+                    margin: 0 0 15px 0;
+                    font-size: 14px;
+                    line-height: 24px;
+                    color: #333333;
+                  "
+                >
+                  Your account has been prepared. To get started, please click
+                  the button below to set up your password and secure your
+                  account.
+                </p>
+              </div>
+
+              <!-- Bulletproof Table CTA Button Structure Center-Aligned -->
+              <div style="margin: 30px 0px; text-align: center">
+                <table
+                  border="0"
+                  cellpadding="0"
+                  cellspacing="0"
+                  role="presentation"
+                  align="center"
+                >
+                  <tr>
+                    <td
+                      align="center"
+                      bgcolor="#107ebc"
+                      style="border-radius: 4px"
+                    >
+                      <a
+                        href="<%= setup_link %>"
+                        target="_blank"
+                        style="
+                          display: inline-block;
+                          padding: 14px 30px;
+                          font-family: 'Poppins', Arial, sans-serif;
+                          font-size: 16px;
+                          color: #ffffff;
+                          text-decoration: none;
+                          font-weight: bold;
+                        "
+                      >
+                        Set Up My Account
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="margin: 20px 0px">
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 13px;
+                    line-height: 20px;
+                    color: #666666;
+                  "
+                >
+                  Note: This invitation link is valid for <%= validity_time %>.
+                  If you did not expect this invitation, please ignore this
+                  email.
+                </p>
+              </div>
+
+              <div style="margin: 20px 0px">
+                <!-- Dynamic Validity Note -->
+                <p
+                  style="
+                    margin: 0 0 12px 0;
+                    font-size: 13px;
+                    line-height: 20px;
+                    color: #666666;
+                    font-family: 'Roboto', Helvetica, Arial, sans-serif;
+                  "
+                >
+                  Note: This invitation link is valid for <%= validity_time %>.
+                  If you did not expect this invitation, please ignore this
+                  email.
+                </p>
+
+                <p
+                  style="
+                    margin: 0 0 4px 0;
+                    font-size: 12px;
+                    line-height: 18px;
+                    color: #666666;
+                    font-family: 'Roboto', Helvetica, Arial, sans-serif;
+                  "
+                >
+                  If the button above doesn't work, copy and paste this URL into
+                  your browser:
+                </p>
+                <p
+                  style="
+                    margin: 0;
+                    font-size: 12px;
+                    line-height: 18px;
+                    color: #05b8ff;
+                    font-family: 'Roboto', Helvetica, Arial, sans-serif;
+                    word-break: break-all;
+                  "
+                >
+                  <<a
+                    href="<%= setup_link %>"
+                    target="_blank"
+                    style="color: #05b8ff; text-decoration: underline"
+                    ><%= setup_link %></a
+                  >
+                </p>
+              </div>
+
+              <div style="margin: 30px 0px">
+                <table width="100%">
+                  <tr>
+                    <td style="color: #107ebc; font-weight: 500">
+                      Head Office: 159, Orewole Islam Street, Ikeja, Lagos.
+                    </td>
+                    <td
+                      style="
+                        text-align: right;
+                        color: #107ebc;
+                        font-weight: 500;
+                      "
+                    >
+                      www.nuecba.com
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <table
+                width="100%"
+                cellpadding="0"
+                cellspacing="0"
+                style="
+                  background: linear-gradient(to right, #107ebc, #0d6191);
+                  height: 4px;
+                "
+              ></table>
+            </singleline>
+
+            <div style="margin: 4% 0px">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td
+                    style="
+                      font-size: 25px;
+                      font-weight: 800;
+                      line-height: 30px;
+                      color: #1a2543;
+                    "
+                  >
+                    Secure Lending
+                  </td>
+                  <td style="text-align: right">
+                    <img
+                      src="https://placehold.co/200x50?text=Footer+Icon"
+                      style="
+                        max-width: 200px;
+                        display: inline-block;
+                        vertical-align: middle;
+                      "
+                      alt="Nue CBA"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td
+                    style="
+                      font-size: 25px;
+                      font-weight: 800;
+                      line-height: 30px;
+                      color: #1a2543;
+                    "
+                  >
+                    with Nue CBA
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <singleline>
+              <p style="margin-top: 20px; font-size: smaller; color: #666666">
+                Your personal info, and transaction PIN/password are your
+                personal assets. <strong>Nue CBA</strong> will NEVER call,
+                email, or SMS to ask you to disclose any of these details. If
+                you ever receive a suspicious request, please contact us
+                immediately on
+                <span style="color: #107ebc; font-weight: bold"
+                  >+234 700 NUECBA</span
+                >
+                or
+                <span style="color: #107ebc; font-weight: bold"
+                  >contact@nuecba.com</span
+                >
+              </p>
+            </singleline>
+          </td>
+        </tr>
+        <tr data-element="colibri-bm-paragraph" data-label="Paragraphs">
+          <td
+            height="25"
+            style="font-size: 25px; line-height: 25px"
+            data-height="Spacing under paragraph"
+          >
+            &nbsp;
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<%- include('./includes/footer.ejs') %>

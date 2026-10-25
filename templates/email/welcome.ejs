@@ -1,0 +1,84 @@
+<%- include('./includes/header.ejs') %>
+
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+  <tr>
+    <td
+      style="
+        padding: 20px 0;
+        text-align: left;
+        font-family: 'Poppins', Arial, sans-serif;
+        color: #333333;
+      "
+    >
+      <h1 style="font-size: 24px; color: #107ebc; margin-bottom: 10px">
+        Welcome to Nue CBA!
+      </h1>
+
+      <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px">
+        Hi <strong> <%= name %> Team </strong>,
+      </p>
+
+      <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px">
+        Your organization has been successfully registered on our
+        <strong>Core Banking Application (CBA)</strong> platform. We are excited
+        to help you streamline your credit operations and reach your financial
+        goals.
+      </p>
+
+      <div
+        style="
+          background-color: #f4f7f9;
+          border-left: 4px solid #107ebc;
+          padding: 15px;
+          margin-bottom: 25px;
+        "
+      >
+        <p style="margin: 0; font-weight: bold; color: #1a2543">Next Steps:</p>
+        <ul style="margin: 10px 0 0 20px; padding: 0; line-height: 1.8">
+          <li>Log in to your dashboard using your registered email.</li>
+          <li>Configure your first <strong>Accounting Ledger</strong>.</li>
+          <li>Configure your first <strong>Account Product</strong>.</li>
+          <li>Configure your first <strong>Api User</strong>.</li>
+          <li>Invite your team members to get started.</li>
+        </ul>
+      </div>
+
+      <table
+        border="0"
+        cellpadding="0"
+        cellspacing="0"
+        role="presentation"
+        style="margin-top: 30px"
+      >
+        <tr>
+          <td align="center" bgcolor="#107ebc" style="border-radius: 4px">
+            <a
+              href="https://nuecba.com/login"
+              target="_blank"
+              style="
+                display: inline-block;
+                padding: 14px 30px;
+                font-family: 'Poppins', Arial, sans-serif;
+                font-size: 16px;
+                color: #ffffff;
+                text-decoration: none;
+                font-weight: bold;
+              "
+            >
+              Go to Dashboard
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-size: 14px; color: #777; margin-top: 40px">
+        If you have any questions, simply reply to this email or visit our
+        <a href="https://nuecba.com/support" style="color: #107ebc"
+          >Support Center</a
+        >.
+      </p>
+    </td>
+  </tr>
+</table>
+
+<%- include('./includes/footer.ejs') %>
