@@ -119,27 +119,20 @@ const LoginOtpTemp = ({
 };
 
 const ResetOtpTemp = ({
-  token,
+  setupUrl,
   expiryTime,
 }: {
-  token: string;
+  setupUrl: string;
   expiryTime: string;
 }) => {
-  return `
-    <div style="font-family: Arial, sans-serif; color: #374151;">
-      <p>Please use this token to reset your otp:</p>
-      
-      <div style="margin: 24px 0;">
-        ${renderTokenBoxes(token)}
-      </div>
-
-      <p style="font-size: 14px; color: #6b7280;">
-        This code will expire at <b>${expiryTime}</b>. 
-        <br/>
-        If you did not request this code, please ignore this email.
-      </p>
-    </div>
-  `;
+  return ` <p>Please reset authenticator one time password (OTP) by clicking on the following link :
+            <a href="${setupUrl}"><b style="text-decoration: underline; color: blue;">Reset OTP</b></a>
+            </p>
+            <br/>
+            <br/>
+            <p>This link will expire at <b>${expiryTime}</b>. If you did not request this link, please ignore this email.</p>
+            <p>If you have any question or need assistance, feel free to reach out to our support team at ${customerSupportPhone} or ${customerSupportEmail}.</p>
+            <p>${setupUrl}<p>`;
 };
 
 const RegisterOtpTemp = ({

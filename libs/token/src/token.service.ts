@@ -71,6 +71,13 @@ export class TokenSessionService {
     });
   }
 
+  async deleteTokensByUser(userId: string, types: TokenType[]) {
+    return await this.tokenModel.deleteMany({
+      userId,
+      ...(types.length > 0 && { type: { $in: types } }),
+    });
+  }
+
   async updateMetadata<T = Record<string, any>>(
     token: string,
     newMetadata: T,

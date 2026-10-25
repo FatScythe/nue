@@ -28,6 +28,7 @@ import {
   BackgroundProcess,
   EmailWorkerJobEnum,
 } from '@libs/background-process';
+import { EmailTemplates } from '@libs/email';
 
 import { ClientException } from '../common/exceptions';
 import { configuration } from '../config';
@@ -284,6 +285,9 @@ export class UserService {
       : 'An administrator';
     const organizationName = adminWithTenant?.tenantName || 'Nue CBA';
 
+    // invalidate any old unused invite tokens for this user...
+    await this.tokenService.deleteTokensByUser(userId, [TokenType.Invite]);
+
     // generate temporary invitation token (48h expiry)...
     const tokenExpiryTime = '48h';
     const invitationToken = await this.tokenService.createToken({
@@ -337,6 +341,7 @@ export class UserService {
     const user = await this.userRepo.findOne({
       selectFn: (record) => ({
         id: record.id,
+        firstName: record.firstName,
         emailAddress: record.emailAddress,
       }),
       where: and(
@@ -361,6 +366,9 @@ export class UserService {
 
     const tokenExpiryTime = 24 * 60 * 60 * 1000; // 24hrs in ms
 
+    // invalidate any old unused invite tokens for this user...
+    await this.tokenService.deleteTokensByUser(user.id, [TokenType.OtpReset]);
+
     const resetToken = await this.tokenService.createToken({
       userId: user.id,
       type: TokenType.OtpReset,
@@ -377,7 +385,17 @@ export class UserService {
       .tz('Africa/Lagos')
       .format('MMMM DD, YYYY hh:mm A');
 
-    // TODO: Send Email
+    await this.backgroundProcess.dispatchEmail(
+      EmailWorkerJobEnum.SendGeneralNotification,
+      {
+        emailAddress: user.emailAddress!,
+        subject: 'Reset Authenticator OTP - Nue CBA',
+        data: {
+          firstName: user.firstName,
+          body: EmailTemplates.ResetOtpTemp({ setupUrl, expiryTime }),
+        },
+      },
+    );
     // await this.emailService.sendOtpResetEmail(user.emailAddress, setupUrl, expiryTime);
 
     return {
