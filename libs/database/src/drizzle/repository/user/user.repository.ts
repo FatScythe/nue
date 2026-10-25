@@ -103,12 +103,12 @@ export class UserRepository extends BaseRepository<typeof Users> {
    * create a new user
    */
   async create(
-    data: Omit<typeof Users.$inferInsert, 'id'>,
+    data: Omit<typeof Users.$inferInsert, 'id'> & { id?: string },
     tx?: DBTransaction,
   ) {
     const transformedData = await this.transformAndValidate({
       ...data,
-      id: '',
+      id: data?.id || '',
     });
     const result = await this.getClient(tx)
       .insert(Users)

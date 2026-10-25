@@ -8,12 +8,14 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 
 import type { Response } from 'express';
 
-import type { PortalReqUser } from '@libs/common';
+import { Environment, type PortalReqUser } from '@libs/common';
 
 import { GetUser, Public } from '../common/decorators';
+import { configuration } from '../config';
 import { AuthService } from './auth.service';
 import {
   CompleteSetupDto,
@@ -24,6 +26,12 @@ import {
 
 @Controller('auth')
 @Public()
+@Throttle({
+  default: {
+    limit: configuration().nodeEnv === Environment.Production ? 3 : 8,
+    ttl: 3 * 1000,
+  },
+})
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -38,6 +46,12 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('forgot-password')
+  @Throttle({
+    default: {
+      limit: configuration().nodeEnv === Environment.Production ? 1 : 8,
+      ttl: 5 * 60 * 1000,
+    },
+  })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }

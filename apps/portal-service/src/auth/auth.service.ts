@@ -17,6 +17,11 @@ import {
 } from '@libs/database';
 import { TokenSessionService } from '@libs/token';
 import { PortalReqUser, randomHash } from '@libs/common';
+import {
+  BackgroundProcess,
+  EmailWorkerJobEnum,
+} from '@libs/background-process';
+import { EmailTemplates } from '@libs/email';
 
 import { ClientException } from '../common/exceptions';
 import { hashData, verifyHashData } from '../common/utils';
@@ -45,6 +50,7 @@ export class AuthService {
     private readonly redisService: RedisService,
     private readonly jwtService: JwtService,
     private readonly tokenService: TokenSessionService,
+    private readonly backgroundProcess: BackgroundProcess,
   ) {}
 
   async loginUser(
@@ -122,7 +128,15 @@ export class AuthService {
       );
 
       if (!isCorrectPassword) {
-        // TODO: Send Email in bkg...
+        // send login failed email in bkg...
+        await this.backgroundProcess.dispatchEmail(
+          EmailWorkerJobEnum.SendLoginNotification,
+          {
+            emailAddress: userRole.emailAddress!,
+            name: userRole.firstName,
+            type: 'failed_login',
+          },
+        );
 
         const RETRY_CACHE_KEY_PREFIX = 'password_retry_';
         const retryTimes =
@@ -137,7 +151,7 @@ export class AuthService {
         // If retry times exceeds limit (key: [number] ---> INVALID_PASSWORD_RETRY_LIMIT), lock account...
         if (retryCount >= this.INVALID_PASSWORD_RETRY_LIMIT) {
           await this.userRepo.update(eq(Users.id, userRole.id), {
-            status: UserStatus.Blocked,
+            status: UserStatus.Locked,
           });
 
           throw new ClientException(
@@ -188,7 +202,15 @@ export class AuthService {
       // attach cookies to response...
       await this.attachCookiesToResponse({ res, user: reqUser, rememberMe });
 
-      // TODO: Send login success email in bkg...
+      // send login success email in bkg...
+      await this.backgroundProcess.dispatchEmail(
+        EmailWorkerJobEnum.SendLoginNotification,
+        {
+          emailAddress: userRole.emailAddress!,
+          name: userRole.firstName,
+          type: 'login',
+        },
+      );
 
       return {
         message: 'User logged in successfully',
@@ -213,7 +235,11 @@ export class AuthService {
 
   async forgotPassword({ emailAddress }: ForgotPasswordDto) {
     const user = await this.userRepo.findOne({
-      selectFn: (record) => ({ id: record.id, status: record.status }),
+      selectFn: (record) => ({
+        id: record.id,
+        status: record.status,
+        firstName: record.firstName,
+      }),
       where: eq(Users.emailAddress, emailAddress),
     });
 
@@ -224,6 +250,11 @@ export class AuthService {
       ) {
         throw new ClientException('Please contact support.');
       }
+
+      // invalidate any old unused invite tokens for this user...
+      await this.tokenService.deleteTokensByUser(user.id, [
+        TokenType.PasswordReset,
+      ]);
 
       const tokenExpiryTime = 10 * 60 * 1000; // 10 minutes in ms
       const token = await this.tokenService.createToken({
@@ -237,8 +268,22 @@ export class AuthService {
         .tz('Africa/Lagos')
         .format('MMMM DD, YYYY hh:mm A');
 
-      // TODO: Send email with resetURL and expiryTime in background...
-      // await this.emailService.sendPasswordResetEmail(user.emailAddress, resetURL, expiryTime);
+      await this.backgroundProcess.dispatchEmail(
+        EmailWorkerJobEnum.SendGeneralNotification,
+        {
+          emailAddress,
+          subject: 'Reset Your Nue CBA Password',
+          data: {
+            firstName: user.firstName || 'there',
+            body: EmailTemplates.ResetPasswordTemp({ expiryTime, resetURL }),
+          },
+        },
+        {
+          jobId: `password_reset_${emailAddress}_${token}_${Date.now()}`,
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
     }
 
     return {
