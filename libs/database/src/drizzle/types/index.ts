@@ -64,6 +64,12 @@ export type RolePermissions = {
     edit: boolean;
     deactivate: boolean;
   };
+  [Resources.Role]: {
+    view: boolean;
+    create: boolean;
+    edit: boolean;
+    deactivate: boolean;
+  };
   [Resources.Api]: {
     view: boolean;
     create: boolean;
@@ -76,6 +82,34 @@ export type RolePermissions = {
     deactivate: boolean;
     edit: boolean;
   };
+};
+
+export const resourceLabels: Record<Resources, string> = {
+  [Resources.Office]: 'Office & Branches',
+  [Resources.Customer]: 'Customer Management',
+  [Resources.Product]: 'Product Management',
+  [Resources.Account]: 'Account Operations',
+  [Resources.Transaction]: 'Transactions & Transfers',
+  [Resources.Lien]: 'Lien Management',
+  [Resources.Loan]: 'Loan Management',
+  [Resources.Ledger]: 'General Ledger Management',
+  [Resources.Team]: 'Team Management',
+  [Resources.Role]: 'Role Management',
+  [Resources.Api]: 'Api Management',
+  [Resources.Configuration]: 'Configuration Management',
+};
+
+export const actionLabels: Record<string | CRUDOps, string> = {
+  read: 'View / Read',
+  create: 'Create / Add',
+  update: 'Modify / Update',
+  deactivate: 'Deactivate',
+  transfer: 'Execute Transfers',
+  deposit: 'Process Deposits',
+  release: 'Release Lien',
+  approve: 'Approve',
+  disburse: 'Disburse Funds',
+  repay: 'Process Repayment',
 };
 
 type CRUDOps = 'create' | 'read' | 'update' | 'delete';

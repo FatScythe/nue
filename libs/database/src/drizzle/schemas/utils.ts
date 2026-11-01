@@ -71,6 +71,12 @@ export const DEFAULT_PERMISSION = {
     edit: false,
     deactivate: false,
   },
+  [Resources.Role]: {
+    view: false,
+    create: false,
+    edit: false,
+    deactivate: false,
+  },
   [Resources.Api]: {
     view: false,
     create: false,

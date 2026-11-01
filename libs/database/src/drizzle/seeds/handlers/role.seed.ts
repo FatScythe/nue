@@ -2,6 +2,7 @@ import { uuidv7 } from 'uuidv7';
 
 import { rebuildPermission } from '@libs/common';
 
+import { RoleStatus } from '../../enums';
 import * as schema from '../../schemas';
 
 export interface SeedRolePayload {
@@ -16,6 +17,7 @@ export async function seedCoreRoles(tx: any, payload: SeedRolePayload) {
       tenantId: null,
       permissions: rebuildPermission({}, true),
       name: 'core admin role',
+      status: RoleStatus.Active,
       createdBy: payload.sysAdminId,
       approvedBy: payload.sysAdminId,
     })

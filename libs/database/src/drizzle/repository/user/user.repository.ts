@@ -57,7 +57,7 @@ export class UserRepository extends BaseRepository<typeof Users> {
         lastName: Users.lastName,
         middleName: Users.otherNames,
         hashedPassword: Users.hashedPassword,
-        otpKey: Users.otpKey,
+        otpKey: Users.secretKey,
         emailAddress: Users.emailAddress,
         type: Users.type,
         status: Users.status,

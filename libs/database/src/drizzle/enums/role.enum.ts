@@ -11,5 +11,11 @@ export enum Resources {
   // portal specific
   Team = 'team',
   Api = 'api',
+  Role = 'role',
   Configuration = 'configuration',
+}
+
+export enum RoleStatus {
+  Active = 'active',
+  Inactive = 'inactive',
 }

@@ -3,6 +3,7 @@ import {
   index,
   integer,
   jsonb,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -12,9 +13,15 @@ import {
 
 import { RolePermissions } from '@libs/database/drizzle/types';
 
+import { RoleStatus } from '../enums';
 import { Businesses } from './business';
 import { Users } from './user';
 import { DEFAULT_PERMISSION } from './utils';
+
+export const roleStatusEnum = pgEnum(
+  'role_status',
+  Object.values(RoleStatus) as [string, ...string[]],
+);
 
 export const Roles = pgTable(
   'roles',
@@ -28,6 +35,7 @@ export const Roles = pgTable(
       .$type<RolePermissions>()
       .notNull()
       .default(DEFAULT_PERMISSION),
+    status: roleStatusEnum('status').$type<RoleStatus>().notNull(),
     createdBy: varchar('created_by', { length: 36 }).references(
       (): AnyPgColumn => Users.id,
       {
