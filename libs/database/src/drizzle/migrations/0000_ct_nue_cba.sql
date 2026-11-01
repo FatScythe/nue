@@ -11,8 +11,9 @@ CREATE TYPE "public"."customer_tier" AS ENUM('0', '1', '2', '3');--> statement-b
 CREATE TYPE "public"."customer_type" AS ENUM('individual', 'corporate');--> statement-breakpoint
 CREATE TYPE "public"."gl_category" AS ENUM('asset', 'liability', 'equity', 'income', 'expense');--> statement-breakpoint
 CREATE TYPE "public"."normal_balance" AS ENUM('debit', 'credit');--> statement-breakpoint
-CREATE TYPE "public"."user_api_scope" AS ENUM('office', 'customer', 'account', 'transaction', 'lien', 'loan', 'ledger');--> statement-breakpoint
-CREATE TYPE "public"."user_status" AS ENUM('active', 'blocked', 'pending', 'inactive');--> statement-breakpoint
+CREATE TYPE "public"."role_status" AS ENUM('active', 'inactive');--> statement-breakpoint
+CREATE TYPE "public"."user_api_scope" AS ENUM('office', 'customer', 'account', 'transaction', 'lien', 'loan', 'ledger', 'product', 'team', 'api', 'role', 'configuration');--> statement-breakpoint
+CREATE TYPE "public"."user_status" AS ENUM('active', 'locked', 'blocked', 'pending', 'inactive');--> statement-breakpoint
 CREATE TYPE "public"."user_type" AS ENUM('human', 'api');--> statement-breakpoint
 CREATE TYPE "public"."currency_type" AS ENUM('ngn', 'usd');--> statement-breakpoint
 CREATE TYPE "public"."journal_entry_status" AS ENUM('posted', 'pending', 'reversed');--> statement-breakpoint
@@ -170,7 +171,8 @@ CREATE TABLE "roles" (
 	"id" varchar(36) PRIMARY KEY NOT NULL,
 	"tenant_id" integer,
 	"name" text NOT NULL,
-	"permissions" jsonb DEFAULT '{"office":{"view":false,"create":false},"customer":{"view":false,"create":false},"account":{"view":false,"create":false},"transaction":{"view":false,"transfer":false,"deposit":false},"lien":{"view":false,"create":false,"release":false},"loan":{"view":false,"disburse":false,"repay":false,"approve":false},"ledger":{"view":false,"create":false}}'::jsonb NOT NULL,
+	"permissions" jsonb DEFAULT '{"customer":{"view":false,"create":false,"edit":false,"deactivate":false},"product":{"view":false,"create":false,"edit":false,"deactivate":false},"account":{"view":false,"create":false,"edit":false,"deactivate":false},"transaction":{"view":false,"create":false,"edit":false,"deactivate":false},"lien":{"view":false,"create":false,"edit":false,"deactivate":false},"loan":{"view":false,"create":false,"edit":false,"deactivate":false,"disburse":false,"repay":false,"approve":false},"ledger":{"view":false,"create":false,"edit":false,"deactivate":false},"office":{"view":false,"create":false,"edit":false},"team":{"view":false,"create":false,"edit":false,"deactivate":false},"role":{"view":false,"create":false,"edit":false,"deactivate":false},"api":{"view":false,"create":false,"deactivate":false,"edit":false},"configuration":{"view":false,"create":false,"deactivate":false,"edit":false}}'::jsonb NOT NULL,
+	"status" "role_status" NOT NULL,
 	"created_by" varchar(36),
 	"approved_by" varchar(36),
 	"deleted_at" timestamp with time zone,
@@ -190,7 +192,6 @@ CREATE TABLE "users" (
 	"secret_key" text,
 	"hashed_password" text,
 	"ip_address" text[],
-	"otp_key" text,
 	"is_otp_enabled" boolean DEFAULT false,
 	"role_id" varchar(36),
 	"scopes" text[],

@@ -1,5 +1,5 @@
 {
-  "id": "fae64e25-6b13-47e6-be08-2b4dc4358786",
+  "id": "c8bc9ccf-b919-4362-aaa9-fffe6b25c220",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1424,7 +1424,14 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'{\"office\":{\"view\":false,\"create\":false},\"customer\":{\"view\":false,\"create\":false},\"account\":{\"view\":false,\"create\":false},\"transaction\":{\"view\":false,\"transfer\":false,\"deposit\":false},\"lien\":{\"view\":false,\"create\":false,\"release\":false},\"loan\":{\"view\":false,\"disburse\":false,\"repay\":false,\"approve\":false},\"ledger\":{\"view\":false,\"create\":false}}'::jsonb"
+          "default": "'{\"customer\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"product\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"account\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"transaction\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"lien\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"loan\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false,\"disburse\":false,\"repay\":false,\"approve\":false},\"ledger\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"office\":{\"view\":false,\"create\":false,\"edit\":false},\"team\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"role\":{\"view\":false,\"create\":false,\"edit\":false,\"deactivate\":false},\"api\":{\"view\":false,\"create\":false,\"deactivate\":false,\"edit\":false},\"configuration\":{\"view\":false,\"create\":false,\"deactivate\":false,\"edit\":false}}'::jsonb"
+        },
+        "status": {
+          "name": "status",
+          "type": "role_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
         },
         "created_by": {
           "name": "created_by",
@@ -1613,12 +1620,6 @@
         "ip_address": {
           "name": "ip_address",
           "type": "text[]",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "otp_key": {
-          "name": "otp_key",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -3360,6 +3361,14 @@
         "credit"
       ]
     },
+    "public.role_status": {
+      "name": "role_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "inactive"
+      ]
+    },
     "public.user_api_scope": {
       "name": "user_api_scope",
       "schema": "public",
@@ -3370,7 +3379,12 @@
         "transaction",
         "lien",
         "loan",
-        "ledger"
+        "ledger",
+        "product",
+        "team",
+        "api",
+        "role",
+        "configuration"
       ]
     },
     "public.user_status": {
@@ -3378,6 +3392,7 @@
       "schema": "public",
       "values": [
         "active",
+        "locked",
         "blocked",
         "pending",
         "inactive"
