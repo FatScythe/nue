@@ -95,7 +95,7 @@ export class UserService {
       const user = await this.userRepo.findOne({
         selectFn: (record) => ({
           id: record.id,
-          otpKey: record.otpKey,
+          otpKey: record.secretKey,
         }),
         where: eq(Users.emailAddress, normalizedEmailAddress),
       });
@@ -357,7 +357,7 @@ export class UserService {
 
     // clear otpKey and disable OTP flag...
     await this.userRepo.update(eq(Users.id, user.id), {
-      otpKey: null,
+      secretKey: null,
       isOtpEnabled: false,
     });
 
