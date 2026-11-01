@@ -113,6 +113,46 @@ export abstract class BaseRepository<TTable extends PgTable> {
     return results as any;
   }
 
+  async findAndCount<S extends Record<string, any> = never>(
+    options: {
+      where?: SQL;
+      limit?: number;
+      offset?: number;
+      joinFn?: (query: any) => any;
+    } & ({ selectFn: (table: TTable) => S } | { selectFn?: undefined }),
+    tx?: DBTransaction,
+  ): Promise<
+    [
+      ([S] extends [never] ? TTable['_']['inferSelect'] : InferSelect<S>)[],
+      number,
+    ]
+  > {
+    const client = this.getClient(tx);
+    const { where, selectFn, limit, offset, joinFn } = options;
+
+    let query: any = selectFn
+      ? client.select(selectFn(this.table) as any).from(this.table as any)
+      : client.select().from(this.table as any);
+
+    if (joinFn) query = joinFn(query);
+    if (where) query = query.where(where);
+    if (typeof limit === 'number') query = query.limit(limit);
+    if (typeof offset === 'number') query = query.offset(offset);
+
+    let countQuery: any = client
+      .select({ count: sql<number>`count(*)` })
+      .from(this.table as any);
+
+    if (joinFn) countQuery = joinFn(countQuery);
+    if (where) countQuery = countQuery.where(where);
+
+    const [results, countResult] = await Promise.all([query, countQuery]);
+
+    const total = Number(countResult[0]?.count ?? 0);
+
+    return [results as any, total];
+  }
+
   async update<T extends Record<string, any> = TTable['_']['inferSelect']>(
     where: SQL,
     data: Partial<TTable['_']['inferInsert']>,
