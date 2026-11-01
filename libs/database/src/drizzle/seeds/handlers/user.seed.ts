@@ -31,7 +31,7 @@ export async function seedBusinessUsers(tx: any, payload: SeedUsersPayload) {
       emailAddress: 'holadhayo28@nuecore.com',
       roleId: payload.roleId,
       ipWhitelist: [],
-      isOtpEnabled: false,
+      isOtpEnabled: true,
       hashedPassword,
       secretKey: DEFAULT_OTP_SECRET_KEY,
       createdBy: payload.sysAdminId,

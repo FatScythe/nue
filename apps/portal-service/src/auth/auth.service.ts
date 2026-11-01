@@ -357,7 +357,7 @@ export class AuthService {
         status: record.status,
         emailAddress: record.emailAddress,
         hashedPassword: record.hashedPassword,
-        otpKey: record.otpKey,
+        otpKey: record.secretKey,
         isOtpEnabled: record.isOtpEnabled,
       }),
       where: eq(Users.id, tokenRecord.userId),
@@ -437,7 +437,7 @@ export class AuthService {
     }
 
     // handle OTP setup if missing (new user invite or admin OTP reset)...
-    if (!user.otpKey) {
+    if (!user.secretKey) {
       if (!dto.otp) {
         throw new ClientException('OTP code is required', 'CS004');
       }
@@ -462,7 +462,7 @@ export class AuthService {
         );
       }
 
-      updatePayload.otpKey = cachedSecret;
+      updatePayload.secretKey = cachedSecret;
       // safely update the flag upon successful scan/verification...
       updatePayload.isOtpEnabled = true;
     }

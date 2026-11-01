@@ -49,7 +49,6 @@ export const Users = pgTable(
     secretKey: text('secret_key').unique(),
     hashedPassword: text('hashed_password'),
     ipWhitelist: text('ip_address').array(),
-    otpKey: text('otp_key'),
     isOtpEnabled: boolean('is_otp_enabled').default(false),
     roleId: varchar('role_id', { length: 36 }).references(() => Roles.id, {
       onDelete: 'restrict',
